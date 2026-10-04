@@ -1,0 +1,924 @@
+<title>Заря Эллады</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Golos+Text:wght@400;500;600;700&display=swap">
+<style>
+/* Layout concept: a living diorama of the coast on top (the city grows as you buy), a medallion to click under it, and the shop as tabs beside it. Single night-sea look, lit by a scene that cycles from dawn to dusk. */
+:root{
+  --bg:#0A1A2A; --panel:#11273D; --panel-2:#173452; --line:#264A6E; --line-2:#335C86;
+  --ink:#F4EFE3; --ink-2:#A9BDD1; --muted:#6F8CA8;
+  --gold:#E8B94B; --gold-deep:#B8861F; --on-gold:#2A1C04;
+  --sea:#44AEDD; --terra:#D9693F; --olive:#9BBA62; --good:#7FD3A2; --bad:#F07A5E;
+  --font-display:'Forum','Cormorant Garamond',Georgia,serif;
+  --font-body:'Golos Text',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.45 var(--font-body);-webkit-text-size-adjust:100%}
+h1,h2,h3,p,ul,ol{margin:0}
+ul,ol{padding:0;list-style:none}
+button{font:inherit;color:inherit;cursor:pointer}
+svg{display:block}
+:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
+
+.wrap{max-width:1140px;margin-inline:auto;padding-inline:16px;padding-block:14px 36px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-block:2px 14px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg{width:34px;height:34px;color:var(--gold)}
+.brand h1{font:400 clamp(24px,5vw,32px)/1 var(--font-display);letter-spacing:.06em;text-transform:uppercase}
+.era{padding:7px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:13px;font-weight:500;color:var(--ink-2)}
+.era b{color:var(--gold);font-weight:600}
+
+.layout{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:920px){.layout{grid-template-columns:minmax(0,1fr)}}
+.left,.right{display:flex;flex-direction:column;gap:14px;min-width:0}
+@media (min-width:921px){.left{position:sticky;top:12px}}
+
+.scene-wrap{position:relative;border-radius:20px;overflow:hidden;background:#5BA8E0;border:1px solid var(--line)}
+.scene-wrap svg{width:100%;height:auto}
+.hint{position:absolute;left:12px;bottom:10px;padding:5px 10px;border-radius:8px;background:rgba(10,26,42,.62);font-size:12px;color:var(--ink);pointer-events:none}
+.sky-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.gift{position:absolute;left:-70px;top:12%;width:58px;height:58px;border:0;padding:0;border-radius:50%;background:radial-gradient(circle,rgba(255,236,160,.95) 0,rgba(255,220,110,.55) 55%,rgba(255,220,110,0) 72%);pointer-events:auto;animation:fly 16s linear forwards;filter:drop-shadow(0 2px 6px rgba(0,0,0,.25))}
+.gift svg{width:100%;height:100%;animation:flap 1s ease-in-out infinite alternate}
+@keyframes fly{0%{transform:translate(0,0)}25%{transform:translate(220px,-14px)}50%{transform:translate(500px,10px)}75%{transform:translate(760px,-12px)}100%{transform:translate(1100px,6px)}}
+@keyframes flap{from{transform:translateY(-3px) rotate(-4deg)}to{transform:translateY(3px) rotate(4deg)}}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px}
+.hud{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center}
+@media (max-width:520px){.hud{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}}
+.medal{width:132px;height:132px;border:0;padding:0;border-radius:50%;background:none;position:relative;transition:transform .08s;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.medal svg{width:100%;height:100%;filter:drop-shadow(0 6px 0 var(--gold-deep)) drop-shadow(0 10px 14px rgba(0,0,0,.35))}
+.medal:active{transform:translateY(4px) scale(.97)}
+.medal:active svg{filter:drop-shadow(0 2px 0 var(--gold-deep)) drop-shadow(0 4px 8px rgba(0,0,0,.35))}
+.count{font:400 clamp(34px,7vw,46px)/1 var(--font-display);font-variant-numeric:tabular-nums;letter-spacing:.01em;overflow-wrap:anywhere}
+.unit{font-size:14px;color:var(--ink-2);margin-top:2px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.stat{padding:6px 10px;border-radius:10px;background:var(--panel-2);font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.stat b{color:var(--ink);font-weight:600}
+@media (max-width:520px){.stats{justify-content:center}}
+.buffs{display:flex;gap:8px;flex-wrap:wrap;min-height:0}
+.buff{display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:999px;background:var(--gold);color:var(--on-gold);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+
+.tabs{display:flex;gap:6px;padding:4px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+.tab{flex:1;border:0;background:none;padding:9px 6px;border-radius:10px;font-weight:600;font-size:14px;color:var(--ink-2)}
+.tab[aria-selected="true"]{background:var(--panel-2);color:var(--ink);box-shadow:inset 0 -3px 0 var(--gold)}
+.tab small{font-weight:500;color:var(--muted);margin-left:2px}
+.modes{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
+.mode{border:1px solid var(--line-2);background:none;border-radius:9px;padding:5px 11px;font-weight:600;color:var(--ink-2)}
+.mode[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--on-gold)}
+
+.list{display:flex;flex-direction:column;gap:8px}
+@media (min-width:921px){.list{max-height:min(74vh,760px);overflow-y:auto;padding-right:4px;scrollbar-color:var(--line-2) transparent}}
+.row{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+@media (max-width:460px){.row{grid-template-columns:44px minmax(0,1fr)}.row .buy{grid-column:1 / -1}}
+.row.locked{opacity:.55}
+.ico{width:48px;height:48px;border-radius:12px;background:var(--panel-2);display:grid;place-items:center;position:relative}
+.ico svg{width:36px;height:36px}
+.ico .x2{position:absolute;right:-5px;bottom:-5px;padding:1px 5px;border-radius:6px;background:var(--gold);color:var(--on-gold);font:700 11px/1.3 var(--font-body)}
+.nm{font-weight:600;line-height:1.25;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.nm .cnt{font:400 20px/1 var(--font-display);color:var(--gold);font-variant-numeric:tabular-nums}
+.ds{font-size:13px;color:var(--ink-2);line-height:1.35;margin-top:2px}
+.rt{font-size:12.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.buy{border:0;border-radius:12px;padding:9px 14px;min-width:116px;background:var(--panel-2);color:var(--ink-2);font-weight:600;line-height:1.25;text-align:center;box-shadow:0 3px 0 var(--line);font-variant-numeric:tabular-nums}
+.buy small{display:block;font-weight:500;font-size:11.5px;opacity:.85}
+.buy.can{background:var(--gold);color:var(--on-gold);box-shadow:0 3px 0 var(--gold-deep)}
+.buy.can:active{transform:translateY(2px);box-shadow:0 1px 0 var(--gold-deep)}
+.buy:disabled{cursor:not-allowed}
+
+.eracard{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:14px;background:linear-gradient(135deg,#1C3C5E,#2A3E63);border:1px solid var(--gold-deep)}
+.eracard h3{font:400 22px/1.15 var(--font-display);letter-spacing:.02em}
+.eracard p{font-size:13.5px;color:var(--ink-2)}
+.note{font-size:13px;color:var(--muted);padding:2px 4px}
+
+.ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.ach li{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:12px;background:var(--panel);border:1px solid var(--line);opacity:.5}
+.ach li.on{opacity:1;border-color:var(--gold-deep)}
+.ach .b{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--panel-2);color:var(--muted);font-size:14px}
+.ach li.on .b{background:var(--gold);color:var(--on-gold)}
+.ach .t{font-weight:600;font-size:13.5px;line-height:1.2}
+.ach .d{font-size:12px;color:var(--ink-2);line-height:1.3}
+
+.foot{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:18px;font-size:12.5px;color:var(--muted)}
+.ghost{border:1px solid var(--line-2);background:none;border-radius:10px;padding:6px 12px;color:var(--ink-2);font-weight:500}
+.ghost.warn{border-color:var(--bad);color:var(--bad)}
+
+.fx{position:fixed;inset:0;pointer-events:none;z-index:30;overflow:hidden}
+.pop{position:absolute;font:400 22px/1 var(--font-display);color:var(--gold);text-shadow:0 2px 0 rgba(0,0,0,.45);animation:pop 1s ease-out forwards;white-space:nowrap}
+@keyframes pop{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-70px)}}
+.bit{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--gold);animation:bit .7s ease-out forwards}
+@keyframes bit{from{opacity:1;transform:translate(0,0)}to{opacity:0;transform:translate(var(--dx),var(--dy))}}
+.toasts{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:40;width:min(92vw,420px);pointer-events:none}
+.toast{padding:10px 14px;border-radius:12px;background:var(--panel-2);border:1px solid var(--gold-deep);font-size:14px;animation:tin .25s ease-out;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.toast b{color:var(--gold)}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(5,12,22,.72)}
+.modal .card{max-width:480px;width:100%;background:var(--panel);border:1px solid var(--gold-deep);border-radius:20px;padding:24px;display:flex;flex-direction:column;gap:12px}
+.modal h2{font:400 28px/1.1 var(--font-display);letter-spacing:.02em}
+.modal p{color:var(--ink-2)}
+.btn{border:0;background:var(--gold);color:var(--on-gold);font-weight:700;padding:12px 20px;border-radius:12px;box-shadow:0 4px 0 var(--gold-deep);align-self:flex-start}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--gold-deep)}
+
+/* scene animation */
+.orbit{transform-origin:400px 430px;animation:orbit 300s linear infinite alternate;animation-delay:-95s}
+@keyframes orbit{from{transform:rotate(-64deg)}to{transform:rotate(64deg)}}
+.dusk{animation:dusk 300s linear infinite alternate;animation-delay:-95s}
+@keyframes dusk{0%{opacity:.55}12%{opacity:.32}22%{opacity:0}78%{opacity:0}88%{opacity:.32}100%{opacity:.55}}
+.cloud{animation:cloud linear infinite}
+@keyframes cloud{from{transform:translateX(-160px)}to{transform:translateX(960px)}}
+.wave{animation:wave 7s ease-in-out infinite alternate}
+@keyframes wave{from{transform:translateX(-16px)}to{transform:translateX(16px)}}
+.bird{animation:cloud 70s linear infinite}
+.bob{animation:bob 3.4s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-1.2deg)}50%{transform:translateY(-2.5px) rotate(1.2deg)}}
+.smoke{transform-box:fill-box;transform-origin:center;animation:smoke 3.2s ease-out infinite}
+.smoke.d2{animation-delay:-1.6s}
+@keyframes smoke{0%{opacity:.75;transform:translateY(0) scale(.7)}100%{opacity:0;transform:translateY(-20px) scale(1.7)}}
+.flick{animation:flick 1.1s ease-in-out infinite alternate}
+@keyframes flick{from{opacity:.65}to{opacity:1}}
+.glint{animation:flick 2.2s ease-in-out infinite alternate}
+
+@media (prefers-reduced-motion: reduce){
+  .orbit,.dusk,.cloud,.wave,.bird,.bob,.smoke,.flick,.glint,.gift,.gift svg{animation:none}
+  .dusk{opacity:0}
+  .gift{left:46%}
+  .pop,.bit,.toast{animation-duration:.01s}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 40 40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M20 35C10 33 5 25 6 14"/><path d="M20 35C30 33 35 25 34 14"/><g fill="currentColor" stroke="none"><ellipse cx="7" cy="24" rx="3.4" ry="1.7" transform="rotate(-60 7 24)"/><ellipse cx="9" cy="17" rx="3.4" ry="1.7" transform="rotate(-40 9 17)"/><ellipse cx="13.500" cy="30" rx="3.400" ry="1.700" transform="rotate(-30 13.500 30)"/><ellipse cx="33" cy="24" rx="3.400" ry="1.700" transform="rotate(60 33 24)"/><ellipse cx="31" cy="17" rx="3.400" ry="1.700" transform="rotate(40 31 17)"/><ellipse cx="26.500" cy="30" rx="3.400" ry="1.700" transform="rotate(30 26.500 30)"/></g></svg>
+      <h1>Заря Эллады</h1>
+    </div>
+    <div class="era" id="era"></div>
+  </header>
+
+  <div class="layout">
+    <section class="left" aria-label="Город">
+      <div class="scene-wrap">
+        <svg id="scene" viewBox="0 0 800 400" role="img" aria-label="Побережье Эгейского моря: поселение, которое растёт вместе с вашими покупками">
+          <defs>
+            <linearGradient id="gSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5BA8E0"/><stop offset=".6" stop-color="#A8D7F0"/><stop offset="1" stop-color="#FBE6BE"/></linearGradient>
+            <linearGradient id="gSea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#63C4E2"/><stop offset="1" stop-color="#1D6FA5"/></linearGradient>
+            <linearGradient id="gLand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FB856"/><stop offset="1" stop-color="#5D8C3D"/></linearGradient>
+            <radialGradient id="gSun"><stop offset="0" stop-color="#FFF6C6"/><stop offset="1" stop-color="#FFD35E"/></radialGradient>
+          </defs>
+          <g id="back">
+            <rect width="800" height="400" fill="url(#gSky)"/>
+            <g class="orbit"><circle cx="400" cy="80" r="46" fill="#FFE9A0" opacity=".28"/><circle cx="400" cy="80" r="27" fill="url(#gSun)"/></g>
+            <g class="cloud" style="animation-duration:150s;animation-delay:-40s"><g fill="#fff" opacity=".9"><ellipse cx="0" cy="62" rx="44" ry="11"/><ellipse cx="-22" cy="54" rx="22" ry="12"/><ellipse cx="16" cy="52" rx="26" ry="14"/></g></g>
+            <g class="cloud" style="animation-duration:210s;animation-delay:-120s"><g fill="#fff" opacity=".8"><ellipse cx="0" cy="104" rx="36" ry="9"/><ellipse cx="-14" cy="97" rx="18" ry="10"/><ellipse cx="14" cy="96" rx="22" ry="12"/></g></g>
+            <g class="cloud" style="animation-duration:120s;animation-delay:-15s"><g fill="#fff" opacity=".75"><ellipse cx="0" cy="34" rx="30" ry="8"/><ellipse cx="10" cy="28" rx="16" ry="9"/></g></g>
+            <g class="bird" style="animation-duration:62s;animation-delay:-22s" fill="none" stroke="#2B3A55" stroke-width="1.6" stroke-linecap="round"><path d="M0 120q4-5 8 0q4-5 8 0"/><path d="M24 128q3-4 6 0q3-4 6 0"/><path d="M-20 130q3-4 6 0q3-4 6 0"/></g>
+            <path d="M0 178 L0 160 Q40 138 92 160 Q132 150 168 178Z" fill="#8DB8DA"/>
+            <path d="M610 178 Q640 150 690 166 Q740 152 800 176 L800 178Z" fill="#84B0D4"/>
+            <rect y="176" width="800" height="170" fill="url(#gSea)"/>
+            <g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".38">
+              <path class="wave" d="M300 196q10-5 20 0t20 0t20 0"/><path class="wave" style="animation-delay:-3s" d="M390 226q10-5 20 0t20 0t20 0"/><path class="wave" style="animation-delay:-5s" d="M330 262q10-5 20 0t20 0t20 0"/><path class="wave" style="animation-delay:-2s" d="M180 190q10-5 20 0t20 0"/><path class="wave" style="animation-delay:-4s" d="M470 208q10-5 20 0t20 0"/>
+            </g>
+          </g>
+          <g id="dyn"></g>
+          <rect class="dusk" width="800" height="400" fill="#16255A" pointer-events="none"/>
+        </svg>
+        <div class="sky-layer" id="sky"></div>
+        <div class="hint" id="hint"></div>
+      </div>
+
+      <div class="panel hud">
+        <button type="button" class="medal" id="medal" aria-label="Собрать урожай"></button>
+        <div>
+          <div class="count" id="count">0</div>
+          <div class="unit" id="unit">зерна</div>
+          <div class="stats">
+            <span class="stat">в секунду <b id="cps">0</b></span>
+            <span class="stat">за клик <b id="cpc">1</b></span>
+            <span class="stat">слава <b id="glory">+0%</b></span>
+          </div>
+        </div>
+      </div>
+      <div class="buffs" id="buffs" aria-live="polite"></div>
+    </section>
+
+    <section class="right" aria-label="Магазин">
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab" role="tab" id="t-b" aria-selected="true" data-tab="b">Здания</button>
+        <button type="button" class="tab" role="tab" id="t-u" aria-selected="false" data-tab="u">Улучшения<small id="u-n"></small></button>
+        <button type="button" class="tab" role="tab" id="t-a" aria-selected="false" data-tab="a">Слава<small id="a-n"></small></button>
+      </div>
+      <div id="p-b" role="tabpanel" class="stack-p">
+        <div class="modes" role="group" aria-label="Сколько покупать">Купить:
+          <button type="button" class="mode" data-mode="1" aria-pressed="true">×1</button>
+          <button type="button" class="mode" data-mode="10" aria-pressed="false">×10</button>
+          <button type="button" class="mode" data-mode="100" aria-pressed="false">×100</button>
+          <button type="button" class="mode" data-mode="0" aria-pressed="false">Макс.</button>
+        </div>
+        <div id="eracard"></div>
+        <ul class="list" id="blist" style="margin-top:8px"></ul>
+      </div>
+      <div id="p-u" role="tabpanel" hidden><ul class="list" id="ulist"></ul></div>
+      <div id="p-a" role="tabpanel" hidden>
+        <p class="note" style="margin-bottom:8px" id="a-note"></p>
+        <ul class="ach" id="alist"></ul>
+      </div>
+    </section>
+  </div>
+
+  <div class="foot">
+    <span>Прогресс сохраняется в этом браузере и растёт, пока вкладка закрыта (вполовину медленнее).</span>
+    <button type="button" class="ghost" id="reset">Начать заново</button>
+  </div>
+</div>
+<div class="fx" id="fx" aria-hidden="true"></div>
+<div class="toasts" id="toasts" role="status"></div>
+<div class="modal" id="modal" hidden><div class="card" id="modal-card"></div></div>
+
+<script>
+(function(){
+'use strict';
+
+const $ = (s, r) => (r || document).querySelector(s);
+const KEY = 'zarya-ellady-v1';
+
+/* ================= data ================= */
+const BUILDINGS = [
+  { id:'olive',    name:'Оливковая роща',       era:0, base:15,      cps:0.1,   icon:'olive',   flavor:'Масло — жидкое золото Эгеиды.' },
+  { id:'goat',     name:'Пастух с козами',      era:0, base:100,     cps:1,     icon:'goat',    flavor:'Молоко, сыр и шерсть для всей деревни.' },
+  { id:'pottery',  name:'Гончарная мастерская', era:0, base:1100,    cps:8,     icon:'amphora', flavor:'Амфоры с маслом уходят за море.' },
+  { id:'forge',    name:'Бронзовая кузница',    era:0, base:12000,   cps:47,    icon:'anvil',   flavor:'Медь и олово становятся плугами и мечами.' },
+  { id:'harbor',   name:'Торговая гавань',      era:0, base:130000,  cps:260,   icon:'ship',    flavor:'Паруса минойцев видны от Египта до Сицилии.' },
+  { id:'palace',   name:'Дворец в Кноссе',      era:0, base:1.4e6,   cps:1400,  icon:'palace',  flavor:'Лабиринт залов, фрески и кладовые с зерном.' },
+  { id:'agora',    name:'Агора',                era:1, base:2e7,     cps:7800,  icon:'scales',  flavor:'Здесь торгуют, спорят и выбирают власть.' },
+  { id:'laurion',  name:'Рудники Лавриона',     era:1, base:3.3e8,   cps:44000, icon:'pick',    flavor:'Серебро для афинских драхм с совой.' },
+  { id:'trireme',  name:'Афинская триера',      era:1, base:5.1e9,   cps:260000,icon:'trireme', flavor:'Сто семьдесят гребцов и бронзовый таран.' },
+  { id:'academy',  name:'Академия',             era:1, base:7.5e10,  cps:1.6e6, icon:'scroll',  flavor:'Философы ищут истину под платанами.' },
+  { id:'theatre',  name:'Театр',                era:1, base:1e12,    cps:1e7,   icon:'mask',    flavor:'Трагедии и комедии для тысяч зрителей.' },
+  { id:'parthenon',name:'Парфенон',             era:1, base:1.4e13,  cps:6.5e7, icon:'temple',  flavor:'Мрамор, пропорции и богиня Афина.' }
+];
+const ERA_COST = 5e6;
+const GROWTH = 1.15;
+
+const TIER_NAMES = {
+  olive:    ['Прививка саженцев', 'Масличный пресс', 'Священная олива Афины'],
+  goat:     ['Крепкий посох', 'Козий сыр', 'Сторожевые псы'],
+  pottery:  ['Гончарный круг', 'Роспись с осьминогами', 'Чернофигурные амфоры'],
+  forge:    ['Олово из-за моря', 'Двойные мехи', 'Мастера с Кипра'],
+  harbor:   ['Парус с реями', 'Критский торговый флот', 'Маяк у входа в бухту'],
+  palace:   ['Фрески с дельфинами', 'Водопровод и канализация', 'Тронный зал с грифонами'],
+  agora:    ['Рыночные весы', 'Расписная стоя', 'Ежедневный рынок'],
+  laurion:  ['Глубокие штольни', 'Промывка руды', 'Тетрадрахмы с совой'],
+  trireme:  ['Три ряда вёсел', 'Бронзовый таран', 'Лучшие гребцы'],
+  academy:  ['Диалоги под платанами', 'Свитки Аристотеля', 'Теорема Пифагора'],
+  theatre:  ['Хор и маски', 'Трагедии Эсхила', 'Акустика Эпидавра'],
+  parthenon:['Мрамор Пентеликона', 'Фриз Фидия', 'Статуя Афины Парфенос']
+};
+
+const UPS = [];
+BUILDINGS.forEach((b, i) => {
+  [[1, 10], [10, 50], [25, 500]].forEach((t, k) => {
+    UPS.push({ id:b.id + k, kind:'b', bi:i, name:TIER_NAMES[b.id][k], cost:b.base * t[1], icon:b.icon,
+      desc:'Выработка «' + b.name + '» ×2', need:() => G.b[i] >= t[0] });
+  });
+});
+[['c0','Каменный серп',100],['c1','Бронзовый серп',500],['c2','Железный плуг',1e4],['c3','Упряжка волов',1e5],['c4','Благословение Деметры',5e6]].forEach(c => {
+  UPS.push({ id:c[0], kind:'c', name:c[1], cost:c[2], icon:'wheat', desc:'Сила клика ×2', need:() => G.total >= c[2] * 0.3 });
+});
+UPS.push({ id:'pct', kind:'p', name:'Щедрая жатва', cost:2.5e5, icon:'wheat', desc:'Каждый клик добавляет 1% от выработки в секунду', need:() => G.total >= 5e4 });
+UPS.push({ id:'g0', kind:'g', mult:1.05, name:'Дельфийское пророчество', cost:2e6, icon:'sun', desc:'Всё производство +5%', need:() => G.total >= 5e5 });
+UPS.push({ id:'g1', kind:'g', mult:1.1, name:'Союз полисов', cost:3e9, icon:'laurel', desc:'Всё производство +10%', need:() => G.era >= 1 && G.total >= 5e8 });
+UPS.push({ id:'g2', kind:'g', mult:1.5, name:'Великие Панафинеи', cost:1e14, icon:'laurel', desc:'Праздник Афины: всё производство +50%', need:() => G.b[11] >= 1 });
+const UPMAP = {}; UPS.forEach(u => { UPMAP[u.id] = u; });
+
+const SUF = ['', 'тыс.', 'млн', 'млрд', 'трлн', 'квадрлн', 'квинтлн', 'секстлн'];
+function fmt(n, dec){
+  if(!isFinite(n)) return '∞';
+  if(n < 1000) return (dec ? n.toFixed(dec) : String(Math.floor(n))).replace('.', ',');
+  const i = Math.min(SUF.length - 1, Math.floor(Math.log10(n) / 3));
+  const v = n / Math.pow(10, 3 * i);
+  return v.toFixed(v < 10 ? 2 : v < 100 ? 1 : 0).replace('.', ',') + ' ' + SUF[i];
+}
+function fmtRate(n){ return n < 10 ? fmt(n, n < 1 ? 2 : 1) : fmt(n); }
+
+const ACH = [];
+[[1, 'Первая горсть'], [100, 'Сотня серпов'], [1000, 'Тысяча взмахов']].forEach(a => {
+  ACH.push({ id:'k' + a[0], name:a[1], desc:'Соберите урожай руками ' + a[0] + ' раз', ok:() => G.clicks >= a[0] });
+});
+[[1e3,'Зерно в амбаре'],[1e5,'Запасы ремесленника'],[1e7,'Казна торговца'],[1e9,'Сокровищница полиса'],[1e11,'Богатство царей'],[1e13,'Дар Креза'],[1e15,'Золото Олимпа']].forEach(a => {
+  ACH.push({ id:'t' + a[0], name:a[1], desc:'Накопите за всё время ' + fmt(a[0]), ok:() => G.total >= a[0] });
+});
+BUILDINGS.forEach((b, i) => {
+  [[1, 'первый шаг'], [10, 'десяток'], [25, 'расцвет'], [50, 'слава']].forEach(t => {
+    ACH.push({ id:b.id + t[0], era:b.era, name:b.name + ': ' + t[1], desc:'Постройте: ' + t[0], ok:() => G.b[i] >= t[0] });
+  });
+});
+ACH.push({ id:'era1', name:'Эпоха полисов', desc:'Переведите народ из дворцов в города', ok:() => G.era >= 1 });
+ACH.push({ id:'gift1', name:'Любимец богов', desc:'Поймайте дар богов', ok:() => G.gifts >= 1 });
+ACH.push({ id:'gift10', name:'Друг Олимпа', desc:'Поймайте десять даров богов', ok:() => G.gifts >= 10 });
+ACH.push({ id:'pan', name:'Праздник Афины', desc:'Устройте Великие Панафинеи', ok:() => !!G.up.g2 });
+
+/* ================= state ================= */
+function fresh(){
+  return { res:0, total:0, clicks:0, b:BUILDINGS.map(() => 0), up:{}, era:0, ach:{}, gifts:0, last:Date.now(), seen:false };
+}
+let G = fresh();
+let D = { cps:0, click:1, glory:1, mb:[], gm:1, cm:1, bp:1, bc:1 };
+let buffs = [];
+let mode = 1;
+let tab = 'b';
+
+function save(){
+  try{
+    G.last = Date.now();
+    localStorage.setItem(KEY, JSON.stringify(G));
+  }catch(e){}
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return null;
+    const d = JSON.parse(raw);
+    if(!d || !Array.isArray(d.b) || typeof d.res !== 'number') return null;
+    const f = fresh();
+    Object.keys(f).forEach(k => { if(d[k] !== undefined) f[k] = d[k]; });
+    while(f.b.length < BUILDINGS.length) f.b.push(0);
+    return f;
+  }catch(e){ return null; }
+}
+
+function achCount(){ let n = 0; ACH.forEach(a => { if(G.ach[a.id]) n++; }); return n; }
+function recalc(){
+  let cm = 1, gm = 1;
+  UPS.forEach(u => {
+    if(!G.up[u.id]) return;
+    if(u.kind === 'c') cm *= 2;
+    if(u.kind === 'g') gm *= u.mult;
+  });
+  let bp = 1, bc = 1;
+  const now = Date.now();
+  buffs = buffs.filter(b => b.until > now);
+  buffs.forEach(b => { if(b.kind === 'p') bp *= b.mult; else bc *= b.mult; });
+  D.glory = 1 + 0.01 * achCount();
+  D.gm = gm; D.cm = cm; D.bp = bp; D.bc = bc;
+  let cps = 0;
+  BUILDINGS.forEach((b, i) => {
+    let m = 1;
+    for(let k = 0; k < 3; k++) if(G.up[b.id + k]) m *= 2;
+    D.mb[i] = m;
+    cps += G.b[i] * b.cps * m;
+  });
+  D.cps = cps * gm * D.glory * bp;
+  D.click = (cm + (G.up.pct ? D.cps * 0.01 : 0)) * bc;
+}
+function unitRate(i){ return BUILDINGS[i].cps * D.mb[i] * D.gm * D.glory * D.bp; }
+
+function cost(i, n){
+  const c = BUILDINGS[i].base * Math.pow(GROWTH, G.b[i]);
+  return c * (Math.pow(GROWTH, n) - 1) / (GROWTH - 1);
+}
+function maxAfford(i){
+  const c = BUILDINGS[i].base * Math.pow(GROWTH, G.b[i]);
+  const n = Math.floor(Math.log(G.res * (GROWTH - 1) / c + 1) / Math.log(GROWTH));
+  return Math.max(0, n);
+}
+function qty(i){
+  if(mode === 0) return Math.max(1, maxAfford(i));
+  return mode;
+}
+
+/* ================= icons ================= */
+const ICONS = {
+  olive:'<path d="M7 34Q18 24 33 7" stroke="#6B8A4C" stroke-width="3" fill="none" stroke-linecap="round"/><g fill="#9BBA62"><ellipse cx="14" cy="26" rx="6" ry="2.6" transform="rotate(-50 14 26)"/><ellipse cx="21" cy="18" rx="6" ry="2.6" transform="rotate(-50 21 18)"/><ellipse cx="28" cy="11" rx="5" ry="2.4" transform="rotate(-50 28 11)"/><ellipse cx="22" cy="27" rx="6" ry="2.6" transform="rotate(30 22 27)"/><ellipse cx="29" cy="20" rx="5" ry="2.4" transform="rotate(30 29 20)"/></g><circle cx="16" cy="32" r="3" fill="#3E4B2A"/><circle cx="25" cy="24" r="3" fill="#3E4B2A"/>',
+  goat:'<ellipse cx="18" cy="24" rx="11" ry="7" fill="#F2EAD8"/><rect x="9" y="28" width="3" height="8" rx="1.500" fill="#8A7A5C"/><rect x="24" y="28" width="3" height="8" rx="1.500" fill="#8A7A5C"/><path d="M26 21L31 11Q35 11 35 15L33 23Z" fill="#F2EAD8"/><circle cx="33" cy="14" r="4" fill="#F2EAD8"/><path d="M31 11Q29 5 33 4" stroke="#8A7A5C" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="34" cy="13" r="1" fill="#2B2B30"/>',
+  amphora:'<path d="M15 5h10v4c7 3 9 10 6 16-2 5-6 8-11 9-5-1-9-4-11-9-3-6-1-13 6-16z" fill="#D9693F"/><path d="M9 20h22M10 26h20" stroke="#2B2B30" stroke-width="2"/><path d="M15 8Q8 8 9 15M25 8Q32 8 31 15" stroke="#B4502C" stroke-width="2.500" fill="none"/>',
+  anvil:'<path d="M5 13h30l-5 7H21v6h7v6H12v-6h7v-6H9z" fill="#6D7886"/><rect x="5" y="11" width="30" height="4" rx="1" fill="#9AA7B6"/><circle cx="30" cy="7" r="2" fill="#FF9A3C"/><circle cx="25" cy="5" r="1.300" fill="#FFC857"/>',
+  ship:'<path d="M4 25Q8 33 20 33Q32 33 36 25Q28 28 20 28Q12 28 4 25Z" fill="#D9693F"/><rect x="19" y="5" width="2" height="22" fill="#8A5A33"/><path d="M20 6L8 9Q6 17 8 23L20 25ZM20 6L32 9Q34 17 32 23L20 25Z" fill="#F6EEDA"/><path d="M7 15h26" stroke="#B83B2E" stroke-width="3"/>',
+  palace:'<rect x="4" y="29" width="32" height="6" fill="#EBD9AE"/><rect x="7" y="14" width="26" height="4" fill="#2D6FA3"/><rect x="7" y="18" width="26" height="11" fill="#F3E6C3"/><g fill="#B83B2E"><path d="M9 18h5l-1 11h-3z"/><path d="M17.500 18h5l-1 11h-3z"/><path d="M26 18h5l-1 11h-3z"/></g><path d="M16 14q-2-6 2-7M24 14q2-6-2-7" stroke="#2B2B30" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  scales:'<path d="M20 6v26M12 33h16" stroke="#E8B94B" stroke-width="3" stroke-linecap="round"/><path d="M7 11h26" stroke="#E8B94B" stroke-width="3" stroke-linecap="round"/><path d="M7 11L3 22h8zM33 11l-4 11h8z" fill="none" stroke="#E8B94B" stroke-width="1.800" stroke-linejoin="round"/><path d="M3 22q4 5 8 0zM29 22q4 5 8 0z" fill="#E8B94B"/><circle cx="20" cy="6" r="2.500" fill="#F4EFE3"/>',
+  pick:'<path d="M9 33L27 12" stroke="#8A5A33" stroke-width="3.500" stroke-linecap="round"/><path d="M12 9Q24 4 33 13Q27 10 22 12Q18 13 16 18Q14 12 12 9Z" fill="#B7C2CE"/><g fill="#F4EFE3"><path d="M7 28l3-3 3 3-3 3z"/></g>',
+  trireme:'<path d="M2 22h36q-2 8-10 9H10Q4 30 2 22Z" fill="#6A4630"/><path d="M2 22h36" stroke="#C8A25A" stroke-width="2.500"/><path d="M8 26l-3 7M14 28l-3 6M20 28v6M26 28l3 6M32 27l3 6" stroke="#B88A55" stroke-width="1.600" stroke-linecap="round"/><rect x="19" y="6" width="2" height="16" fill="#8A5A33"/><path d="M10 7h20v13H10z" fill="#F3E7C9"/><path d="M10 13h20" stroke="#2D6FA3" stroke-width="3"/>',
+  scroll:'<rect x="9" y="8" width="22" height="26" rx="2" fill="#F1E3BC"/><path d="M13 14h14M13 19h14M13 24h9" stroke="#8A6B3E" stroke-width="2" stroke-linecap="round"/><rect x="6" y="5" width="28" height="5" rx="2.500" fill="#D9B97A"/><rect x="6" y="31" width="28" height="5" rx="2.500" fill="#D9B97A"/>',
+  mask:'<path d="M7 9Q20 3 33 9Q34 25 20 35Q6 25 7 9Z" fill="#F4EFE3"/><path d="M11 16q3-3 6 0M23 16q3-3 6 0" stroke="#2B2B30" stroke-width="2.200" fill="none" stroke-linecap="round"/><ellipse cx="14" cy="18.500" rx="3" ry="2" fill="#2B2B30"/><ellipse cx="26" cy="18.500" rx="3" ry="2" fill="#2B2B30"/><path d="M13 26Q20 32 27 26" stroke="#2B2B30" stroke-width="2.400" fill="none" stroke-linecap="round"/>',
+  temple:'<path d="M3 15L20 5L37 15Z" fill="#F4EFE3"/><rect x="5" y="15" width="30" height="3" fill="#D8D1BE"/><g fill="#F4EFE3"><rect x="7" y="19" width="4" height="12"/><rect x="14" y="19" width="4" height="12"/><rect x="22" y="19" width="4" height="12"/><rect x="29" y="19" width="4" height="12"/></g><rect x="3" y="31" width="34" height="3" fill="#D8D1BE"/><rect x="1" y="34" width="38" height="3" fill="#BDB59E"/>',
+  wheat:'<path d="M20 36V10" stroke="#C9A04A" stroke-width="2.500" stroke-linecap="round"/><g fill="#E8B94B"><ellipse cx="20" cy="6" rx="2.800" ry="4.500"/><ellipse cx="15" cy="12" rx="2.600" ry="4.500" transform="rotate(-30 15 12)"/><ellipse cx="25" cy="12" rx="2.600" ry="4.500" transform="rotate(30 25 12)"/><ellipse cx="14.500" cy="19" rx="2.600" ry="4.500" transform="rotate(-30 14.500 19)"/><ellipse cx="25.500" cy="19" rx="2.600" ry="4.500" transform="rotate(30 25.500 19)"/><ellipse cx="15" cy="26" rx="2.600" ry="4.500" transform="rotate(-30 15 26)"/><ellipse cx="25" cy="26" rx="2.600" ry="4.500" transform="rotate(30 25 26)"/></g>',
+  sun:'<circle cx="20" cy="20" r="8" fill="#FFD35E"/><g stroke="#FFD35E" stroke-width="3" stroke-linecap="round"><path d="M20 4v5M20 31v5M4 20h5M31 20h5M9 9l3.500 3.500M27.500 27.500L31 31M31 9l-3.500 3.500M12.500 27.500L9 31"/></g>',
+  laurel:'<path d="M20 35C11 33 6 26 7 15M20 35C29 33 34 26 33 15" stroke="#9BBA62" stroke-width="2.600" fill="none" stroke-linecap="round"/><g fill="#9BBA62"><ellipse cx="8" cy="25" rx="4" ry="2" transform="rotate(-60 8 25)"/><ellipse cx="10" cy="18" rx="4" ry="2" transform="rotate(-40 10 18)"/><ellipse cx="14" cy="30" rx="4" ry="2" transform="rotate(-30 14 30)"/><ellipse cx="32" cy="25" rx="4" ry="2" transform="rotate(60 32 25)"/><ellipse cx="30" cy="18" rx="4" ry="2" transform="rotate(40 30 18)"/><ellipse cx="26" cy="30" rx="4" ry="2" transform="rotate(30 26 30)"/></g><circle cx="20" cy="14" r="3.500" fill="#E8B94B"/>'
+};
+function ic(name, size){
+  size = size || 36;
+  return '<svg viewBox="0 0 40 40" width="' + size + '" height="' + size + '" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
+}
+
+function medalSvg(era){
+  const rim = '<circle cx="60" cy="60" r="57" fill="#C99530"/><circle cx="60" cy="60" r="50" fill="#F1CB68"/><circle cx="60" cy="60" r="44" fill="none" stroke="#C99530" stroke-width="2.500" stroke-dasharray="2 5" stroke-linecap="round"/>';
+  if(era === 0){
+    return '<svg viewBox="0 0 120 120" aria-hidden="true">' + rim +
+      '<path d="M60 98V38" stroke="#9C6B18" stroke-width="4" stroke-linecap="round"/>' +
+      '<g fill="#B8821F"><ellipse cx="60" cy="26" rx="5" ry="9"/>' +
+      '<ellipse cx="49" cy="38" rx="5" ry="9" transform="rotate(-32 49 38)"/><ellipse cx="71" cy="38" rx="5" ry="9" transform="rotate(32 71 38)"/>' +
+      '<ellipse cx="48" cy="54" rx="5" ry="9" transform="rotate(-32 48 54)"/><ellipse cx="72" cy="54" rx="5" ry="9" transform="rotate(32 72 54)"/>' +
+      '<ellipse cx="49" cy="70" rx="5" ry="9" transform="rotate(-32 49 70)"/><ellipse cx="71" cy="70" rx="5" ry="9" transform="rotate(32 71 70)"/></g></svg>';
+  }
+  return '<svg viewBox="0 0 120 120" aria-hidden="true">' + rim +
+    '<path d="M60 28C46 28 40 42 42 58C44 76 51 90 60 90C69 90 76 76 78 58C80 42 74 28 60 28Z" fill="#B8821F"/>' +
+    '<path d="M42 34L50 42L56 34ZM78 34L70 42L64 34Z" fill="#B8821F"/>' +
+    '<circle cx="52" cy="50" r="10" fill="#F1CB68" stroke="#8C5E14" stroke-width="2.500"/><circle cx="68" cy="50" r="10" fill="#F1CB68" stroke="#8C5E14" stroke-width="2.500"/>' +
+    '<circle cx="52" cy="50" r="4.500" fill="#4A2F08"/><circle cx="68" cy="50" r="4.500" fill="#4A2F08"/>' +
+    '<path d="M56 60L64 60L60 68Z" fill="#8C5E14"/>' +
+    '<path d="M50 72Q60 80 70 72M51 79Q60 87 69 79" stroke="#8C5E14" stroke-width="2.500" fill="none" stroke-linecap="round"/>' +
+    '<path d="M50 92L54 98M60 92V99M70 92L66 98" stroke="#8C5E14" stroke-width="3" stroke-linecap="round"/></svg>';
+}
+
+/* ================= scene ================= */
+const C = { marble:'#F4F0E6', marbleSh:'#D8D1BE', cream:'#EBD9AE', creamSh:'#CDB985', red:'#B83B2E', blue:'#2D6FA3', gold:'#E3B445',
+  terra:'#C9603E', terraDk:'#9C4429', wood:'#8A5A33', woodDk:'#5E3C20', leaf:'#9DB383', leafDk:'#7A9566', stone:'#BDB39C', stoneDk:'#8F876F', dark:'#2B2B30' };
+
+function shadow(rx){ return '<ellipse cx="0" cy="1" rx="' + rx + '" ry="' + (rx * 0.24) + '" fill="#1b2a10" opacity=".22"/>'; }
+function tree(x, y, s, ripe){
+  return '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')">' + shadow(17) +
+    '<path d="M-3 1Q-6 -9 -2 -18L3 -18Q6 -8 3 1Z" fill="' + C.woodDk + '"/>' +
+    '<circle cx="-10" cy="-24" r="10" fill="' + C.leafDk + '"/><circle cx="10" cy="-25" r="11" fill="' + C.leafDk + '"/>' +
+    '<circle cx="0" cy="-32" r="12" fill="' + C.leaf + '"/><circle cx="-8" cy="-26" r="7" fill="' + C.leaf + '"/><circle cx="9" cy="-28" r="6" fill="#B2C698" opacity=".7"/>' +
+    (ripe ? '<circle cx="-6" cy="-22" r="2" fill="#3E4B2A"/><circle cx="7" cy="-33" r="2" fill="#3E4B2A"/><circle cx="12" cy="-24" r="2" fill="#3E4B2A"/><circle cx="-2" cy="-36" r="2" fill="#3E4B2A"/>' : '') +
+    '</g>';
+}
+function goat(x, y, f){
+  return '<g transform="translate(' + x + ' ' + y + ') scale(' + f + ',1)">' + shadow(11) +
+    '<rect x="-7" y="-8" width="2.600" height="8" rx="1.200" fill="#6B5B45"/><rect x="4" y="-8" width="2.600" height="8" rx="1.200" fill="#6B5B45"/>' +
+    '<ellipse cx="0" cy="-10" rx="10" ry="5.500" fill="#F2EAD8"/><path d="M6 -13L10 -21Q14 -21 14 -17L11 -11Z" fill="#F2EAD8"/>' +
+    '<circle cx="12" cy="-19" r="3.400" fill="#F2EAD8"/><path d="M10.500 -22Q9 -27 13 -27" stroke="#8A7A5C" stroke-width="1.600" fill="none" stroke-linecap="round"/>' +
+    '<circle cx="13" cy="-19.500" r=".9" fill="#2B2B30"/></g>';
+}
+function amph(x, y, s){
+  return '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')"><path d="M-4 -16h8v3c6 2 7 8 5 12-1 3-4 5-9 5s-8-2-9-5c-2-4-1-10 5-12z" fill="' + C.terra + '"/><path d="M-8 -7h16" stroke="' + C.dark + '" stroke-width="1.500"/></g>';
+}
+function kiln(x, y){
+  return '<g transform="translate(' + x + ' ' + y + ')">' + shadow(19) +
+    '<rect x="6" y="-36" width="7" height="16" fill="' + C.terraDk + '"/>' +
+    '<path d="M-17 0Q-17 -28 0 -28Q17 -28 17 0Z" fill="' + C.terra + '"/><path d="M-17 0Q-17 -28 0 -28Q-8 -18 -8 0Z" fill="#E0805A" opacity=".5"/>' +
+    '<path d="M-6 0Q-6 -13 0 -13Q6 -13 6 0Z" fill="#2c140b"/><path d="M-3.500 0Q-3.500 -8 0 -8Q3.500 -8 3.500 0Z" fill="#FF9A3C" class="flick"/>' +
+    '<circle class="smoke" cx="9.500" cy="-40" r="4" fill="#EEE9DE"/><circle class="smoke d2" cx="10" cy="-46" r="5" fill="#EEE9DE"/></g>';
+}
+function forge(x, y){
+  return '<g transform="translate(' + x + ' ' + y + ')">' + shadow(26) +
+    '<rect x="-20" y="-24" width="40" height="24" fill="' + C.stone + '"/><rect x="-20" y="-6" width="40" height="6" fill="' + C.stoneDk + '" opacity=".4"/>' +
+    '<rect x="10" y="-50" width="9" height="22" fill="' + C.stoneDk + '"/>' +
+    '<path d="M-25 -24L0 -43L25 -24Z" fill="' + C.woodDk + '"/>' +
+    '<path d="M-8 0V-13Q0 -19 8 -13V0Z" fill="#2b1a10"/><path d="M-5 0V-9Q0 -13 5 -9V0Z" fill="#FF8A2B" class="flick"/>' +
+    '<rect x="-17" y="-8" width="7" height="3" fill="#59616C"/><rect x="-15" y="-5" width="3" height="5" fill="#59616C"/>' +
+    '<circle class="smoke" cx="14.500" cy="-54" r="4" fill="#E2DDD2"/><circle class="smoke d2" cx="15" cy="-60" r="5" fill="#E2DDD2"/></g>';
+}
+function ship(x, y, s, i){
+  return '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')"><g class="bob" style="animation-delay:-' + (i * 1.3).toFixed(1) + 's">' +
+    '<ellipse cx="0" cy="4" rx="32" ry="3" fill="#fff" opacity=".35"/>' +
+    '<path d="M-28 -12Q-24 4 0 5Q24 4 28 -12Q14 -6 0 -6Q-14 -6 -28 -12Z" fill="' + C.terra + '"/>' +
+    '<path d="M-25 -9Q0 -3 25 -9" stroke="#fff" stroke-width="2" fill="none" opacity=".8"/>' +
+    '<rect x="-1.500" y="-42" width="3" height="36" fill="' + C.woodDk + '"/>' +
+    '<path d="M-19 -39Q0 -34 19 -39L19 -14Q0 -9 -19 -14Z" fill="#F6EEDA"/>' +
+    '<path d="M-19 -29Q0 -24 19 -29" stroke="' + C.red + '" stroke-width="4" fill="none"/>' +
+    '</g></g>';
+}
+function trireme(x, y, s, i){
+  let oars = '';
+  for(let k = 0; k < 8; k++){ const ox = -30 + k * 8; oars += '<path d="M' + ox + ' 2L' + (ox - 6) + ' 13" stroke="' + C.woodDk + '" stroke-width="1.400" stroke-linecap="round"/>'; }
+  return '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')"><g class="bob" style="animation-delay:-' + (i * 1.1).toFixed(1) + 's">' +
+    '<ellipse cx="0" cy="6" rx="46" ry="3.500" fill="#fff" opacity=".35"/>' + oars +
+    '<path d="M-46 -12Q-42 6 -8 8L34 8Q46 6 50 -6L46 -9Q40 -3 30 -3L-30 -3Q-40 -5 -46 -12Z" fill="#5E3C2A"/>' +
+    '<path d="M-44 -9L48 -7" stroke="#C8A25A" stroke-width="2.600" opacity=".95"/>' +
+    '<polygon points="50,3 60,6 50,9" fill="#B0763A"/><circle cx="40" cy="-1" r="2.200" fill="#F4F0E6"/>' +
+    '<rect x="-1.500" y="-40" width="3" height="34" fill="' + C.woodDk + '"/>' +
+    '<path d="M-17 -38H17V-14H-17Z" fill="#F3E7C9"/><path d="M-17 -30H17" stroke="' + C.blue + '" stroke-width="4"/></g></g>';
+}
+function palace(x, y, L){
+  let s = '<g transform="translate(' + x + ' ' + y + ')">';
+  s += '<rect x="0" y="-16" width="176" height="34" fill="' + C.cream + '"/><rect x="0" y="-4" width="176" height="5" fill="' + C.creamSh + '"/>';
+  s += '<rect x="22" y="-48" width="132" height="32" fill="#F3E6C3"/><rect x="22" y="-53" width="132" height="6" fill="' + C.blue + '"/>';
+  s += '<g fill="#fff" opacity=".7"><circle cx="34" cy="-50" r="1.600"/><circle cx="54" cy="-50" r="1.600"/><circle cx="74" cy="-50" r="1.600"/><circle cx="94" cy="-50" r="1.600"/><circle cx="114" cy="-50" r="1.600"/><circle cx="134" cy="-50" r="1.600"/></g>';
+  for(let i = 0; i < 6; i++){
+    const cx = 36 + i * 21.2;
+    s += '<polygon points="' + (cx - 5.500) + ',-44 ' + (cx + 5.500) + ',-44 ' + (cx + 3.500) + ',-17 ' + (cx - 3.500) + ',-17" fill="' + C.red + '"/><rect x="' + (cx - 7) + '" y="-47" width="14" height="3.500" fill="' + C.dark + '"/>';
+  }
+  s += '<path d="M80 -53Q76 -63 82 -65M96 -53Q100 -63 94 -65" stroke="' + C.dark + '" stroke-width="2.800" fill="none" stroke-linecap="round"/>';
+  if(L >= 2){
+    s += '<rect x="154" y="-38" width="38" height="22" fill="#F3E6C3"/><rect x="154" y="-42" width="38" height="5" fill="' + C.blue + '"/><rect x="158" y="-34" width="30" height="18" fill="' + C.cream + '"/>';
+    s += '<polygon points="165,-37 173,-37 171.500,-17 166.500,-17" fill="' + C.red + '"/><polygon points="178,-37 186,-37 184.500,-17 179.500,-17" fill="' + C.red + '"/>';
+  }
+  if(L >= 3){
+    s += '<rect x="52" y="-74" width="76" height="22" fill="#F3E6C3"/><rect x="52" y="-79" width="76" height="6" fill="' + C.blue + '"/>';
+    s += '<polygon points="64,-70 72,-70 70.500,-54 65.500,-54" fill="' + C.red + '"/><polygon points="88,-70 96,-70 94.500,-54 89.500,-54" fill="' + C.red + '"/><polygon points="110,-70 118,-70 116.500,-54 111.500,-54" fill="' + C.red + '"/>';
+  }
+  return s + '</g>';
+}
+function stoa(x, y, n){
+  const w = n * 22 + 14;
+  let s = '<g transform="translate(' + x + ' ' + y + ')">' + shadow(w / 2 + 6).replace('cx="0"', 'cx="' + (w / 2) + '"');
+  s += '<rect x="0" y="-34" width="' + w + '" height="30" fill="#E0CC9F"/><rect x="0" y="-22" width="' + w + '" height="5" fill="' + C.blue + '" opacity=".75"/>';
+  for(let i = 0; i < n; i++){
+    const cx = 11 + i * 22;
+    s += '<rect x="' + (cx - 3.500) + '" y="-36" width="7" height="32" fill="' + C.marble + '"/><rect x="' + (cx + 0.500) + '" y="-36" width="1.400" height="32" fill="' + C.marbleSh + '"/><rect x="' + (cx - 5) + '" y="-38" width="10" height="3" fill="' + C.marble + '"/>';
+  }
+  s += '<rect x="-2" y="-47" width="' + (w + 4) + '" height="9" fill="' + C.marble + '"/><polygon points="-6,-47 ' + (w + 6) + ',-47 ' + (w - 4) + ',-56 4,-56" fill="' + C.terra + '"/>';
+  s += '<rect x="-3" y="-4" width="' + (w + 6) + '" height="4" fill="' + C.marbleSh + '"/></g>';
+  return s;
+}
+function academy(x, y, n){
+  let s = '<g transform="translate(' + x + ' ' + y + ')">' + shadow(40);
+  s += '<rect x="-34" y="-4" width="68" height="4" fill="' + C.marbleSh + '"/><rect x="-30" y="-30" width="60" height="26" fill="#E3D3AA"/>';
+  for(let i = 0; i < 4; i++){ const cx = -24 + i * 16; s += '<rect x="' + (cx - 3) + '" y="-32" width="6" height="28" fill="' + C.marble + '"/>'; }
+  s += '<polygon points="-36,-32 0,-50 36,-32" fill="' + C.marble + '"/><polygon points="-26,-35 0,-46 26,-35" fill="' + C.marbleSh + '"/>';
+  s += '<g transform="translate(-52 0)">' + tree(0, 0, .7, false).replace(/#9DB383/g, '#8DB06A') + '</g>';
+  if(n >= 5) s += '<g transform="translate(54 0)">' + tree(0, 0, .75, false) + '</g>';
+  if(n >= 3){
+    s += '<g><circle cx="-8" cy="-14" r="2.400" fill="#E9C7A0"/><path d="M-12 -4L-8 -12L-4 -4Z" fill="#F4F0E6"/><circle cx="10" cy="-14" r="2.400" fill="#E9C7A0"/><path d="M6 -4L10 -12L14 -4Z" fill="#8FB0D6"/></g>';
+  }
+  return s + '</g>';
+}
+function mine(x, y){
+  return '<g transform="translate(' + x + ' ' + y + ')">' +
+    '<path d="M-15 0V-17Q0 -32 15 -17V0Z" fill="#241d19"/><rect x="-17" y="-20" width="5" height="20" fill="' + C.wood + '"/><rect x="12" y="-20" width="5" height="20" fill="' + C.wood + '"/><rect x="-19" y="-24" width="38" height="5" rx="1.500" fill="' + C.woodDk + '"/>' +
+    '<rect x="19" y="-8" width="16" height="8" rx="1.500" fill="#59616C"/><circle cx="23" cy="1" r="2.500" fill="#2B2B30"/><circle cx="31" cy="1" r="2.500" fill="#2B2B30"/><circle cx="27" cy="-10" r="3" fill="#C9D3DE"/><circle cx="31.500" cy="-9" r="2.200" fill="#E4EAF0"/></g>';
+}
+function theatre(cx, cy, rows){
+  let s = '';
+  for(let i = rows - 1; i >= 0; i--){
+    const r = 14 + i * 9;
+    s += '<path d="M' + (cx - r) + ' ' + cy + 'A' + r + ' ' + (r * 0.58) + ' 0 0 1 ' + (cx + r) + ' ' + cy + 'Z" fill="' + (i % 2 ? C.marble : '#E4DDC9') + '"/>';
+  }
+  s += '<ellipse cx="' + cx + '" cy="' + cy + '" rx="12" ry="4.500" fill="#CDB985"/><rect x="' + (cx - 16) + '" y="' + (cy + 1) + '" width="32" height="4" fill="' + C.marbleSh + '"/>';
+  return s;
+}
+function parthenon(x, y, n){
+  const cols = Math.min(8, n);
+  let s = '<g transform="translate(' + x + ' ' + y + ')">';
+  s += '<rect x="-4" y="0" width="172" height="5" fill="' + C.marble + '"/><rect x="-9" y="5" width="182" height="5" fill="' + C.marbleSh + '"/><rect x="-14" y="10" width="192" height="5" fill="#C9C1AB"/>';
+  if(cols >= 2) s += '<rect x="14" y="-38" width="' + (cols * 21.5 - 30) + '" height="38" fill="#E7DFCB"/>';
+  for(let i = 0; i < cols; i++){
+    const cx = 4 + i * 21.8;
+    s += '<rect x="' + (cx - 4.500) + '" y="-38" width="9" height="38" fill="' + C.marble + '"/><rect x="' + (cx + 0.500) + '" y="-38" width="1.600" height="38" fill="' + C.marbleSh + '"/><rect x="' + (cx - 6.500) + '" y="-41" width="13" height="3.500" fill="' + C.marble + '"/>';
+  }
+  if(n >= 8){
+    s += '<rect x="-9" y="-50" width="180" height="9" fill="' + C.marble + '"/>';
+    for(let i = 0; i < 12; i++) s += '<rect x="' + (-4 + i * 15) + '" y="-48" width="6" height="5" fill="' + C.marbleSh + '"/>';
+    s += '<polygon points="-13,-50 81,-80 175,-50" fill="' + C.marble + '"/><polygon points="0,-53 81,-76 162,-53" fill="' + C.marbleSh + '"/><polygon points="-13,-50 81,-80 175,-50 175,-52 81,-82 -13,-52" fill="' + C.terra + '"/>';
+  }
+  if(n >= 20) s += '<circle class="glint" cx="81" cy="-62" r="7" fill="' + C.gold + '"/><circle class="glint" cx="81" cy="-62" r="12" fill="' + C.gold + '" opacity=".25"/>';
+  return s + '</g>';
+}
+function sanctuary(x, y){
+  return '<g transform="translate(' + x + ' ' + y + ')"><path d="M-30 0Q-32 -26 -26 -50Q-20 -26 -22 0Z" fill="#3E6A3A"/><path d="M34 0Q32 -22 38 -42Q44 -22 42 0Z" fill="#3E6A3A"/>' +
+    '<rect x="-12" y="-12" width="24" height="12" rx="1.500" fill="' + C.stone + '"/><rect x="-10" y="-17" width="20" height="6" fill="' + C.stoneDk + '"/><path d="M-9 -17Q-12 -26 -6 -27M9 -17Q12 -26 6 -27" stroke="' + C.dark + '" stroke-width="2.600" fill="none" stroke-linecap="round"/></g>';
+}
+function pier(){
+  let s = '<g><path d="M338 316L412 300L416 306L342 324Z" fill="' + C.wood + '"/><path d="M338 316L412 300" stroke="' + C.woodDk + '" stroke-width="2"/>';
+  for(let i = 0; i < 6; i++){ const px = 352 + i * 12; s += '<rect x="' + px + '" y="' + (322 - i * 3.6) + '" width="3" height="12" fill="' + C.woodDk + '"/>'; }
+  return s + '</g>';
+}
+
+const SHIP_SLOTS = [ {x:395,y:288,s:1,i:0}, {x:432,y:240,s:.82,i:1}, {x:262,y:204,s:.6,i:2}, {x:340,y:228,s:.7,i:3}, {x:140,y:196,s:.5,i:4}, {x:520,y:214,s:.55,i:5} ];
+const TRI_SLOTS = [ {x:418,y:268,s:1,i:0}, {x:316,y:222,s:.78,i:1}, {x:214,y:196,s:.58,i:2}, {x:520,y:200,s:.52,i:3} ];
+const TREE_SLOTS = [ {x:40,y:372,s:1}, {x:112,y:382,s:1.08}, {x:186,y:370,s:.95}, {x:258,y:380,s:1.05}, {x:322,y:388,s:1.12}, {x:76,y:346,s:.8}, {x:150,y:343,s:.84}, {x:226,y:347,s:.8}, {x:296,y:344,s:.78}, {x:22,y:394,s:1.2}, {x:368,y:362,s:.9}, {x:290,y:396,s:1.2} ];
+const GOAT_SLOTS = [ {x:528,y:376,f:1}, {x:566,y:388,f:-1}, {x:598,y:372,f:1}, {x:492,y:390,f:-1}, {x:632,y:388,f:1}, {x:470,y:376,f:1} ];
+const KILN_SLOTS = [ {x:390,y:352}, {x:432,y:368}, {x:470,y:350}, {x:410,y:390} ];
+const FORGE_SLOTS = [ {x:700,y:372}, {x:760,y:384}, {x:648,y:388} ];
+const MINE_SLOTS = [ {x:660,y:326}, {x:716,y:322}, {x:768,y:326} ];
+
+function drawScene(){
+  const n = G.b, era = G.era, out = [], spr = [];
+  const marbleHill = era >= 1 && n[11] >= 1;
+  const rock = marbleHill ? '#E5DDC6' : '#CDBF99';
+  out.push(
+    '<path d="M0 335V238Q55 214 125 220Q205 226 255 262Q300 292 345 314V338Z" fill="#7CA94E"/>' +
+    '<path d="M0 246Q55 224 125 228Q205 234 255 270Q300 300 345 322V314Q300 292 255 262Q205 226 125 220Q55 214 0 238Z" fill="#9CC468" opacity=".7"/>' +
+    '<path d="M455 338Q490 292 530 246Q560 206 610 192L772 190Q792 191 800 198V338Z" fill="' + rock + '"/>' +
+    '<path d="M610 192L772 190Q792 191 800 198V232Q700 226 610 250Q560 262 540 290Q500 320 470 338H455Q490 292 530 246Q560 206 610 192Z" fill="#fff" opacity=".12"/>' +
+    '<path d="M520 262Q600 232 700 236L800 226" stroke="#000" opacity=".08" stroke-width="3" fill="none"/>' +
+    '<path d="M470 300Q560 280 640 288L800 270" stroke="#000" opacity=".07" stroke-width="3" fill="none"/>' +
+    '<path d="M0 322Q190 300 380 318Q580 336 800 306V400H0Z" fill="url(#gLand)"/>' +
+    '<path d="M300 400Q360 362 440 346Q520 336 604 324" stroke="#E0C98F" stroke-width="14" fill="none" opacity=".55" stroke-linecap="round"/>'
+  );
+  if(n[4] >= 1) out.push(pier());
+  const ships = Math.min(6, n[4]);
+  for(let k = ships - 1; k >= 0; k--){ const p = SHIP_SLOTS[k]; out.push(ship(p.x, p.y, p.s, p.i)); }
+  const tri = Math.min(4, n[8]);
+  for(let k = tri - 1; k >= 0; k--){ const p = TRI_SLOTS[k]; out.push(trireme(p.x, p.y, p.s, p.i)); }
+  if(n[5] >= 1) out.push(palace(34, 226, Math.min(3, 1 + Math.floor((n[5] - 1) / 4))));
+  if(era >= 1 && n[11] === 0) out.push(sanctuary(700, 191));
+  if(era === 0) out.push(sanctuary(700, 191));
+  if(n[10] >= 1) out.push(theatre(566, 262, Math.min(5, 1 + n[10])));
+  if(n[11] >= 1) out.push(parthenon(620, 191, n[11]));
+  for(let k = 0; k < Math.min(3, n[7]); k++){ const p = MINE_SLOTS[k]; spr.push({ y:p.y, s:mine(p.x, p.y) }); }
+  if(n[6] >= 1) spr.push({ y:338, s:stoa(466, 338, Math.min(6, 2 + n[6])) });
+  if(n[9] >= 1) spr.push({ y:334, s:academy(284, 334, n[9]) });
+  for(let k = 0; k < Math.min(12, n[0]); k++){ const p = TREE_SLOTS[k]; spr.push({ y:p.y, s:tree(p.x, p.y, p.s, n[0] >= 25) }); }
+  for(let k = 0; k < Math.min(6, n[1]); k++){ const p = GOAT_SLOTS[k]; spr.push({ y:p.y, s:goat(p.x, p.y, p.f) }); }
+  for(let k = 0; k < Math.min(4, n[2]); k++){
+    const p = KILN_SLOTS[k];
+    spr.push({ y:p.y, s:kiln(p.x, p.y) + (n[2] >= k * 3 + 2 ? amph(p.x + 24, p.y, 1) : '') });
+  }
+  for(let k = 0; k < Math.min(3, n[3]); k++){ const p = FORGE_SLOTS[k]; spr.push({ y:p.y, s:forge(p.x, p.y) }); }
+  spr.sort((a, b) => a.y - b.y);
+  spr.forEach(o => out.push(o.s));
+  $('#dyn').innerHTML = out.join('');
+}
+
+/* ================= UI ================= */
+const el = {};
+function cacheEls(){
+  ['era','count','unit','cps','cpc','glory','buffs','medal','blist','ulist','alist','eracard','u-n','a-n','a-note','hint','sky','fx','toasts','modal','modal-card','reset'].forEach(id => { el[id] = document.getElementById(id); });
+}
+function eraName(){
+  return G.era === 0 ? '<b>Бронзовый век</b> · Крит и Микены' : '<b>Классическая Эллада</b> · Афины';
+}
+function unitName(){ return G.era === 0 ? 'зерна (мер)' : 'драхм'; }
+
+let brows = [], urowsKey = '';
+function buildBuildings(){
+  brows = [];
+  const html = [];
+  BUILDINGS.forEach((b, i) => {
+    if(b.era > G.era) return;
+    html.push('<li class="row" data-i="' + i + '"><div class="ico">' + ic(b.icon) + '</div>' +
+      '<div><div class="nm"><span>' + b.name + '</span><span class="cnt">0</span></div><div class="ds">' + b.flavor + '</div><div class="rt"></div></div>' +
+      '<button type="button" class="buy" data-buy="' + i + '"><span class="bc"></span><small class="bq"></small></button></li>');
+  });
+  if(G.era === 0) html.push('<li class="note">В эпоху полисов откроются: Агора, Рудники Лавриона, Триера, Академия, Театр и Парфенон.</li>');
+  el.blist.innerHTML = html.join('');
+  el.blist.querySelectorAll('.row').forEach(r => {
+    const i = +r.dataset.i;
+    brows[i] = { row:r, cnt:$('.cnt', r), rt:$('.rt', r), btn:$('.buy', r), bc:$('.bc', r), bq:$('.bq', r) };
+  });
+}
+function buildEraCard(){
+  if(G.era === 0 && G.b[5] >= 1){
+    el.eracard.innerHTML = '<div class="eracard"><h3>Эпоха полисов</h3><p>Дворцы пали, но греки остались. На холмах растут города со своими рынками и храмами. В новой эпохе откроются шесть зданий, а зерно сменят драхмы.</p><button type="button" class="buy" id="era-btn" style="align-self:flex-start"><span id="era-cost"></span><small>нужен дворец</small></button></div>';
+  } else el.eracard.innerHTML = '';
+}
+function availableUps(){
+  return UPS.filter(u => !G.up[u.id] && u.need()).sort((a, b) => a.cost - b.cost);
+}
+let urows = {};
+function buildUps(force){
+  const av = availableUps();
+  const key = av.map(u => u.id).join(',');
+  el['u-n'].textContent = av.length ? ' ' + av.length : '';
+  if(!force && key === urowsKey) return;
+  urowsKey = key;
+  urows = {};
+  if(!av.length){
+    el.ulist.innerHTML = '<li class="note">Пока нечего улучшать. Стройте здания и собирайте урожай: новые улучшения появятся здесь.</li>';
+    return;
+  }
+  el.ulist.innerHTML = av.map(u =>
+    '<li class="row" data-u="' + u.id + '"><div class="ico">' + ic(u.icon) + (u.kind === 'b' || u.kind === 'c' ? '<span class="x2">×2</span>' : '') + '</div>' +
+    '<div><div class="nm"><span>' + u.name + '</span></div><div class="ds">' + u.desc + '</div></div>' +
+    '<button type="button" class="buy" data-up="' + u.id + '"><span>' + fmt(u.cost) + '</span><small>' + unitName() + '</small></button></li>').join('');
+  el.ulist.querySelectorAll('.row').forEach(r => { urows[r.dataset.u] = $('.buy', r); });
+}
+function buildAch(){
+  const vis = ACH.filter(a => a.era === undefined || a.era <= G.era);
+  let done = 0;
+  el.alist.innerHTML = vis.map(a => {
+    const on = !!G.ach[a.id]; if(on) done++;
+    return '<li class="' + (on ? 'on' : '') + '"><span class="b">' + (on ? '✓' : '·') + '</span><div><div class="t">' + a.name + '</div><div class="d">' + a.desc + '</div></div></li>';
+  }).join('');
+  el['a-n'].textContent = ' ' + done;
+  el['a-note'].textContent = 'Каждое достижение добавляет +1% ко всему производству. Сейчас слава даёт +' + Math.round((D.glory - 1) * 100) + '%.';
+}
+
+function refresh(){
+  el.era.innerHTML = eraName();
+  el.unit.textContent = unitName();
+  el.medal.innerHTML = medalSvg(G.era);
+  el.medal.setAttribute('aria-label', G.era === 0 ? 'Собрать урожай' : 'Чеканить драхму');
+  el.hint.textContent = G.era === 0 ? 'Крит, около 1900 г. до н. э.' : 'Афины, V век до н. э.';
+  buildBuildings(); buildEraCard(); buildUps(true); buildAch(); drawScene(); tickUI();
+}
+
+function tickUI(){
+  el.count.textContent = fmt(G.res);
+  el.cps.textContent = fmtRate(D.cps);
+  el.cpc.textContent = fmtRate(D.click);
+  el.glory.textContent = '+' + Math.round((D.glory - 1) * 100) + '%';
+  brows.forEach((r, i) => {
+    if(!r) return;
+    const n = qty(i), c = cost(i, n);
+    r.cnt.textContent = G.b[i];
+    r.bc.textContent = fmt(c);
+    r.bq.textContent = '×' + n + ' · ' + unitName();
+    const can = G.res >= c;
+    r.btn.classList.toggle('can', can);
+    r.btn.setAttribute('aria-disabled', can ? 'false' : 'true');
+    r.rt.textContent = 'Каждая: ' + fmtRate(unitRate(i)) + '/с' + (G.b[i] ? ' · всего ' + fmtRate(unitRate(i) * G.b[i]) + '/с' : '');
+  });
+  Object.keys(urows).forEach(id => {
+    const u = UPMAP[id];
+    urows[id].classList.toggle('can', G.res >= u.cost);
+  });
+  const ec = $('#era-btn');
+  if(ec){ $('#era-cost').textContent = fmt(ERA_COST) + ' ' + unitName(); ec.classList.toggle('can', G.res >= ERA_COST); }
+  const now = Date.now();
+  const bhtml = buffs.filter(b => b.until > now).map(b => '<span class="buff">' + b.name + ' · ' + Math.ceil((b.until - now) / 1000) + ' с</span>').join('');
+  if(el.buffs.dataset.h !== bhtml){ el.buffs.dataset.h = bhtml; el.buffs.innerHTML = bhtml; }
+}
+
+/* ================= actions ================= */
+function toast(html){
+  const t = document.createElement('div');
+  t.className = 'toast'; t.innerHTML = html;
+  el.toasts.appendChild(t);
+  while(el.toasts.children.length > 3) el.toasts.removeChild(el.toasts.firstChild);
+  setTimeout(() => { if(t.parentNode) t.parentNode.removeChild(t); }, 3800);
+}
+function earn(v){ G.res += v; G.total += v; }
+
+function doClick(e){
+  const v = D.click;
+  earn(v); G.clicks++;
+  const x = e && e.clientX ? e.clientX : (el.medal.getBoundingClientRect().left + 66);
+  const y = e && e.clientY ? e.clientY : (el.medal.getBoundingClientRect().top + 30);
+  const p = document.createElement('div');
+  p.className = 'pop'; p.textContent = '+' + fmtRate(v); p.style.left = x + 'px'; p.style.top = (y - 14) + 'px';
+  el.fx.appendChild(p); setTimeout(() => p.remove(), 1000);
+  for(let k = 0; k < 4; k++){
+    const b = document.createElement('div'); b.className = 'bit';
+    b.style.left = x + 'px'; b.style.top = y + 'px';
+    b.style.setProperty('--dx', ((Math.random() - 0.5) * 90).toFixed(0) + 'px');
+    b.style.setProperty('--dy', (-20 - Math.random() * 50).toFixed(0) + 'px');
+    el.fx.appendChild(b); setTimeout(() => b.remove(), 700);
+  }
+  while(el.fx.children.length > 40) el.fx.removeChild(el.fx.firstChild);
+  tickUI();
+}
+
+function buyBuilding(i){
+  const n = qty(i), c = cost(i, n);
+  if(G.res < c) return;
+  G.res -= c; G.b[i] += n;
+  recalc(); drawScene(); buildEraCard(); buildUps(false); tickUI(); checkAch();
+}
+function buyUp(id){
+  const u = UPMAP[id];
+  if(!u || G.up[id] || G.res < u.cost) return;
+  G.res -= u.cost; G.up[id] = true;
+  recalc(); buildUps(true); tickUI(); checkAch();
+  if(id === 'g2') showModal('Великие Панафинеи', 'Раз в четыре года город празднует день рождения Афины: состязания, жертвы и торжественное шествие к Парфенону. Ваша казна растёт, а слава Афин доходит до самых дальних берегов.', 'Продолжить');
+}
+function advanceEra(){
+  if(G.era !== 0 || G.b[5] < 1 || G.res < ERA_COST) return;
+  G.res -= ERA_COST; G.era = 1;
+  recalc(); refresh(); checkAch();
+  showModal('Эпоха полисов', 'Дворцы Крита и Микен пали, но греки не пропали. На холмах вырастают города: Афины, Спарта, Коринф. Вместо дворцовых кладовых появились агора, чеканная монета и споры о законах. Теперь вы считаете драхмы, а на вершине холма ждёт место для храма.', 'В путь');
+}
+
+function checkAch(){
+  let changed = false;
+  ACH.forEach(a => {
+    if(!G.ach[a.id] && a.ok()){
+      G.ach[a.id] = true; changed = true;
+      toast('Слава: <b>' + a.name + '</b> · +1% к производству');
+    }
+  });
+  if(changed){ recalc(); buildAch(); }
+}
+
+function showModal(title, text, btn){
+  el['modal-card'].innerHTML = '<h2>' + title + '</h2><p>' + text + '</p><button type="button" class="btn" id="modal-ok">' + btn + '</button>';
+  el.modal.hidden = false;
+  $('#modal-ok').focus();
+}
+function closeModal(){ el.modal.hidden = true; }
+
+/* ---- gifts of the gods ---- */
+const GIFTS = [
+  { k:'owl', name:'Озарение Афины', svg:'<svg viewBox="0 0 60 60"><path d="M30 12C20 12 16 22 17 34C18 46 23 52 30 52C37 52 42 46 43 34C44 22 40 12 30 12Z" fill="#8A5A1E"/><path d="M18 14L24 20L28 13ZM42 14L36 20L32 13Z" fill="#8A5A1E"/><circle cx="24" cy="26" r="7" fill="#F6E7B0"/><circle cx="36" cy="26" r="7" fill="#F6E7B0"/><circle cx="24" cy="26" r="3" fill="#2B2B30"/><circle cx="36" cy="26" r="3" fill="#2B2B30"/><path d="M27 33h6l-3 6z" fill="#E3B445"/><path d="M22 42q8 6 16 0" stroke="#D2A55A" stroke-width="2" fill="none"/></svg>' },
+  { k:'wheat', name:'Щедрая жатва', svg:'<svg viewBox="0 0 60 60"><path d="M30 54V22" stroke="#B38A2E" stroke-width="3" stroke-linecap="round"/><g fill="#E8B94B" stroke="#B38A2E" stroke-width="1"><ellipse cx="30" cy="12" rx="4" ry="7"/><ellipse cx="22" cy="21" rx="4" ry="7" transform="rotate(-30 22 21)"/><ellipse cx="38" cy="21" rx="4" ry="7" transform="rotate(30 38 21)"/><ellipse cx="22" cy="33" rx="4" ry="7" transform="rotate(-30 22 33)"/><ellipse cx="38" cy="33" rx="4" ry="7" transform="rotate(30 38 33)"/></g></svg>' },
+  { k:'sandal', name:'Ветер Гермеса', svg:'<svg viewBox="0 0 60 60"><path d="M12 38Q12 30 22 30L40 30Q50 30 50 38L50 42L12 42Z" fill="#C9603E"/><path d="M18 34L44 34M16 38L46 38" stroke="#F4EFE3" stroke-width="2"/><path d="M14 28Q4 22 6 12Q14 14 20 24ZM20 26Q12 16 16 6Q24 10 26 22Z" fill="#F4F0E6" stroke="#CFC8B4" stroke-width="1"/></svg>' }
+];
+let giftTimer = 0;
+function scheduleGift(first){
+  clearTimeout(giftTimer);
+  giftTimer = setTimeout(spawnGift, first ? 18000 + Math.random() * 14000 : 55000 + Math.random() * 65000);
+}
+function spawnGift(){
+  if(document.hidden || $('.gift', el.sky)){ scheduleGift(false); return; }
+  const g = GIFTS[Math.floor(Math.random() * GIFTS.length)];
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'gift'; b.innerHTML = g.svg;
+  b.setAttribute('aria-label', 'Дар богов: ' + g.name + '. Нажмите, чтобы принять');
+  b.style.top = (6 + Math.random() * 28).toFixed(0) + '%';
+  b.addEventListener('click', () => { b.remove(); takeGift(g); });
+  el.sky.appendChild(b);
+  setTimeout(() => { if(b.parentNode) b.remove(); }, 16500);
+  scheduleGift(false);
+}
+function takeGift(g){
+  G.gifts++;
+  const now = Date.now();
+  if(g.k === 'owl'){
+    buffs.push({ id:'owl', name:'Озарение Афины ×7', kind:'p', mult:7, until:now + 30000 });
+    toast('<b>Озарение Афины</b>: производство ×7 на 30 с');
+  } else if(g.k === 'sandal'){
+    buffs.push({ id:'sandal', name:'Ветер Гермеса: клик ×10', kind:'c', mult:10, until:now + 20000 });
+    toast('<b>Ветер Гермеса</b>: клики ×10 на 20 с');
+  } else {
+    const v = Math.max(Math.min(G.res * 0.15, D.cps * 900), D.cps * 60, D.click * 40, 13);
+    earn(v);
+    toast('<b>Щедрая жатва</b>: +' + fmt(v) + ' ' + unitName());
+  }
+  recalc(); tickUI(); checkAch();
+}
+
+/* ================= loop ================= */
+let lastT = Date.now(), lastSave = Date.now(), lastAch = 0;
+function loop(){
+  const now = Date.now();
+  let dt = (now - lastT) / 1000;
+  lastT = now;
+  if(dt > 0){
+    if(dt > 60){ dt = 60; }
+    recalc();
+    earn(D.cps * dt);
+  }
+  if(now - lastAch > 1000){ lastAch = now; checkAch(); buildUps(false); }
+  if(now - lastSave > 10000){ lastSave = now; save(); }
+  tickUI();
+}
+
+/* ================= events ================= */
+function bind(){
+  let skip = false;
+  el.medal.addEventListener('pointerdown', e => { e.preventDefault(); skip = true; doClick(e); });
+  el.medal.addEventListener('click', e => { if(skip){ skip = false; return; } doClick(e.detail === 0 ? null : e); });
+
+  document.addEventListener('click', e => {
+    const bb = e.target.closest('[data-buy]');
+    if(bb){ buyBuilding(+bb.dataset.buy); return; }
+    const ub = e.target.closest('[data-up]');
+    if(ub){ buyUp(ub.dataset.up); return; }
+    if(e.target.closest('#era-btn')){ advanceEra(); return; }
+    const m = e.target.closest('[data-mode]');
+    if(m){
+      mode = +m.dataset.mode;
+      document.querySelectorAll('.mode').forEach(x => x.setAttribute('aria-pressed', String(x === m)));
+      tickUI(); return;
+    }
+    const t = e.target.closest('[data-tab]');
+    if(t){
+      tab = t.dataset.tab;
+      ['b', 'u', 'a'].forEach(k => {
+        $('#t-' + k).setAttribute('aria-selected', String(k === tab));
+        $('#p-' + k).hidden = k !== tab;
+      });
+      if(tab === 'a') buildAch();
+      return;
+    }
+    if(e.target.closest('#modal-ok')){ closeModal(); return; }
+  });
+
+  let rt = 0;
+  el.reset.addEventListener('click', () => {
+    if(el.reset.dataset.arm){
+      clearTimeout(rt); el.reset.dataset.arm = ''; el.reset.classList.remove('warn'); el.reset.textContent = 'Начать заново';
+      buffs = []; G = fresh(); G.seen = true; recalc(); refresh(); save();
+      showModal('Заря Эллады', INTRO, 'К делу');
+    } else {
+      el.reset.dataset.arm = '1'; el.reset.classList.add('warn'); el.reset.textContent = 'Точно? Прогресс удалится';
+      rt = setTimeout(() => { el.reset.dataset.arm = ''; el.reset.classList.remove('warn'); el.reset.textContent = 'Начать заново'; }, 4000);
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => { if(document.hidden) save(); });
+  window.addEventListener('pagehide', save);
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && !el.modal.hidden) closeModal(); });
+}
+
+const INTRO = 'Крит, около 1900 года до н. э. Ваша деревня стоит у тёплого моря. Собирайте урожай, сажайте оливы, обжигайте амфоры и торгуйте с соседями. Рано или поздно здесь вырастет дворец, а потом и храм на холме. Ловите дары богов, пока они пролетают над городом.';
+
+function start(){
+  cacheEls();
+  const saved = load();
+  let offlineMsg = '';
+  if(saved){
+    G = saved;
+    recalc();
+    const away = Math.min((Date.now() - G.last) / 1000, 8 * 3600);
+    if(away > 60 && D.cps > 0){
+      const gain = D.cps * away * 0.5;
+      earn(gain);
+      offlineMsg = 'Пока вас не было ' + (away >= 3600 ? Math.floor(away / 3600) + ' ч ' : '') + Math.floor((away % 3600) / 60) + ' мин, город накопил <b>' + fmt(gain) + '</b> ' + unitName() + '.';
+    }
+  }
+  recalc();
+  bind();
+  refresh();
+  checkAch();
+  lastT = Date.now();
+  setInterval(loop, 100);
+  scheduleGift(true);
+  if(offlineMsg) showModal('С возвращением', offlineMsg, 'Продолжить');
+  else if(!G.seen){ G.seen = true; showModal('Заря Эллады', INTRO, 'К делу'); }
+  save();
+}
+start();
+})();
+</script>
