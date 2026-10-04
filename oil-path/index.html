@@ -1,0 +1,1102 @@
+<title>Путь нефти</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600;700&display=swap">
+<style>
+/* Layout concept: one card per stage under a six-node pipeline stepper; each stage is a flat mini-game that ends with a one-question quiz. */
+:root{
+  --bg:#E8EFF3; --surface:#FFFFFF; --surface-2:#F0F5F8;
+  --ink:#10222D; --ink-2:#4B606C; --line:#D3DEE4; --line-2:#B7C7D0;
+  --amber:#F5A21B; --amber-deep:#C27700; --amber-soft:#FDEBC8; --on-amber:#2B1A00;
+  --water:#2F9DDC; --good:#1E9E63; --good-soft:#D9F3E5; --bad:#D8432A; --bad-soft:#FBE0DA;
+  --gas:#B2C4D0; --oil:#2C2723;
+  --l-soil:#DDBE86; --l-clay:#B98B63; --l-aq:#A6D6F0; --l-cap:#6F7C85; --l-gas:#E3ECF1; --l-oil:#2C2723; --l-brine:#62B2E0; --l-rock:#919DA4;
+  --f-gas:#B2C4D0; --f-gasoline:#F4CF4A; --f-kero:#F2A04B; --f-diesel:#D97236; --f-mazut:#7A4A2E;
+  --font-display:'Unbounded','Arial Black',system-ui,sans-serif;
+  --font-body:'Golos Text',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1820; --surface:#152531; --surface-2:#1B2F3D;
+    --ink:#E9F2F6; --ink-2:#9FB5C1; --line:#2A4252; --line-2:#3B5667;
+    --amber:#FFB22E; --amber-deep:#B97800; --amber-soft:#3A2C12; --on-amber:#2B1A00;
+    --water:#4DB4F2; --good:#3CC585; --good-soft:#14382A; --bad:#FF6B4F; --bad-soft:#3F1D17;
+    --gas:#6F8796; --oil:#06080B;
+    --l-soil:#8E7545; --l-clay:#7B5B3E; --l-aq:#2D6B8E; --l-cap:#47555E; --l-gas:#2A3C48; --l-oil:#06080B; --l-brine:#2A78A6; --l-rock:#56646C;
+    --f-gas:#6F8796; --f-gasoline:#D9B23A; --f-kero:#E08E36; --f-diesel:#C25E28; --f-mazut:#8A5A3A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1820; --surface:#152531; --surface-2:#1B2F3D;
+  --ink:#E9F2F6; --ink-2:#9FB5C1; --line:#2A4252; --line-2:#3B5667;
+  --amber:#FFB22E; --amber-deep:#B97800; --amber-soft:#3A2C12; --on-amber:#2B1A00;
+  --water:#4DB4F2; --good:#3CC585; --good-soft:#14382A; --bad:#FF6B4F; --bad-soft:#3F1D17;
+  --gas:#6F8796; --oil:#06080B;
+  --l-soil:#8E7545; --l-clay:#7B5B3E; --l-aq:#2D6B8E; --l-cap:#47555E; --l-gas:#2A3C48; --l-oil:#06080B; --l-brine:#2A78A6; --l-rock:#56646C;
+  --f-gas:#6F8796; --f-gasoline:#D9B23A; --f-kero:#E08E36; --f-diesel:#C25E28; --f-mazut:#8A5A3A;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--font-body);-webkit-text-size-adjust:100%}
+h1,h2,h3,h4,p,ul,ol{margin:0}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(34px,8vw,58px);line-height:1.04;letter-spacing:-.03em}
+h2{font-size:clamp(23px,4.6vw,31px);line-height:1.15}
+h3{font-size:18px;line-height:1.25}
+h4{font:600 12px/1.3 var(--font-body);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+button{font:inherit;color:inherit}
+svg{display:block}
+:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+
+.wrap{max-width:920px;margin-inline:auto;padding-inline:16px;padding-block:14px 40px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:4px 16px}
+.brand{display:flex;align-items:center;gap:10px;font:700 17px/1 var(--font-display);letter-spacing:-.02em}
+.brand svg{width:28px;height:28px;color:var(--amber)}
+.score{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:var(--surface);font-weight:600;font-variant-numeric:tabular-nums;font-size:14px}
+.score b{color:var(--amber-deep)}
+
+/* stepper: the route as a pipeline */
+.steps{list-style:none;padding:0;margin:0 0 18px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+.step{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.step::before{content:"";position:absolute;top:14px;right:50%;width:100%;height:5px;background:var(--line-2);border-radius:3px}
+.step:first-child::before{display:none}
+.step.done::before,.step.cur::before{background:var(--amber)}
+.node{position:relative;z-index:1;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--ink-2);font:700 13px var(--font-display);border:3px solid var(--line-2)}
+.step.done .node{background:var(--amber);border-color:var(--amber);color:var(--on-amber)}
+.step.cur .node{border-color:var(--amber);color:var(--ink);background:var(--surface)}
+.step .lbl{display:none;font-size:12px;font-weight:500;color:var(--ink-2);text-align:center}
+.step.cur .lbl{color:var(--ink);font-weight:600}
+@media (min-width:640px){.step .lbl{display:block}}
+
+.card{background:var(--surface);border-radius:20px;padding:22px}
+@media (min-width:640px){.card{padding:30px}}
+.eyebrow{font:600 12px/1.3 var(--font-body);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.lead{font-size:17px;max-width:64ch}
+.stack{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.note{font-size:14px;color:var(--ink-2);min-height:1.5em}
+.note.good{color:var(--good);font-weight:600}
+.note.bad{color:var(--bad);font-weight:600}
+.tag{display:inline-block;background:var(--amber);color:var(--on-amber);font:700 11px/1 var(--font-body);letter-spacing:.1em;text-transform:uppercase;padding:5px 8px;border-radius:6px}
+.callout{display:flex;flex-direction:column;gap:8px;background:var(--surface-2);border-radius:14px;padding:14px 16px;align-items:flex-start}
+.callout p{max-width:66ch}
+.small{font-size:13.5px;color:var(--ink-2)}
+.stars{color:var(--amber);letter-spacing:.08em;white-space:nowrap}
+.stars i{font-style:normal;color:var(--line-2)}
+
+.btn{border:0;background:var(--amber);color:var(--on-amber);font:600 16px/1.2 var(--font-body);padding:13px 22px;border-radius:12px;box-shadow:0 4px 0 var(--amber-deep);cursor:pointer;transition:transform .08s,box-shadow .08s;-webkit-tap-highlight-color:transparent}
+.btn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--amber-deep)}
+.btn:disabled{background:var(--line);color:var(--ink-2);box-shadow:0 4px 0 var(--line-2);cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--line-2)}
+.btn.ghost:active:not(:disabled){transform:none;background:var(--surface-2)}
+.btn.ghost:disabled{background:transparent;color:var(--ink-2);box-shadow:inset 0 0 0 2px var(--line);opacity:.6}
+.btn.big{width:100%;padding:20px 22px;font-size:18px;touch-action:none;user-select:none;-webkit-user-select:none}
+.btn.small-btn{padding:8px 12px;font-size:14px;border-radius:10px}
+
+/* start */
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:26px;align-items:center}
+@media (max-width:700px){.hero{grid-template-columns:1fr}}
+.hero .stack{gap:16px}
+.art{border-radius:18px;overflow:hidden;background:var(--surface-2)}
+.art svg{width:100%;height:auto}
+.route{list-style:none;padding:0;margin:18px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.route li{display:flex;gap:12px;align-items:center;background:var(--surface);border-radius:14px;padding:12px 14px}
+.route .n{flex:none;width:30px;height:30px;border-radius:9px;background:var(--amber-soft);color:var(--ink);display:grid;place-items:center;font:700 13px var(--font-display)}
+.route b{display:block;font-weight:600}
+.route span{font-size:13.5px;color:var(--ink-2)}
+
+.game{margin-top:20px;display:flex;flex-direction:column;gap:16px}
+.ic{flex:none}
+
+/* drilling */
+.drill{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:660px){.drill{grid-template-columns:1fr}}
+.drill svg{width:100%;height:auto;background:var(--surface-2);border-radius:14px}
+.panel{display:flex;flex-direction:column;gap:12px}
+.readout{display:flex;align-items:baseline;gap:8px}
+.readout .num{font:700 44px/1 var(--font-display);font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.readout .unit{font:600 18px var(--font-body);color:var(--ink-2)}
+.where{display:inline-flex;align-self:flex-start;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--surface-2);font-weight:600;font-size:14px}
+.where i{width:12px;height:12px;border-radius:4px;display:inline-block;border:2px solid var(--ink)}
+
+/* matcher pieces */
+.pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.pool.one{grid-template-columns:1fr}
+.chip{display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;border-radius:12px;background:var(--surface-2);border:2px solid var(--line);cursor:pointer;min-height:52px;width:100%}
+.chip:hover:not(:disabled){border-color:var(--ink-2)}
+.chip.sel{border-color:var(--amber);background:var(--amber-soft)}
+.chip:disabled{opacity:.5;cursor:not-allowed}
+.chip .t{font-weight:600;line-height:1.25;display:block}
+.chip .d{font-size:13px;color:var(--ink-2);line-height:1.3;display:block;margin-top:2px}
+.dot{flex:none;width:14px;height:14px;border-radius:50%;display:inline-block}
+.chipin{display:inline-flex;align-items:center;gap:10px;font-weight:600;line-height:1.25}
+.slot{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:2px dashed var(--line-2);background:var(--surface);min-height:58px;width:100%;text-align:left;cursor:pointer}
+.slot.filled{border-style:solid;border-color:var(--line-2)}
+.slot.ok{border-style:solid;border-color:var(--good);background:var(--good-soft);cursor:default}
+.slot.flash{animation:shake .4s;border-color:var(--bad);background:var(--bad-soft)}
+.slot .ph{color:var(--ink-2);font-size:14px}
+.slot .num{flex:none;width:30px;height:30px;border-radius:9px;background:var(--surface-2);display:grid;place-items:center;font:700 13px var(--font-display)}
+.slot.ok .num{background:var(--good);color:#fff}
+.slot-body{flex:1;min-width:0}
+.slot .desc{display:block;font-size:13px;font-weight:400;color:var(--ink-2);margin-top:2px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+.split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:700px){.split{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:6px;background:var(--surface-2);padding:10px;border-radius:26px 26px 14px 14px}
+.col .slot{background:var(--surface)}
+.col .temp{flex:none;width:96px;font:600 13px/1.2 var(--font-body);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.col .slot.ok{border-color:var(--fc)}
+.col .slot .band{flex:none;width:10px;align-self:stretch;border-radius:5px;background:var(--line-2)}
+.col .slot.ok .band{background:var(--fc)}
+.col .slot.ok{background:var(--surface)}
+.furnace{display:flex;align-items:center;gap:10px;background:var(--amber);color:var(--on-amber);border-radius:12px;padding:10px 14px;font-weight:700;margin-top:4px}
+.targets{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.targets .slot{flex-direction:row}
+.targets .tico{flex:none;width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:grid;place-items:center}
+
+/* separator + pipeline */
+.vessel svg,.chart svg{width:100%;height:auto;background:var(--surface-2);border-radius:14px}
+.p{transition:transform 2.6s cubic-bezier(.35,.1,.25,1)}
+.bands{opacity:0;transition:opacity .9s ease 2.2s}
+.bands.on{opacity:1}
+.svslot{cursor:pointer}
+.svslot:focus-visible{outline:none}
+.svslot:focus-visible .ring{stroke:var(--water);stroke-width:4}
+.svslot.sel .ring{stroke:var(--amber);stroke-width:4}
+.chart svg{cursor:crosshair;touch-action:manipulation}
+.kmin{width:92px;padding:9px 10px;border-radius:10px;border:2px solid var(--line-2);background:var(--surface);color:var(--ink);font:inherit}
+.stlist{display:flex;gap:8px;flex-wrap:wrap}
+
+/* quiz */
+.facts{list-style:none;padding:0;display:flex;flex-direction:column;gap:10px}
+.facts li{position:relative;padding-left:22px;max-width:66ch}
+.facts li::before{content:"";position:absolute;left:0;top:.55em;width:10px;height:10px;border-radius:3px;background:var(--amber)}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:var(--surface);cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--ink-2)}
+.opt .k{flex:none;width:30px;height:30px;border-radius:9px;background:var(--surface-2);display:grid;place-items:center;font:700 13px var(--font-display)}
+.opt:disabled{cursor:default}
+.opt.good{border-color:var(--good);background:var(--good-soft)}
+.opt.bad{border-color:var(--bad);background:var(--bad-soft)}
+.qtext{font-weight:600;font-size:18px;max-width:60ch}
+.result{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--good-soft);border-radius:14px;padding:12px 16px}
+.result p{flex:1;min-width:200px}
+
+/* final */
+.sum{list-style:none;padding:0;display:flex;flex-direction:column;gap:8px}
+.sum li{display:flex;align-items:center;gap:12px;background:var(--surface-2);border-radius:12px;padding:10px 14px}
+.sum .nm{flex:1;min-width:0;font-weight:600}
+.rank{font:700 clamp(24px,5vw,36px)/1.1 var(--font-display);color:var(--ink)}
+.rank-total{font:700 15px var(--font-body);color:var(--ink-2)}
+.foot{margin-top:22px;font-size:13px;color:var(--ink-2);max-width:70ch}
+
+@media (prefers-reduced-motion: reduce){
+  .p,.bands{transition:none}
+  .slot.flash{animation:none}
+  .btn{transition:none}
+}
+</style>
+
+<div class="wrap">
+  <header class="bar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true" fill="currentColor"><path d="M16 2C13 8 5 14.500 5 21a11 11 0 0 0 22 0C27 14.500 19 8 16 2z"/></svg>
+      <span>Путь нефти</span>
+    </div>
+    <div class="score" title="Звёзды за мини-игры и вопросы"><span class="stars">★</span><b id="score">0</b><span id="score-max" class="small"></span></div>
+  </header>
+  <ol class="steps" id="steps" aria-label="Этапы пути нефти"></ol>
+  <main id="app"></main>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var $ = function(s, r){ return (r || document).querySelector(s); };
+var app = $('#app');
+var SAVE_KEY = 'oil-path-v1';
+
+/* ---------- icons ---------- */
+var ICON = {
+  drop:'<path d="M16 3C13 8 6 14.500 6 20.500a10 10 0 0 0 20 0C26 14.500 19 8 16 3z"/>',
+  salt:'<rect x="4" y="14" width="11" height="11" rx="2"/><rect x="17" y="7" width="11" height="11" rx="2"/><rect x="15" y="21" width="10" height="7" rx="2" opacity=".55"/>',
+  flame:'<path d="M16 3c1 5 8 8 8 15a8 8 0 0 1-16 0c0-4 2-6 3.500-9 .8 2 1.800 3 3 3.500C14.500 9 14.500 6 16 3z"/>',
+  tank:'<path d="M5 10v16a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V10z"/><ellipse cx="16" cy="9" rx="11" ry="4" opacity=".55"/>',
+  car:'<path d="M3 21v-5l3.500-1.500L10 8h11l4 6.500 4 1.500v5z"/><circle cx="9" cy="22" r="3.300" style="fill:var(--surface);stroke:currentColor;stroke-width:2.400"/><circle cx="23" cy="22" r="3.300" style="fill:var(--surface);stroke:currentColor;stroke-width:2.400"/>',
+  plane:'<rect x="3" y="14" width="26" height="4" rx="2"/><path d="M13 15 8 4h4l9 11z"/><path d="M13 17l-5 11h4l9-11z"/><path d="M4 15 2 9h3l3 6z"/><path d="M4 17 2 23h3l3-6z"/>',
+  truck:'<rect x="2" y="8" width="17" height="13" rx="1.500"/><path d="M21 12h5l4.500 5v4H21z"/><circle cx="8" cy="23" r="3" style="fill:var(--surface);stroke:currentColor;stroke-width:2.400"/><circle cx="25" cy="23" r="3" style="fill:var(--surface);stroke:currentColor;stroke-width:2.400"/>',
+  ship:'<path d="M3 20h26l-4 7H7z"/><rect x="9" y="13" width="12" height="6"/><rect x="13" y="6" width="5" height="7"/>',
+  bottle:'<rect x="9" y="10" width="14" height="19" rx="5"/><rect x="12" y="5" width="8" height="6" rx="1.500"/><rect x="14" y="2" width="4" height="4" rx="1"/>',
+  road:'<path d="M12 3h8l9 26H3z"/><path d="M16 6v4M16 14v4M16 22v4" style="stroke:var(--surface);stroke-width:2.200;fill:none"/>'
+};
+function ic(k, size){
+  size = size || 28;
+  return '<svg class="ic" viewBox="0 0 32 32" width="' + size + '" height="' + size + '" aria-hidden="true" fill="currentColor">' + ICON[k] + '</svg>';
+}
+
+/* ---------- state ---------- */
+var TOTAL = 6;
+function blankState(){
+  return { screen:'start', stage:0, phase:'intro',
+    game:[0,0,0,0,0,0], quiz:[0,0,0,0,0,0], done:[false,false,false,false,false,false],
+    note:['','','','','',''], ans:[null,null,null,null,null,null] };
+}
+var S = blankState();
+
+function save(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({ game:S.game, quiz:S.quiz, done:S.done, note:S.note })); }catch(e){}
+}
+function loadSaved(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return null;
+    var d = JSON.parse(raw);
+    if(!d || !Array.isArray(d.done) || d.done.length !== TOTAL) return null;
+    return d;
+  }catch(e){ return null; }
+}
+function clearSaved(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+function stageStars(i){ return S.game[i] + S.quiz[i]; }
+function totalStars(){ var t = 0; for(var i = 0; i < TOTAL; i++) t += stageStars(i); return t; }
+function starsHtml(n, max){
+  max = max || 3;
+  var s = '';
+  for(var i = 0; i < max; i++) s += i < n ? '★' : '<i>★</i>';
+  return '<span class="stars" role="img" aria-label="' + n + ' из ' + max + '">' + s + '</span>';
+}
+
+/* ---------- generic tap-to-place matcher ---------- */
+function makeMatcher(root, api, cfg){
+  var st = { placed:{}, locked:{}, sel:null, mistakes:0, flash:{}, msg:'', msgCls:'', finished:false, stars:0 };
+  var items = cfg.items, targets = cfg.targets;
+  function itemById(id){ for(var i = 0; i < items.length; i++) if(items[i].id === id) return items[i]; return null; }
+  function whereIs(id){ for(var k in st.placed) if(st.placed[k] === id) return k; return null; }
+  function blocked(){ return st.finished || (cfg.blocked && cfg.blocked()); }
+  function chip(it){
+    return '<button type="button" class="chip ' + (st.sel === it.id ? 'sel' : '') + '" data-item="' + it.id + '"' + (blocked() ? ' disabled' : '') + '>' + cfg.chipInner(it) + '</button>';
+  }
+  function placedChip(id){
+    var it = itemById(id);
+    return '<span class="chipin" data-item="' + id + '">' + cfg.placedInner(it) + '</span>';
+  }
+  function pool(cls){
+    var free = items.filter(function(it){ return !whereIs(it.id); });
+    if(!free.length) return '<p class="small">Все карточки на местах. Нажмите «Проверить».</p>';
+    return '<div class="pool ' + (cls || '') + '">' + free.map(chip).join('') + '</div>';
+  }
+  function slotCls(t){
+    return (st.placed[t.id] ? 'filled ' : '') + (st.locked[t.id] ? 'ok ' : '') + (st.flash[t.id] ? 'flash ' : '');
+  }
+  function canCheck(){
+    return !st.finished && !blocked() && targets.every(function(t){ return st.placed[t.id]; });
+  }
+  function actions(){
+    if(st.finished){
+      return '<div class="row"><button type="button" class="btn" data-act="finish">Дальше</button></div><p class="note good" role="status">' + st.msg + '</p>';
+    }
+    return '<div class="row"><button type="button" class="btn" data-act="check"' + (canCheck() ? '' : ' disabled') + '>Проверить</button>' + (cfg.extraActions ? cfg.extraActions() : '') + '</div><p class="note ' + st.msgCls + '" role="status">' + st.msg + '</p>';
+  }
+  var ctx = { st:st, chip:chip, placedChip:placedChip, pool:pool, slotCls:slotCls, actions:actions, blocked:blocked };
+  function render(){
+    root.innerHTML = cfg.view(ctx);
+    st.flash = {};
+    if(cfg.afterRender) cfg.afterRender(root, ctx);
+  }
+  function check(){
+    var wrong = 0;
+    targets.forEach(function(t){
+      if(st.locked[t.id]) return;
+      if(st.placed[t.id] === cfg.solution[t.id]){ st.locked[t.id] = true; }
+      else { wrong++; st.flash[t.id] = true; delete st.placed[t.id]; }
+    });
+    st.sel = null;
+    if(wrong){
+      st.mistakes += wrong;
+      st.msg = 'Не на месте: ' + wrong + '. Эти карточки вернулись вниз, попробуйте ещё раз.';
+      st.msgCls = 'bad';
+    } else {
+      st.finished = true;
+      st.stars = st.mistakes === 0 ? 2 : (st.mistakes <= 3 ? 1 : 0);
+      st.msg = cfg.success;
+      st.msgCls = 'good';
+    }
+    render();
+  }
+  root.onclick = function(e){
+    var act = e.target.closest('[data-act]');
+    if(act){
+      if(act.dataset.act === 'check'){ check(); return; }
+      if(act.dataset.act === 'finish'){ api.done(st.stars, cfg.note(st)); return; }
+      if(cfg.onAct && cfg.onAct(act.dataset.act, ctx, render)) return;
+      return;
+    }
+    if(blocked()) return;
+    var itEl = e.target.closest('[data-item]');
+    var tgEl = e.target.closest('[data-target]');
+    var tid = tgEl ? tgEl.dataset.target : null;
+    if(st.sel && tid && !st.locked[tid]){
+      var prev = st.placed[tid];
+      var from = whereIs(st.sel);
+      if(from) delete st.placed[from];
+      st.placed[tid] = st.sel;
+      if(prev && from && !st.locked[from]) st.placed[from] = prev;
+      st.sel = null;
+      render();
+      return;
+    }
+    if(itEl){
+      var id = itEl.dataset.item;
+      var w = whereIs(id);
+      if(w){
+        if(st.locked[w]) return;
+        delete st.placed[w];
+        st.sel = id;
+      } else {
+        st.sel = st.sel === id ? null : id;
+      }
+      render();
+      return;
+    }
+    if(tid && !st.locked[tid] && st.placed[tid]){
+      st.sel = st.placed[tid];
+      delete st.placed[tid];
+      render();
+    }
+  };
+  root.onkeydown = function(e){
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    var el = e.target;
+    if(el && el.matches && el.matches('[role="button"][data-target]')){
+      e.preventDefault();
+      el.click();
+    }
+  };
+  render();
+  return { render:render, st:st };
+}
+
+/* ---------- stage 1: drilling ---------- */
+function mountDrill(root, api){
+  var Y0 = 70, K = 0.118, MAX = 3200, CX = 126, EX0 = 36, EX1 = 216;
+  var LAYERS = [
+    { k:'soil',  name:'Почва и песок',        from:0,    to:400 },
+    { k:'clay',  name:'Глины',                from:400,  to:1500 },
+    { k:'aq',    name:'Водоносный горизонт',  from:1500, to:1900 },
+    { k:'cap',   name:'Покрышка',             from:1900, to:2000 },
+    { k:'gas',   name:'Газовая шапка',        from:2000, to:2150 },
+    { k:'oil',   name:'Нефтяной пласт',       from:2150, to:2450 },
+    { k:'brine', name:'Пластовая вода',       from:2450, to:2700 },
+    { k:'rock',  name:'Плотные породы',       from:2700, to:3200 }
+  ];
+  var HINT = {
+    soil:'Здесь только почва и песок. Нефти нет, бурите глубже.',
+    clay:'Это глины. Нефти нет, бурите глубже.',
+    aq:'Это водоносный горизонт: в нём вода, а не нефть. Бурите глубже.',
+    cap:'Покрышка — плотные глины, которые удерживают газ и нефть под собой. Сама она нефти не даёт.',
+    gas:'Вы вскрыли газовую шапку: газ легче нефти и лежит над ней. Нефть ниже.',
+    brine:'Вы прошли нефть и попали в пластовую воду. Поднимите долото выше.',
+    rock:'Слишком глубоко: плотные породы без пор не содержат нефти.'
+  };
+  var depth = 0, attempts = 0, holding = false, last = 0, solved = false;
+  function y(d){ return Y0 + d * K; }
+  function layerAt(d){
+    for(var i = 0; i < LAYERS.length; i++) if(d >= LAYERS[i].from && d < LAYERS[i].to) return LAYERS[i];
+    return LAYERS[LAYERS.length - 1];
+  }
+  var layersSvg = LAYERS.map(function(l){
+    var y1 = y(l.from), h = (l.to - l.from) * K, ym = y1 + h / 2;
+    return '<rect x="' + EX0 + '" y="' + y1.toFixed(1) + '" width="' + (EX1 - EX0) + '" height="' + h.toFixed(1) + '" style="fill:var(--l-' + l.k + ')"/>' +
+      '<line x1="' + EX1 + '" x2="' + (EX1 + 8) + '" y1="' + ym.toFixed(1) + '" y2="' + ym.toFixed(1) + '" stroke="currentColor" stroke-opacity=".35" stroke-width="1.500"/>' +
+      '<text x="' + (EX1 + 13) + '" y="' + (ym + 4).toFixed(1) + '" font-size="12.500" fill="currentColor"' + (l.k === 'oil' ? ' font-weight="700"' : '') + '>' + l.name + '</text>';
+  }).join('');
+  var ticks = [0, 1000, 2000, 3000].map(function(d){
+    return '<line x1="' + (EX0 - 6) + '" x2="' + EX0 + '" y1="' + y(d).toFixed(1) + '" y2="' + y(d).toFixed(1) + '" stroke="currentColor" stroke-opacity=".5" stroke-width="1.500"/>' +
+      '<text x="' + (EX0 - 9) + '" y="' + (y(d) + 4).toFixed(1) + '" font-size="10.500" text-anchor="end" fill="currentColor" fill-opacity=".7">' + (d / 1000) + ' км</text>';
+  }).join('');
+  var rig =
+    '<polygon points="' + (CX - 28) + ',70 ' + CX + ',10 ' + (CX + 28) + ',70" fill="none" stroke="var(--ink)" stroke-width="3.500" stroke-linejoin="round"/>' +
+    '<line x1="' + (CX - 20) + '" y1="52" x2="' + (CX + 20) + '" y2="52" stroke="var(--ink)" stroke-width="3"/>' +
+    '<line x1="' + (CX - 12) + '" y1="32" x2="' + (CX + 12) + '" y2="32" stroke="var(--ink)" stroke-width="3"/>' +
+    '<line x1="' + (CX - 20) + '" y1="52" x2="' + (CX + 12) + '" y2="32" stroke="var(--ink)" stroke-width="2.500"/>' +
+    '<line x1="' + (CX + 20) + '" y1="52" x2="' + (CX - 12) + '" y2="32" stroke="var(--ink)" stroke-width="2.500"/>' +
+    '<rect x="' + (CX - 7) + '" y="4" width="14" height="9" rx="2" style="fill:var(--amber)" stroke="var(--ink)" stroke-width="2"/>' +
+    '<rect x="' + (EX0 - 12) + '" y="68" width="' + (EX1 - EX0 + 24) + '" height="4" rx="2" style="fill:var(--ink)"/>';
+
+  root.innerHTML =
+    '<div class="drill"><div>' +
+    '<svg viewBox="0 0 400 460" role="img" aria-label="Разрез земной коры: слои породы и буровая вышка">' +
+    layersSvg + ticks + rig +
+    '<line id="d-mark" x1="' + EX0 + '" x2="' + EX1 + '" y1="70" y2="70" stroke="var(--amber)" stroke-width="2" stroke-dasharray="5 4"/>' +
+    '<line id="d-line" x1="' + CX + '" x2="' + CX + '" y1="70" y2="70" stroke="var(--ink)" stroke-width="3.500" stroke-linecap="round"/>' +
+    '<polygon id="d-bit" points="-8,-13 8,-13 0,0" transform="translate(' + CX + ',70)" style="fill:var(--amber)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>' +
+    '</svg></div>' +
+    '<div class="panel">' +
+    '<div class="readout"><span class="num" id="d-depth">0</span><span class="unit">м</span></div>' +
+    '<div class="where" id="d-where" aria-live="polite"><i style="background:var(--l-soil)"></i><span>Почва и песок</span></div>' +
+    '<button type="button" class="btn big" id="d-hold">Бурить: зажмите и держите</button>' +
+    '<div class="row">' +
+    '<button type="button" class="btn ghost" data-a="up">Выше 50 м</button>' +
+    '<button type="button" class="btn ghost" data-a="down">Ниже 50 м</button>' +
+    '<button type="button" class="btn ghost" data-a="reset">Сначала</button></div>' +
+    '<button type="button" class="btn" data-a="commit" id="d-commit">Вскрыть пласт</button>' +
+    '<p class="note" id="d-msg" role="status">Остановите долото внутри нефтяного пласта и нажмите «Вскрыть пласт».</p>' +
+    '</div></div>';
+
+  var elLine = $('#d-line', root), elBit = $('#d-bit', root), elMark = $('#d-mark', root);
+  var elDepth = $('#d-depth', root), elWhere = $('#d-where', root), elMsg = $('#d-msg', root);
+  var elHold = $('#d-hold', root);
+
+  function upd(){
+    var yy = y(depth).toFixed(1);
+    elLine.setAttribute('y2', yy);
+    elMark.setAttribute('y1', yy); elMark.setAttribute('y2', yy);
+    elBit.setAttribute('transform', 'translate(' + CX + ',' + yy + ')');
+    elDepth.textContent = Math.round(depth).toLocaleString('ru-RU');
+    var l = layerAt(depth);
+    elWhere.innerHTML = '<i style="background:var(--l-' + l.k + ')"></i><span>' + l.name + '</span>';
+  }
+  function setMsg(t, cls){ elMsg.textContent = t; elMsg.className = 'note ' + (cls || ''); }
+  function tick(t){
+    if(!root.isConnected || !holding) return;
+    var dt = Math.min(0.05, (t - last) / 1000);
+    last = t;
+    depth = Math.min(MAX, depth + 300 * dt);
+    upd();
+    requestAnimationFrame(tick);
+  }
+  function startHold(){
+    if(holding || solved) return;
+    holding = true; last = performance.now();
+    requestAnimationFrame(tick);
+  }
+  function stopHold(){ holding = false; }
+  elHold.addEventListener('pointerdown', function(e){
+    e.preventDefault();
+    try{ elHold.setPointerCapture(e.pointerId); }catch(err){}
+    startHold();
+  });
+  ['pointerup','pointercancel','lostpointercapture'].forEach(function(n){ elHold.addEventListener(n, stopHold); });
+  elHold.addEventListener('keydown', function(e){
+    if((e.key === ' ' || e.key === 'Enter') && !e.repeat){ e.preventDefault(); startHold(); }
+  });
+  elHold.addEventListener('keyup', function(e){
+    if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); stopHold(); }
+  });
+  elHold.addEventListener('blur', stopHold);
+  elHold.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+  root.addEventListener('click', function(e){
+    var b = e.target.closest('[data-a]');
+    if(!b || solved) return;
+    var a = b.dataset.a;
+    if(a === 'up'){ depth = Math.max(0, depth - 50); upd(); }
+    else if(a === 'down'){ depth = Math.min(MAX, depth + 50); upd(); }
+    else if(a === 'reset'){ depth = 0; upd(); setMsg('Долото поднято. Попробуйте ещё раз.'); }
+    else if(a === 'commit'){
+      if(depth < 100){ setMsg('Сначала пробурите скважину.', 'bad'); return; }
+      var l = layerAt(depth);
+      if(l.k === 'oil'){
+        solved = true;
+        var stars = attempts === 0 ? 2 : (attempts === 1 ? 1 : 0);
+        var d = Math.round(depth);
+        setMsg('Есть нефть! Вы вскрыли продуктивный пласт на глубине ' + d.toLocaleString('ru-RU') + ' м. Скважина даст приток.', 'good');
+        root.querySelectorAll('button[data-a], #d-hold').forEach(function(x){ x.disabled = true; });
+        var nx = document.createElement('button');
+        nx.type = 'button'; nx.className = 'btn'; nx.textContent = 'Дальше';
+        nx.addEventListener('click', function(){
+          api.done(stars, 'Пласт вскрыт на глубине ' + d.toLocaleString('ru-RU') + ' м, попыток: ' + (attempts + 1) + '.');
+        });
+        elMsg.parentNode.appendChild(nx);
+        nx.focus();
+      } else {
+        attempts++;
+        setMsg(HINT[l.k], 'bad');
+      }
+    }
+  });
+  upd();
+}
+
+/* ---------- stage 2: separator ---------- */
+function mountSeparator(root, api){
+  var seed = 11;
+  function rnd(){ seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+  var BAND = { gas:[36, 86], oil:[86, 150], water:[150, 206] };
+  var RAD = { gas:4.5, oil:7, water:6 };
+  var FILL = { gas:'var(--gas)', oil:'var(--oil)', water:'var(--water)' };
+  var counts = { gas:14, oil:17, water:17 };
+  var parts = [];
+  Object.keys(counts).forEach(function(t){
+    for(var i = 0; i < counts[t]; i++){
+      var r = RAD[t];
+      var b = BAND[t];
+      parts.push({
+        t:t, r:r,
+        x: 48 + rnd() * 244,
+        y0: 44 + rnd() * 154,
+        y1: b[0] + r + 3 + rnd() * (b[1] - b[0] - 2 * r - 6),
+        delay: Math.round(rnd() * 700)
+      });
+    }
+  });
+  var sim = { phase:'mixed' };   // mixed -> running -> settled
+  var SLOTS = [
+    { id:'top',    y:61,  name:'Верхний выход' },
+    { id:'middle', y:118, name:'Средний выход' },
+    { id:'bottom', y:178, name:'Нижний выход' }
+  ];
+  var ITEMS = [
+    { id:'water', title:'Пластовая вода', dot:'var(--water)' },
+    { id:'gas',   title:'Попутный газ',   dot:'var(--gas)' },
+    { id:'oil',   title:'Нефть',          dot:'var(--oil)' }
+  ];
+  var SHORT = { gas:'Газ', oil:'Нефть', water:'Вода' };
+
+  function vesselSvg(c){
+    var settled = sim.phase === 'settled';
+    var pc = parts.map(function(p, i){
+      var cy = settled ? p.y1 : p.y0;
+      var st = p.t === 'oil' ? ' stroke="var(--amber)" stroke-width="1.500"' : '';
+      return '<circle class="p" data-i="' + i + '" cx="' + p.x.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + p.r + '" style="fill:' + FILL[p.t] + '"' + st + '/>';
+    }).join('');
+    var bands =
+      '<g class="bands' + (settled ? ' on' : '') + '" id="s-bands" clip-path="url(#s-clip)">' +
+      '<rect x="20" y="' + BAND.gas[0] + '" width="300" height="' + (BAND.gas[1] - BAND.gas[0]) + '" style="fill:var(--l-gas)"/>' +
+      '<rect x="20" y="' + BAND.oil[0] + '" width="300" height="' + (BAND.oil[1] - BAND.oil[0]) + '" style="fill:var(--amber-soft)"/>' +
+      '<rect x="20" y="' + BAND.water[0] + '" width="300" height="' + (BAND.water[1] - BAND.water[0]) + '" style="fill:var(--l-brine);opacity:.35"/>' +
+      '</g>';
+    var slots = SLOTS.map(function(s){
+      var id = c.st.placed[s.id];
+      var ok = c.st.locked[s.id];
+      var cls = 'svslot' + (c.st.sel && !ok ? ' sel' : '');
+      var label = id ? SHORT[id] : '?';
+      var lcol = ok ? 'var(--good)' : 'currentColor';
+      var flash = c.st.flash[s.id];
+      return '<g class="' + cls + '" data-target="' + s.id + '" role="button" tabindex="0" aria-label="' + s.name + (id ? ': ' + SHORT[id] : ', пусто') + '">' +
+        '<rect x="320" y="' + (s.y - 10) + '" width="64" height="20" style="fill:var(--line-2)"/>' +
+        '<circle class="ring" cx="352" cy="' + s.y + '" r="15" style="fill:var(--surface)" stroke="' + (flash ? 'var(--bad)' : ok ? 'var(--good)' : 'var(--ink)') + '" stroke-width="3"/>' +
+        '<path d="M345 ' + s.y + 'h14" stroke="' + (ok ? 'var(--good)' : 'var(--ink)') + '" stroke-width="3" stroke-linecap="round"/>' +
+        '<text x="396" y="' + (s.y + 5) + '" font-size="14" font-weight="700" fill="' + lcol + '">' + label + '</text>' +
+        '<rect x="316" y="' + (s.y - 22) + '" width="150" height="44" fill="transparent"/>' +
+        '</g>';
+    }).join('');
+    return '<svg viewBox="0 0 470 250" id="s-svg" role="img" aria-label="Горизонтальный сепаратор с тремя выходами: сверху, посередине и снизу">' +
+      '<defs><clipPath id="s-clip"><rect x="23" y="33" width="294" height="176" rx="43"/></clipPath></defs>' +
+      '<rect x="20" y="30" width="300" height="180" rx="46" style="fill:var(--surface)"/>' +
+      bands +
+      '<g clip-path="url(#s-clip)">' + pc + '</g>' +
+      '<rect x="20" y="30" width="300" height="180" rx="46" fill="none" stroke="var(--ink)" stroke-width="4"/>' +
+      '<path d="M0 118h20" stroke="var(--ink)" stroke-width="4"/>' +
+      '<polygon points="4,106 4,130 16,118" style="fill:var(--ink)"/>' +
+      '<rect x="150" y="14" width="10" height="16" style="fill:var(--ink)"/>' +
+      '<rect x="60" y="210" width="12" height="22" style="fill:var(--ink)"/><rect x="268" y="210" width="12" height="22" style="fill:var(--ink)"/>' +
+      slots + '</svg>';
+  }
+
+  var m = makeMatcher(root, api, {
+    items: ITEMS,
+    targets: SLOTS,
+    solution: { top:'gas', middle:'oil', bottom:'water' },
+    blocked: function(){ return sim.phase !== 'settled'; },
+    chipInner: function(it){ return '<span class="dot" style="background:' + it.dot + ';border:2px solid var(--ink)"></span><span class="t">' + it.title + '</span>'; },
+    placedInner: function(it){ return it.title; },
+    success: 'Всё подключено верно. Газ ушёл вверх, нефть пошла дальше, воду вернут в пласт.',
+    note: function(st){ return st.mistakes ? 'Ошибок при подключении: ' + st.mistakes + '.' : 'Выходы подключены без ошибок.'; },
+    extraActions: function(){
+      return sim.phase === 'mixed' ? '<button type="button" class="btn ghost" data-act="settle">Запустить отстаивание</button>' : '';
+    },
+    view: function(c){
+      var head = sim.phase === 'mixed'
+        ? '<div class="row"><button type="button" class="btn" data-act="settle">Запустить отстаивание</button><span class="small">Смесь из скважины: газ, нефть и вода вперемешку.</span></div>'
+        : (sim.phase === 'running'
+            ? '<p class="small" role="status">Идёт отстаивание: лёгкое всплывает, тяжёлое оседает…</p>'
+            : '<p class="small">Смесь разделилась на слои. Выберите карточку и нажмите на выход сепаратора.</p>');
+      return '<div class="stack"><div class="vessel">' + vesselSvg(c) + '</div>' + head +
+        '<div><h4>Продукты</h4><div style="margin-top:8px">' + c.pool() + '</div></div>' +
+        (sim.phase === 'settled' ? c.actions() : '') + '</div>';
+    },
+    onAct: function(act, c, render){
+      if(act !== 'settle' || sim.phase !== 'mixed') return false;
+      sim.phase = 'running';
+      render();
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){
+          root.querySelectorAll('.p').forEach(function(el){
+            var p = parts[+el.dataset.i];
+            el.style.transitionDelay = p.delay + 'ms';
+            el.style.transform = 'translateY(' + (p.y1 - p.y0).toFixed(1) + 'px)';
+          });
+          var b = $('#s-bands', root); if(b) b.classList.add('on');
+        });
+      });
+      setTimeout(function(){
+        if(!root.isConnected) return;
+        sim.phase = 'settled';
+        m.render();
+      }, 3700);
+      return true;
+    }
+  });
+}
+
+/* ---------- stage 3: preparation order ---------- */
+function mountPrep(root, api){
+  var STEPS = [
+    { id:'dehyd', icon:'drop',  title:'Обезвоживание',  desc:'Нагрев и деэмульгаторы разрушают водонефтяную эмульсию, вода отделяется.' },
+    { id:'desal', icon:'salt',  title:'Обессоливание',  desc:'Нефть промывают пресной водой, чтобы вымыть остатки солей.' },
+    { id:'stab',  icon:'flame', title:'Стабилизация',   desc:'Убирают самые лёгкие углеводороды (пропан, бутан), чтобы они не улетучивались в резервуарах и трубе.' },
+    { id:'park',  icon:'tank',  title:'Товарный парк',  desc:'Готовую нефть собирают в резервуарах, измеряют её количество и качество.' }
+  ];
+  var TARGETS = [{ id:'p1' }, { id:'p2' }, { id:'p3' }, { id:'p4' }];
+  var order = ['dehyd', 'desal', 'stab', 'park'];
+  var sol = {}; TARGETS.forEach(function(t, i){ sol[t.id] = order[i]; });
+  var shuffled = [STEPS[2], STEPS[3], STEPS[0], STEPS[1]];
+  function byId(id){ return STEPS.filter(function(s){ return s.id === id; })[0]; }
+
+  makeMatcher(root, api, {
+    items: shuffled,
+    targets: TARGETS,
+    solution: sol,
+    chipInner: function(it){ return ic(it.icon, 30) + '<span><span class="t">' + it.title + '</span><span class="d">' + it.desc + '</span></span>'; },
+    placedInner: function(it){ return ic(it.icon, 26) + '<span>' + it.title + '</span>'; },
+    success: 'Цепочка собрана верно: вода, соли, лёгкие газы и только потом товарный учёт.',
+    note: function(st){ return st.mistakes ? 'Ошибок при расстановке: ' + st.mistakes + '.' : 'Порядок расставлен без ошибок.'; },
+    view: function(c){
+      var slots = TARGETS.map(function(t, i){
+        var id = c.st.placed[t.id];
+        var d = id && c.st.locked[t.id] ? '<span class="desc">' + byId(id).desc + '</span>' : '';
+        return '<div class="slot ' + c.slotCls(t) + '" data-target="' + t.id + '" role="button" tabindex="0" aria-label="Шаг ' + (i + 1) + '">' +
+          '<span class="num">' + (i + 1) + '</span>' +
+          '<span class="slot-body">' + (id ? '<span>' + c.placedChip(id) + d + '</span>' : '<span class="ph">Выберите этап и нажмите сюда</span>') + '</span></div>';
+      }).join('');
+      return '<div class="stack"><div><h4>Порядок на установке подготовки нефти</h4><div class="stack" style="margin-top:8px;gap:8px">' + slots + '</div></div>' +
+        '<div><h4>Этапы</h4><div style="margin-top:8px">' + c.pool('one') + '</div></div>' + c.actions() + '</div>';
+    }
+  });
+}
+
+/* ---------- stage 4: pipeline pumps ---------- */
+function mountPipeline(root, api){
+  var L = 600, P0 = 6.2, PMIN = 0.8, G = 0.04, MAXS = 7, BEST = 4;
+  var W = 640, H = 346, X0 = 54, X1 = 626, YB = 246, YT = 22;
+  var RUN = (P0 - PMIN) / G;      // km until the minimum pressure
+  var ZERO = P0 / G;              // km until zero (drawing limit)
+  var stations = [];
+  function px(km){ return X0 + km / L * (X1 - X0); }
+  function py(p){ return YB - p / 7 * (YB - YT); }
+  function fmt(n){ return String(n).replace('.', ','); }
+  function analyze(){
+    var pts = [0].concat(stations.slice().sort(function(a, b){ return a - b; }), [L]);
+    var segs = [], bad = 0;
+    for(var i = 0; i < pts.length - 1; i++){
+      var len = pts[i + 1] - pts[i];
+      if(len > RUN + 1e-9) bad++;
+      segs.push({ a:pts[i], b:pts[i + 1], len:len });
+    }
+    return { segs:segs, bad:bad };
+  }
+  function chart(){
+    var an = analyze();
+    var grid = '', i;
+    for(i = 0; i <= 7; i++){
+      grid += '<line x1="' + X0 + '" x2="' + X1 + '" y1="' + py(i).toFixed(1) + '" y2="' + py(i).toFixed(1) + '" stroke="currentColor" stroke-opacity=".12"/>' +
+        '<text x="' + (X0 - 8) + '" y="' + (py(i) + 4).toFixed(1) + '" font-size="11" text-anchor="end" fill="currentColor" fill-opacity=".75">' + i + '</text>';
+    }
+    for(i = 0; i <= 600; i += 100){
+      grid += '<text x="' + px(i).toFixed(1) + '" y="' + (YB + 17) + '" font-size="11" text-anchor="middle" fill="currentColor" fill-opacity=".75">' + i + '</text>';
+    }
+    grid += '<text x="' + X1 + '" y="' + (YB + 34) + '" font-size="11" text-anchor="end" fill="currentColor" fill-opacity=".75">расстояние от головной станции, км</text>' +
+      '<text x="' + X0 + '" y="12" font-size="11" fill="currentColor" fill-opacity=".75">Давление, МПа</text>';
+    var areas = '', lines = '', jumps = '';
+    an.segs.forEach(function(s){
+      var dl = Math.min(s.len, ZERO);
+      var pEnd = Math.max(P0 - G * dl, 0);
+      areas += '<polygon points="' + px(s.a).toFixed(1) + ',' + py(0).toFixed(1) + ' ' + px(s.a).toFixed(1) + ',' + py(P0).toFixed(1) + ' ' + px(s.a + dl).toFixed(1) + ',' + py(pEnd).toFixed(1) + ' ' + px(s.a + dl).toFixed(1) + ',' + py(0).toFixed(1) + '" style="fill:var(--water)" fill-opacity=".16"/>';
+      var okLen = Math.min(dl, RUN);
+      lines += '<polyline points="' + px(s.a).toFixed(1) + ',' + py(P0).toFixed(1) + ' ' + px(s.a + okLen).toFixed(1) + ',' + py(P0 - G * okLen).toFixed(1) + '" fill="none" stroke="var(--water)" stroke-width="3.500" stroke-linecap="round"/>';
+      if(s.len > RUN){
+        lines += '<polyline points="' + px(s.a + RUN).toFixed(1) + ',' + py(PMIN).toFixed(1) + ' ' + px(s.a + dl).toFixed(1) + ',' + py(pEnd).toFixed(1) + '" fill="none" stroke="var(--bad)" stroke-width="3.500" stroke-linecap="round"/>';
+      }
+      if(s.a > 0){
+        jumps += '<line x1="' + px(s.a).toFixed(1) + '" x2="' + px(s.a).toFixed(1) + '" y1="' + py(P0).toFixed(1) + '" y2="' + py(0).toFixed(1) + '" stroke="var(--amber)" stroke-width="1.500" stroke-dasharray="3 3"/>';
+      }
+    });
+    var minLine = '<line x1="' + X0 + '" x2="' + X1 + '" y1="' + py(PMIN).toFixed(1) + '" y2="' + py(PMIN).toFixed(1) + '" stroke="var(--bad)" stroke-width="2" stroke-dasharray="6 5"/>' +
+      '<text x="' + (X1 - 4) + '" y="' + (py(PMIN) - 6).toFixed(1) + '" font-size="11.500" font-weight="600" text-anchor="end" style="fill:var(--bad);stroke:var(--surface-2);stroke-width:5px;paint-order:stroke">минимум 0,8 МПа</text>';
+    var pipe = '<line x1="' + X0 + '" x2="' + X1 + '" y1="302" y2="302" stroke="var(--ink)" stroke-width="6" stroke-linecap="round"/>' +
+      '<rect x="' + (X0 - 12) + '" y="290" width="24" height="24" rx="4" style="fill:var(--amber)" stroke="var(--ink)" stroke-width="2.500"/>' +
+      '<text x="' + X0 + '" y="334" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">ГНПС</text>' +
+      '<rect x="' + (X1 - 8) + '" y="292" width="16" height="20" rx="4" style="fill:var(--ink)"/>' +
+      '<text x="' + (X1 - 2) + '" y="334" font-size="11" font-weight="700" text-anchor="end" fill="currentColor">НПЗ</text>';
+    stations.forEach(function(k){
+      pipe += '<rect x="' + (px(k) - 10).toFixed(1) + '" y="291" width="20" height="22" rx="4" style="fill:var(--amber)" stroke="var(--ink)" stroke-width="2.500"/>' +
+        '<text x="' + px(k).toFixed(1) + '" y="334" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">' + k + ' км</text>';
+    });
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="График давления вдоль нефтепровода длиной 600 километров">' +
+      grid + areas + minLine + jumps + lines + pipe +
+      '<rect data-plot="1" x="' + X0 + '" y="' + YT + '" width="' + (X1 - X0) + '" height="' + (H - YT) + '" fill="transparent"/></svg>';
+  }
+  function status(){
+    var an = analyze();
+    var n = stations.length;
+    var valid = an.bad === 0;
+    var msg;
+    if(valid) msg = n === BEST ? 'Давление везде не ниже 0,8 МПа. Это экономичный вариант.' : 'Давление везде не ниже 0,8 МПа. Попробуйте обойтись меньшим числом станций.';
+    else msg = 'Участков с давлением ниже минимума: ' + an.bad + '. Добавьте станции на красных участках.';
+    return { valid:valid, msg:msg, n:n };
+  }
+  function draw(){
+    var s = status();
+    $('#p-chart', root).innerHTML = chart();
+    $('#p-count', root).textContent = s.n + ' из ' + MAXS;
+    var msg = $('#p-msg', root);
+    msg.textContent = s.msg; msg.className = 'note ' + (s.valid ? 'good' : 'bad');
+    $('#p-accept', root).disabled = !s.valid;
+    $('#p-list', root).innerHTML = stations.slice().sort(function(a, b){ return a - b; }).map(function(k){
+      return '<button type="button" class="btn ghost small-btn" data-rm="' + k + '" aria-label="Убрать станцию на ' + k + ' километре">' + k + ' км ✕</button>';
+    }).join('') || '<span class="small">Станций пока нет. Нажмите на график или введите километр.</span>';
+  }
+  function toggle(km){
+    km = Math.max(5, Math.min(L - 5, Math.round(km / 5) * 5));
+    var near = null;
+    stations.forEach(function(k){ if(Math.abs(k - km) <= 10 && (near === null || Math.abs(k - km) < Math.abs(near - km))) near = k; });
+    if(near !== null){ stations.splice(stations.indexOf(near), 1); }
+    else if(stations.length < MAXS){ stations.push(km); }
+    draw();
+  }
+  root.innerHTML =
+    '<div class="stack">' +
+    '<div class="chart" id="p-chart"></div>' +
+    '<div class="row"><span><b id="p-count"></b> <span class="small">промежуточных станций</span></span>' +
+    '<label class="row small" for="p-km">Километр: <input class="kmin" id="p-km" type="number" min="5" max="595" step="5" value="130" inputmode="numeric"></label>' +
+    '<button type="button" class="btn ghost small-btn" data-p="add">Поставить станцию</button>' +
+    '<button type="button" class="btn ghost small-btn" data-p="clear">Убрать все</button></div>' +
+    '<div class="stlist" id="p-list"></div>' +
+    '<p class="note" id="p-msg" role="status"></p>' +
+    '<div class="row"><button type="button" class="btn" id="p-accept" data-p="accept">Принять проект</button></div></div>';
+  root.addEventListener('click', function(e){
+    var plot = e.target.closest('[data-plot]');
+    if(plot){
+      var svg = plot.ownerSVGElement;
+      var r = svg.getBoundingClientRect();
+      var x = (e.clientX - r.left) / r.width * W;
+      toggle((x - X0) / (X1 - X0) * L);
+      return;
+    }
+    var rm = e.target.closest('[data-rm]');
+    if(rm){ stations.splice(stations.indexOf(+rm.dataset.rm), 1); draw(); return; }
+    var b = e.target.closest('[data-p]');
+    if(!b) return;
+    if(b.dataset.p === 'add'){
+      var v = parseFloat($('#p-km', root).value);
+      if(isFinite(v)) toggle(v);
+    } else if(b.dataset.p === 'clear'){ stations = []; draw(); }
+    else if(b.dataset.p === 'accept'){
+      var s = status();
+      if(!s.valid) return;
+      var stars = s.n <= BEST ? 2 : (s.n === BEST + 1 ? 1 : 0);
+      api.done(stars, 'Проект принят: ' + s.n + ' промежуточных станций' + (s.n <= BEST ? ', это минимально возможное число.' : '.'));
+    }
+  });
+  draw();
+}
+
+/* ---------- stage 5: distillation column ---------- */
+function mountColumn(root, api){
+  var FR = [
+    { id:'gas',      title:'Углеводородные газы', desc:'Пропан, бутан: самые лёгкие',          temp:'до 40 °C' },
+    { id:'gasoline', title:'Бензин',              desc:'Топливо для легковых автомобилей',      temp:'40–180 °C' },
+    { id:'kero',     title:'Керосин',             desc:'Топливо для реактивных двигателей',     temp:'180–240 °C' },
+    { id:'diesel',   title:'Дизельное топливо',   desc:'Для грузовиков, поездов, тракторов',    temp:'240–350 °C' },
+    { id:'mazut',    title:'Мазут',               desc:'Тяжёлый остаток, не успевший испариться', temp:'выше 350 °C' }
+  ];
+  var TARGETS = FR.map(function(f){ return { id:f.id, temp:f.temp }; });
+  var sol = {}; FR.forEach(function(f){ sol[f.id] = f.id; });
+  var shuffled = [FR[3], FR[0], FR[4], FR[2], FR[1]];
+  function byId(id){ return FR.filter(function(f){ return f.id === id; })[0]; }
+  makeMatcher(root, api, {
+    items: shuffled,
+    targets: TARGETS,
+    solution: sol,
+    chipInner: function(it){ return '<span><span class="t">' + it.title + '</span><span class="d">' + it.desc + '</span></span>'; },
+    placedInner: function(it){ return it.title; },
+    success: 'Колонна настроена. Чем легче фракция, тем выше она отбирается.',
+    note: function(st){ return st.mistakes ? 'Ошибок при расстановке: ' + st.mistakes + '.' : 'Все фракции на своих уровнях с первой попытки.'; },
+    view: function(c){
+      var rows = TARGETS.map(function(t){
+        var id = c.st.placed[t.id];
+        return '<div class="slot ' + c.slotCls(t) + '" data-target="' + t.id + '" role="button" tabindex="0" style="--fc:var(--f-' + t.id + ')" aria-label="Уровень ' + t.temp + '">' +
+          '<span class="band"></span><span class="temp">' + t.temp + '</span>' +
+          '<span class="slot-body">' + (id ? c.placedChip(id) : '<span class="ph">пусто</span>') + '</span></div>';
+      }).join('');
+      return '<div class="split"><div><h4>Колонна: сверху холоднее, снизу горячее</h4>' +
+        '<div class="col" style="margin-top:8px">' + rows + '<div class="furnace">' + ic('flame', 22) + '<span>Печь: нефть нагрета до 350 °C</span></div></div></div>' +
+        '<div class="stack"><h4>Продукты перегонки</h4>' + c.pool('one') + c.actions() + '</div></div>';
+    }
+  });
+}
+
+/* ---------- stage 6: consumers ---------- */
+function mountConsumers(root, api){
+  var PR = [
+    { id:'gasoline', title:'Бензин',            to:'car',    dest:'Легковой автомобиль' },
+    { id:'kero',     title:'Авиакеросин',       to:'plane',  dest:'Самолёт' },
+    { id:'diesel',   title:'Дизельное топливо', to:'truck',  dest:'Грузовик и тепловоз' },
+    { id:'mazut',    title:'Мазут',             to:'ship',   dest:'Судно и котельная' },
+    { id:'lpg',      title:'Пропан-бутан',      to:'bottle', dest:'Газовый баллон' },
+    { id:'bitumen',  title:'Битум',             to:'road',   dest:'Дорожное покрытие' }
+  ];
+  var TARGETS = PR.map(function(p){ return { id:p.id, icon:p.to, dest:p.dest }; });
+  var sol = {}; PR.forEach(function(p){ sol[p.id] = p.id; });
+  var shuffled = [PR[4], PR[1], PR[5], PR[0], PR[3], PR[2]];
+  makeMatcher(root, api, {
+    items: shuffled,
+    targets: TARGETS,
+    solution: sol,
+    chipInner: function(it){ return '<span class="t">' + it.title + '</span>'; },
+    placedInner: function(it){ return it.title; },
+    success: 'Все продукты доехали по адресу. Путь нефти пройден.',
+    note: function(st){ return st.mistakes ? 'Ошибок при доставке: ' + st.mistakes + '.' : 'Все продукты доставлены без ошибок.'; },
+    view: function(c){
+      var tg = TARGETS.map(function(t){
+        var id = c.st.placed[t.id];
+        return '<div class="slot ' + c.slotCls(t) + '" data-target="' + t.id + '" role="button" tabindex="0" aria-label="' + t.dest + '">' +
+          '<span class="tico">' + ic(t.icon, 28) + '</span>' +
+          '<span class="slot-body"><span class="small" style="display:block">' + t.dest + '</span>' + (id ? c.placedChip(id) : '<span class="ph">выберите продукт</span>') + '</span></div>';
+      }).join('');
+      return '<div class="stack"><div><h4>Потребители</h4><div class="targets" style="margin-top:8px">' + tg + '</div></div>' +
+        '<div><h4>Нефтепродукты</h4><div style="margin-top:8px">' + c.pool() + '</div></div>' + c.actions() + '</div>';
+    }
+  });
+}
+
+/* ---------- stages ---------- */
+var STAGES = [
+  { short:'Бурение', name:'Бурение скважины', place:'Месторождение',
+    lead:'Нефть лежит глубоко под землёй, в порах горных пород, как вода в губке. Сверху её держит непроницаемая покрышка, а в самой ловушке вещества расположены по плотности: сверху газ, ниже нефть, ещё ниже вода.',
+    task:'Пробурите скважину и остановите долото внутри нефтяного пласта. Зажмите кнопку, чтобы бурить, отпустите, чтобы остановиться. Кнопки «Выше» и «Ниже» двигают долото на 50 м.',
+    mount: mountDrill,
+    facts:['Порода, в порах которой скапливается нефть, называется коллектором. Над ней лежит покрышка из плотных глин.',
+           'Нефть легче воды и тяжелее газа, поэтому в ловушке газ собирается сверху, нефть посередине, вода снизу.',
+           'Скважины на нефть обычно уходят на глубину от одного до пяти километров.'],
+    quiz:{ q:'Почему в ловушке газ лежит над нефтью, а вода под ней?',
+           o:['Так распределили геологи при бурении','Вещества расслаиваются по плотности: газ легче нефти, вода тяжелее','Газ притягивается к поверхности магнитным полем Земли','Вода всегда стекает вниз из-за низкой температуры'],
+           a:1, e:'Нефть легче воды и тяжелее газа, поэтому в пласте они занимают свои «этажи». Тот же принцип используют дальше, на сепараторе.' } },
+
+  { short:'Сепарация', name:'Сепарация на промысле', place:'Промысел',
+    lead:'Из скважины поднимается смесь: нефть, попутный газ и пластовая вода. Первое, что делают на промысле, это разделяют её в сепараторе.',
+    task:'Запустите отстаивание и подключите три выхода сепаратора: выберите продукт и нажмите на нужный выход.',
+    mount: mountSeparator,
+    facts:['Простой сепаратор работает за счёт силы тяжести: лёгкое всплывает, тяжёлое оседает.',
+           'Попутный газ не выбрасывают: его собирают и перерабатывают или используют как топливо на промысле.',
+           'Пластовая вода солёная. Её чаще всего закачивают обратно в пласт, чтобы поддерживать давление.'],
+    quiz:{ q:'Какой принцип положен в основу простого гравитационного сепаратора?',
+           o:['Электрический ток пропускают через смесь','Мелкие фильтры задерживают нефть','Разница плотностей: лёгкое всплывает, тяжёлое оседает','Смесь замораживают и разрезают на слои'],
+           a:2, e:'Газ легче нефти, нефть легче воды. Если дать смеси отстояться, она сама расслаивается.' } },
+
+  { short:'Подготовка', name:'Подготовка нефти', place:'Установка подготовки',
+    lead:'После сепаратора в нефти остаются вода, соли и самые лёгкие газы. Перед отправкой в трубу её доводят до товарного качества на установке подготовки нефти.',
+    task:'Расставьте четыре этапа подготовки в правильном порядке: выберите этап и нажмите на нужный номер.',
+    mount: mountPrep,
+    facts:['Вода и соли вызывают коррозию труб и оборудования, а перекачивать воду по трубе невыгодно.',
+           'Качество товарной нефти нормируют стандартами: ограничены содержание воды, солей и давление насыщенных паров (в России это ГОСТ Р 51858).',
+           'Количество нефти измеряют на узле учёта: по нему идут расчёты между компаниями.'],
+    quiz:{ q:'Зачем из нефти удаляют воду и соли до отправки в трубопровод?',
+           o:['Чтобы нефть стала светлее','Соли и вода вызывают коррозию и осложняют переработку','Только ради красивой отчётности','Чтобы нефть стала твёрже'],
+           a:1, e:'Хлористые соли при нагреве на НПЗ дают кислоты, которые разъедают оборудование. Поэтому нефть обессоливают заранее.' } },
+
+  { short:'Транспорт', name:'Магистральный нефтепровод', place:'Трасса',
+    lead:'Нефть едет от промысла к заводам и портам. Самый дешёвый путь по суше для больших объёмов, это нефтепровод. Из-за трения давление в трубе падает, поэтому через каждую сотню километров стоят насосные станции.',
+    task:'Нефтепровод длиной 600 км. После станции давление 6,2 МПа и падает на 0,04 МПа на каждом километре. Ниже 0,8 МПа опускаться нельзя. Нажимайте на график, чтобы поставить или убрать станцию. Чем их меньше, тем дешевле проект. Модель упрощена: рельеф и вязкость не учитываются.',
+    mount: mountPipeline,
+    facts:['Головная станция (ГНПС) закачивает нефть в трубу, промежуточные (НПС) поддерживают давление по пути.',
+           'Магистральные нефтепроводы строят из труб диаметром до 1220 мм. Нефть движется в них со скоростью около 1–3 м/с.',
+           'Железнодорожные цистерны и автоцистерны выгодны на небольших объёмах, танкеры нужны для морских перевозок.'],
+    quiz:{ q:'Какой способ обычно самый дешёвый для больших объёмов нефти на суше?',
+           o:['Автоцистерны','Железнодорожные цистерны','Вертолёты с подвесными бочками','Магистральный трубопровод'],
+           a:3, e:'Труба работает круглосуточно и без пересадок, а стоимость перекачки тонны на километр у трубопровода самая низкая.' } },
+
+  { short:'НПЗ', name:'Перегонка на НПЗ', place:'Завод',
+    lead:'На заводе нефть нагревают в печи примерно до 350 °C и подают в ректификационную колонну. Чем легче фракция, тем ниже она кипит и тем выше поднимается по колонне.',
+    task:'Расставьте продукты по уровням колонны. Справа от каждого уровня указана температура, при которой отбирается фракция.',
+    mount: mountColumn,
+    facts:['Разделение нефти по температурам кипения называется ректификацией (прямая перегонка).',
+           'Мазут перегоняют дальше в вакуумной колонне: получают масляные фракции и гудрон, из которого делают битум.',
+           'Вторичные процессы, например крекинг и риформинг, увеличивают выход бензина и улучшают его качество.'],
+    quiz:{ q:'От чего зависит, на каком уровне колонны отбирается фракция?',
+           o:['От цвета фракции','От вязкости: вязкие поднимаются выше','От её температуры кипения: лёгкие поднимаются выше','От цены на бирже'],
+           a:2, e:'В колонне сверху прохладнее, снизу жарче. Каждая фракция конденсируется там, где температура ниже её точки кипения.' } },
+
+  { short:'Потребители', name:'Нефтепродукты потребителю', place:'Рынок',
+    lead:'Готовые нефтепродукты расходятся по трубопроводам, железной дорогой и автомобилями. У каждого продукта своё применение.',
+    task:'Отправьте каждый нефтепродукт тому, кто в нём нуждается: выберите продукт и нажмите на потребителя.',
+    mount: mountConsumers,
+    facts:['Из нефти делают не только топливо: смазочные масла, битум, парафин, сырьё для пластмасс и удобрений.',
+           'Пропан-бутан (сжиженный газ) хранят в баллонах под давлением, поэтому он остаётся жидким.',
+           'Битум, который остаётся после перегонки мазута, связывает щебень в асфальте.'],
+    quiz:{ q:'Почему сырую нефть почти не используют как топливо напрямую?',
+           o:['Она не горит','Это запрещено законом','Она слишком дорогая','В ней смесь сотен углеводородов, а двигателям и котлам нужны продукты с определёнными свойствами'],
+           a:3, e:'Бензин, керосин, дизель и мазут различаются по испаряемости, вязкости и горению. Разделить нефть на такие продукты и позволяет переработка.' } }
+];
+
+/* ---------- views ---------- */
+var elSteps = $('#steps');
+function renderSteps(){
+  elSteps.innerHTML = STAGES.map(function(s, i){
+    var done = S.screen === 'final' || S.done[i];
+    var cur = S.screen === 'stage' && i === S.stage;
+    return '<li class="step ' + (done ? 'done' : '') + ' ' + (cur ? 'cur' : '') + '"' + (cur ? ' aria-current="step"' : '') + '>' +
+      '<div class="node">' + (done ? '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.500l3.200 3.200L13 4.800" fill="none" stroke="currentColor" stroke-width="2.600" stroke-linecap="round" stroke-linejoin="round"/></svg>' : (i + 1)) + '</div>' +
+      '<span class="lbl">' + s.short + '</span></li>';
+  }).join('');
+  $('#score').textContent = totalStars();
+  $('#score-max').textContent = '/ ' + TOTAL * 3;
+}
+
+var HERO_ART =
+  '<svg viewBox="0 0 320 260" role="img" aria-label="Буровая вышка над нефтяным пластом и бочка с нефтью">' +
+  '<rect width="320" height="260" style="fill:var(--surface-2)"/>' +
+  '<circle cx="268" cy="48" r="24" style="fill:var(--amber)"/>' +
+  '<rect y="150" width="320" height="40" style="fill:var(--l-soil)"/>' +
+  '<rect y="190" width="320" height="34" style="fill:var(--l-clay)"/>' +
+  '<rect y="224" width="320" height="36" style="fill:var(--l-rock)"/>' +
+  '<ellipse cx="160" cy="214" rx="78" ry="13" style="fill:var(--oil)"/>' +
+  '<polygon points="128,150 160,38 192,150" fill="none" stroke="var(--ink)" stroke-width="4" stroke-linejoin="round"/>' +
+  '<line x1="138" y1="124" x2="182" y2="124" stroke="var(--ink)" stroke-width="3.500"/>' +
+  '<line x1="147" y1="94" x2="173" y2="94" stroke="var(--ink)" stroke-width="3.500"/>' +
+  '<line x1="138" y1="124" x2="173" y2="94" stroke="var(--ink)" stroke-width="3"/>' +
+  '<line x1="182" y1="124" x2="147" y2="94" stroke="var(--ink)" stroke-width="3"/>' +
+  '<rect x="150" y="28" width="20" height="12" rx="3" style="fill:var(--amber)" stroke="var(--ink)" stroke-width="3"/>' +
+  '<line x1="160" y1="150" x2="160" y2="208" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/>' +
+  '<rect x="36" y="108" width="40" height="46" rx="7" style="fill:var(--amber)" stroke="var(--ink)" stroke-width="3"/>' +
+  '<line x1="36" y1="122" x2="76" y2="122" stroke="var(--ink)" stroke-width="3"/>' +
+  '<line x1="36" y1="140" x2="76" y2="140" stroke="var(--ink)" stroke-width="3"/>' +
+  '<path d="M262 118c-8 14-18 24-18 36a18 18 0 0 0 36 0c0-12-10-22-18-36z" style="fill:var(--oil)"/>' +
+  '</svg>';
+
+function startView(){
+  var saved = loadSaved();
+  var firstOpen = saved ? saved.done.indexOf(false) : -1;
+  var resume = saved && firstOpen > 0 ? '<button type="button" class="btn ghost" data-go="resume">Продолжить с этапа ' + (firstOpen + 1) + '</button>' : '';
+  var routeItems = [
+    ['Бурение','вскрыть нефтяной пласт'],['Сепарация','разделить газ, нефть и воду'],['Подготовка','довести нефть до качества'],
+    ['Нефтепровод','расставить насосные станции'],['НПЗ','разогнать нефть на фракции'],['Потребители','доставить продукты']
+  ].map(function(r, i){ return '<li><span class="n">' + (i + 1) + '</span><div><b>' + r[0] + '</b><span>' + r[1] + '</span></div></li>'; }).join('');
+  app.innerHTML =
+    '<section class="card hero"><div class="stack">' +
+    '<p class="eyebrow">Учебная игра по нефтегазовому делу</p>' +
+    '<h1>Путь нефти</h1>' +
+    '<p class="lead">От скважины до заправки: шесть этапов, шесть мини-игр. Бурите, разделяйте, перекачивайте, перегоняйте и доставляйте продукты потребителям.</p>' +
+    '<div class="row"><button type="button" class="btn" data-go="start">Начать</button>' + resume + '</div>' +
+    '<p class="small">Около 15 минут. Подойдёт тем, кто только знакомится с профессией.</p></div>' +
+    '<div class="art">' + HERO_ART + '</div></section>' +
+    '<ul class="route">' + routeItems + '</ul>' +
+    '<p class="foot">Игра упрощает реальные процессы. Для расчётов используйте нормативные методики и материалы вашего курса.</p>';
+}
+
+function stageView(){
+  var st = STAGES[S.stage], n = S.stage + 1, body = '';
+  if(S.phase === 'intro'){
+    body = '<div class="stack" style="margin-top:14px"><p class="lead">' + st.lead + '</p>' +
+      '<div class="callout"><span class="tag">Задание</span><p>' + st.task + '</p></div>' +
+      '<div class="row"><button type="button" class="btn" data-go="play">Приступить</button></div></div>';
+  } else if(S.phase === 'play'){
+    body = '<div class="callout" style="margin-top:14px"><span class="tag">Задание</span><p>' + st.task + '</p></div><div class="game" id="game"></div>';
+  } else {
+    var q = st.quiz, ans = S.ans[S.stage], answered = ans !== null;
+    var opts = q.o.map(function(t, i){
+      var cls = '';
+      if(answered){ if(i === q.a) cls = 'good'; else if(i === ans) cls = 'bad'; }
+      return '<button type="button" class="opt ' + cls + '" data-q="' + i + '"' + (answered ? ' disabled' : '') + '><span class="k">' + 'АБВГ'.charAt(i) + '</span><span>' + t + '</span></button>';
+    }).join('');
+    var after = '';
+    if(answered){
+      var right = ans === q.a;
+      after = '<p class="note ' + (right ? 'good' : 'bad') + '" role="status">' + (right ? 'Верно. ' : 'Не совсем. ') + q.e + '</p>' +
+        '<div class="row"><button type="button" class="btn" data-go="next">' + (S.stage < TOTAL - 1 ? 'К следующему этапу' : 'К итогам') + '</button></div>';
+    }
+    body = '<div class="stack" style="margin-top:14px">' +
+      '<div class="result"><span class="tag">Задание выполнено</span>' + starsHtml(S.game[S.stage], 2) + '<p class="small" style="color:var(--ink)">' + S.note[S.stage] + '</p></div>' +
+      '<div><h4>Что стоит запомнить</h4><ul class="facts" style="margin-top:10px">' + st.facts.map(function(f){ return '<li>' + f + '</li>'; }).join('') + '</ul></div>' +
+      '<div class="stack"><h4>Проверьте себя</h4><p class="qtext">' + q.q + '</p><div class="opts">' + opts + '</div>' + after + '</div></div>';
+  }
+  app.innerHTML = '<section class="card" aria-labelledby="st-title"><p class="eyebrow">Этап ' + n + ' из ' + TOTAL + ' · ' + st.place + '</p>' +
+    '<h2 id="st-title" style="margin-top:8px">' + st.name + '</h2>' + body + '</section>';
+  if(S.phase === 'play'){
+    var api = {
+      done: function(stars, note){
+        S.game[S.stage] = stars;
+        S.note[S.stage] = note || '';
+        S.phase = 'quiz';
+        render();
+      }
+    };
+    st.mount($('#game'), api);
+  }
+}
+
+function finalView(){
+  var total = totalStars(), max = TOTAL * 3;
+  var rank = total >= 16 ? 'Главный технолог' : total >= 12 ? 'Инженер-технолог' : total >= 7 ? 'Оператор' : 'Стажёр';
+  var rows = STAGES.map(function(s, i){
+    return '<li><span class="n route-n" style="width:30px;height:30px;border-radius:9px;background:var(--amber-soft);display:grid;place-items:center;font:700 13px var(--font-display)">' + (i + 1) + '</span>' +
+      '<span class="nm">' + s.name + '</span>' + starsHtml(stageStars(i)) + '</li>';
+  }).join('');
+  app.innerHTML =
+    '<section class="card"><div class="stack">' +
+    '<p class="eyebrow">Путь пройден</p>' +
+    '<div><p class="rank">' + rank + '</p><p class="rank-total" style="margin-top:6px">Звёзд: ' + total + ' из ' + max + '</p></div>' +
+    '<p class="lead">Вы довели нефть от пласта до потребителя: пробурили скважину, разделили смесь, подготовили нефть, проложили трассу с насосными станциями, разогнали сырьё на фракции и отправили продукты по адресам.</p>' +
+    '<ul class="sum">' + rows + '</ul>' +
+    '<div class="row"><button type="button" class="btn" data-go="restart">Пройти заново</button></div>' +
+    '<p class="foot" style="margin-top:0">Игра упрощает реальные процессы. Для расчётов используйте нормативные методики и материалы вашего курса.</p>' +
+    '</div></section>';
+}
+
+function render(){
+  renderSteps();
+  if(S.screen === 'start') startView();
+  else if(S.screen === 'stage') stageView();
+  else finalView();
+  var top = $('#steps');
+  if(top && top.scrollIntoView && S.screen !== 'start'){ try{ top.scrollIntoView({ block:'start' }); }catch(e){} }
+}
+
+app.addEventListener('click', function(e){
+  var g = e.target.closest('[data-go]');
+  if(g){
+    var a = g.dataset.go;
+    if(a === 'start' || a === 'restart'){ clearSaved(); S = blankState(); S.screen = 'stage'; S.stage = 0; S.phase = 'intro'; render(); }
+    else if(a === 'resume'){
+      var d = loadSaved();
+      if(d){ S.game = d.game; S.quiz = d.quiz; S.done = d.done; S.note = d.note; }
+      S.screen = 'stage'; S.stage = Math.max(0, S.done.indexOf(false)); S.phase = 'intro'; render();
+    }
+    else if(a === 'play'){ S.phase = 'play'; render(); }
+    else if(a === 'next'){
+      if(S.stage < TOTAL - 1){ S.stage++; S.phase = 'intro'; }
+      else { S.screen = 'final'; }
+      render();
+    }
+    return;
+  }
+  var q = e.target.closest('[data-q]');
+  if(q && S.screen === 'stage' && S.phase === 'quiz' && S.ans[S.stage] === null){
+    var idx = +q.dataset.q;
+    S.ans[S.stage] = idx;
+    S.quiz[S.stage] = idx === STAGES[S.stage].quiz.a ? 1 : 0;
+    S.done[S.stage] = true;
+    save();
+    var keepTop = window.scrollY;
+    render();
+    window.scrollTo(0, keepTop);
+  }
+});
+
+render();
+})();
+</script>
