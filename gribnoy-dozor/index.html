@@ -68,10 +68,10 @@ button{font:inherit;color:inherit;cursor:pointer}
 .arrow{position:fixed;width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid var(--red);filter:drop-shadow(0 0 4px rgba(0,0,0,.6));pointer-events:none}
 
 .overlay{position:fixed;inset:0;display:grid;place-items:center;padding:16px;background:radial-gradient(ellipse at center,rgba(10,22,14,.35),rgba(8,16,10,.85));overflow:auto}
-.card{width:min(860px,100%);background:rgba(20,36,24,.92);border:1px solid var(--line);border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.card{width:min(1000px,100%);background:rgba(20,36,24,.92);border:1px solid var(--line);border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
 .title{font:400 clamp(40px,9vw,72px)/.95 var(--font-display);color:#FFE7A6;text-shadow:0 5px 0 #8A3A1E,0 0 30px rgba(255,190,90,.35);letter-spacing:.01em}
 .lead{color:var(--ink-2);font-size:17px;margin:0;max-width:62ch}
-.classes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.classes{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
 @media (max-width:700px){.classes{grid-template-columns:1fr}}
 .cls{display:flex;flex-direction:column;gap:8px;text-align:left;padding:14px;border-radius:18px;border:2px solid var(--line);background:rgba(255,255,255,.04)}
 .cls:hover,.cls.sel{border-color:var(--amber);background:rgba(255,194,75,.08)}
@@ -469,7 +469,8 @@ const last = {};
 const ok = (k, ms) => { const n = performance.now(); if(last[k] && n - last[k] < ms) return false; last[k] = n; return true; };
 const SFX = {
   shot(kind){ if(!AC || muted) return; const t = AC.currentTime;
-    if(kind === 'heavy'){ nz(t, 'lowpass', 900, 0.8, 0.5, 0.25, 120); tn(t, 'sine', 160, 50, 0.5, 0.2); }
+    if(kind === 'burst'){ nz(t, 'lowpass', 2200, 0.8, 0.45, 0.18, 300); tn(t, 'sine', 200, 70, 0.3, 0.15); }
+    else if(kind === 'heavy'){ nz(t, 'lowpass', 900, 0.8, 0.5, 0.25, 120); tn(t, 'sine', 160, 50, 0.5, 0.2); }
     else if(kind === 'rapid'){ if(!ok('rapid', 45)) return; nz(t, 'bandpass', 2400, 2, 0.18, 0.06); tn(t, 'square', 900, 500, 0.05, 0.05); }
     else { nz(t, 'bandpass', 1300, 1.2, 0.3, 0.1, 400); tn(t, 'triangle', 520, 200, 0.18, 0.12); } },
   hit(crit){ if(!AC || muted || !ok('hit', 30)) return; const t = AC.currentTime; tn(t, 'triangle', crit ? 1400 : 950, crit ? 1800 : 1100, 0.12, 0.06); },
@@ -513,7 +514,11 @@ const CLASSES = {
   lisichka:{ name:'Лисичка', role:'Ловкач', cap:'#F2A33A', funnel:true, hp:115, speed:8.6,
     desc:'Скорострельные иглы и рывки. Бей и уходи.',
     weapon:{ kind:'rapid', dmg:8, rate:12, mag:48, reload:1.2, speed:70, spread:0.03, size:0.13, col:[1, 0.85, 0.35] },
-    q:{ name:'Рывок', cd:4, desc:'резкий рывок, неуязвимость' }, e:{ name:'Огонь', cd:8, desc:'огненная граната' } }
+    q:{ name:'Рывок', cd:4, desc:'резкий рывок, неуязвимость' }, e:{ name:'Огонь', cd:8, desc:'огненная граната' } },
+  dozhdevik:{ name:'Дождевик', role:'Поддержка', cap:'#F4EFE4', puff:true, hp:170, speed:6.6,
+    desc:'Споровая дробь вблизи. Лечит Грибницу и союзников.',
+    weapon:{ kind:'burst', dmg:9, pellets:7, rate:2.1, mag:10, reload:1.6, speed:46, spread:0.075, size:0.13, life:0.55, col:[0.95, 0.95, 0.85] },
+    q:{ name:'Пых!', cd:10, desc:'облако, оглушает всех рядом' }, e:{ name:'Лечение', cd:14, desc:'лечит Грибницу, растения и себя' } }
 };
 const creamM = new THREE.MeshStandardMaterial({ color:'#F1E6CF', roughness:0.75 });
 const blackM = new THREE.MeshStandardMaterial({ color:'#15110E', roughness:0.3 });
@@ -525,7 +530,11 @@ function buildMushroom(cls, scale){
   const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.55, 1.15, 18), creamM); stem.position.y = 0.85; body.add(stem);
   const capM = new THREE.MeshStandardMaterial({ color:C.cap, roughness:0.45 });
   let cap;
-  if(C.funnel){
+  if(C.puff){
+    stem.scale.set(0.8, 0.5, 0.8); stem.position.y = 0.45;
+    cap = new THREE.Mesh(new THREE.SphereGeometry(0.95, 28, 18), capM); cap.position.y = 1.15; cap.scale.set(1, 0.92, 1);
+    for(let i = 0; i < 26; i++){ const a = rand(0, TAU), el = rand(-0.2, 1.3); const w = new THREE.Mesh(new THREE.SphereGeometry(rand(0.05, 0.09), 6, 4), new THREE.MeshStandardMaterial({ color:'#E2D8C2', roughness:0.9 })); w.position.set(Math.cos(a) * Math.cos(el) * 0.93, 1.15 + Math.sin(el) * 0.86, Math.sin(a) * Math.cos(el) * 0.93); body.add(w); }
+  } else if(C.funnel){
     const pts = [];
     for(let i = 0; i <= 10; i++){ const t = i / 10; pts.push(new THREE.Vector2(0.25 + t * 0.95, t * t * 0.75)); }
     cap = new THREE.Mesh(new THREE.LatheGeometry(pts, 22), capM); cap.material.side = THREE.DoubleSide; cap.position.y = 1.3; cap.scale.set(1, 0.9, 1);
@@ -541,8 +550,9 @@ function buildMushroom(cls, scale){
   }
   // face
   for(const sx of [-0.17, 0.17]){
-    const e = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), blackM); e.position.set(sx, 1.0, 0.43); e.scale.z = 0.5; body.add(e);
-    const h = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), whiteM); h.position.set(sx + 0.03, 1.04, 0.48); body.add(h);
+    const fy = C.puff ? 1.2 : 1.0, fz = C.puff ? 0.86 : 0.43;
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), blackM); e.position.set(sx, fy, fz); e.scale.z = 0.5; body.add(e);
+    const h = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), whiteM); h.position.set(sx + 0.03, fy + 0.04, fz + 0.05); body.add(h);
   }
   // arms + weapon
   const weap = new THREE.Group(); weap.position.set(0.55, 0.85, 0.25); body.add(weap);
@@ -566,6 +576,7 @@ const ETYPES = {
   ant:    { name:'Муравей', hp:22, speed:5.4, r:0.6, h:0.45, dmg:6, reward:3, mass:0.6 },
   beetle: { name:'Жук-рогач', hp:120, speed:3.6, r:1.1, h:0.7, dmg:18, reward:12, mass:2.5, charge:true },
   wasp:   { name:'Оса', hp:34, speed:6, r:0.7, h:3.2, dmg:7, reward:8, mass:0.5, fly:true, ranged:true },
+  tick:   { name:'Клещ', hp:18, speed:6.2, r:0.45, h:0.35, dmg:6, reward:5, mass:0.4, latch:true },
   snail:  { name:'Улитка-гигант', hp:2200, speed:1.25, r:3.2, h:1.8, dmg:40, reward:250, mass:30, boss:true }
 };
 function hitFlash(m){ const ms = []; m.traverse(o => { if(o.isMesh){ o.material = o.material.clone(); ms.push(o.material); } }); return ms; }
@@ -600,6 +611,12 @@ function buildEnemy(type){
     const wm = new THREE.MeshStandardMaterial({ color:'#E6F6FF', transparent:true, opacity:0.45, side:THREE.DoubleSide, roughness:0.1 });
     parts.wings = [];
     for(const sx of [-1, 1]){ const w = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.35), wm); w.position.set(sx * 0.5, 0.25, 0); w.rotation.x = -Math.PI / 2; g.add(w); parts.wings.push(w); }
+  } else if(type === 'tick'){
+    const m = gloss('#5B1E1E', 0.3);
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 10), m); b.position.y = 0.4; b.scale.set(1, 0.7, 1.15); g.add(b);
+    const hd = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), gloss('#2A0E0E')); hd.position.set(0, 0.38, 0.48); g.add(hd);
+    parts.legs = [];
+    for(let i = 0; i < 8; i++){ const side = i < 4 ? -1 : 1; const l = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.02, 0.55, 4), gloss('#2A0E0E')); l.position.set(side * 0.38, 0.25, (i % 4 - 1.5) * 0.18); l.rotation.z = side * 1.1; g.add(l); parts.legs.push(l); }
   } else if(type === 'snail'){
     const bm = gloss('#9C8A62', 0.3);
     const b = new THREE.Mesh(new THREE.CapsuleGeometry(1.1, 4.4, 8, 18), bm); b.rotation.x = Math.PI / 2; b.position.y = 0.9; b.scale.set(1.2, 1, 0.75); g.add(b);
@@ -696,7 +713,7 @@ function spawnShot(from, to, w, crit){
   dir.x += rand(-w.spread, w.spread); dir.y += rand(-w.spread, w.spread); dir.z += rand(-w.spread, w.spread); dir.normalize();
   const mesh = new THREE.Mesh(shotGeo, new THREE.MeshBasicMaterial({ color:new THREE.Color(w.col[0], w.col[1], w.col[2]) }));
   mesh.scale.setScalar(w.size); mesh.position.copy(from); scene.add(mesh);
-  shots.push({ p:from.clone(), v:dir.multiplyScalar(w.speed), dmg:w.dmg, r:w.size, life:1.6, mesh, splash:w.splash || 0, col:w.col, kind:w.kind });
+  shots.push({ p:from.clone(), v:dir.multiplyScalar(w.speed), dmg:w.dmg, r:w.size, life:w.life || 1.6, mesh, splash:w.splash || 0, col:w.col, kind:w.kind });
 }
 function damageEnemy(e, dmg, src, kx, kz, crit){
   if(e.dead) return;
@@ -732,10 +749,10 @@ function splash(x, y, z, r, dmg, src, knock){
     damageEnemy(e, dmg * f, src, nx * (knock || 0), nz * (knock || 0));
   }
 }
-function damagePlayer(dmg, fx, fz){
+function damagePlayer(dmg, fx, fz, quiet){
   if(player.dead || player.dash > 0) return;
   if(player.shield > 0) dmg *= 0.15;
-  player.hp -= dmg; hurtFlash = Math.min(1, hurtFlash + dmg / 40); SFX.hurt();
+  player.hp -= dmg; hurtFlash = Math.min(1, hurtFlash + (quiet ? dmg / 8 : dmg / 40)); if(!quiet) SFX.hurt();
   if(fx !== undefined){ player.kx += fx; player.kz += fz; }
   if(player.hp <= 0){
     player.hp = 0; player.dead = true; player.respawn = 5; player.mesh.visible = false;
@@ -770,9 +787,9 @@ function renderAbilities(){
 /* ================= waves ================= */
 function waveDef(n){
   const W = [
-    ['slug', 6], ['slug', 7, 'ant', 6], ['slug', 7, 'ant', 8, 'beetle', 1], ['ant', 12, 'beetle', 2, 'wasp', 2],
-    ['slug', 10, 'beetle', 2, 'wasp', 3], ['ant', 16, 'wasp', 4, 'beetle', 2], ['slug', 10, 'beetle', 3, 'wasp', 3, 'ant', 6],
-    ['beetle', 4, 'wasp', 5, 'ant', 12], ['slug', 12, 'beetle', 4, 'wasp', 5, 'ant', 10], ['snail', 1, 'slug', 6, 'ant', 8, 'wasp', 3]
+    ['slug', 6], ['slug', 7, 'ant', 6], ['slug', 7, 'ant', 8, 'beetle', 1], ['ant', 10, 'beetle', 2, 'wasp', 2, 'tick', 3],
+    ['slug', 10, 'beetle', 2, 'wasp', 3], ['ant', 14, 'wasp', 4, 'beetle', 2, 'tick', 4], ['slug', 10, 'beetle', 3, 'wasp', 3, 'ant', 6],
+    ['beetle', 4, 'wasp', 5, 'ant', 10, 'tick', 4], ['slug', 12, 'beetle', 4, 'wasp', 5, 'ant', 8, 'tick', 4], ['snail', 1, 'slug', 6, 'ant', 8, 'wasp', 3]
   ];
   const d = W[n - 1], list = [];
   for(let i = 0; i < d.length; i += 2) for(let k = 0; k < d[i + 1]; k++) list.push(d[i]);
@@ -933,6 +950,18 @@ function ability(k){
       emit('soft', player.x + fx * 2, player.y + 1, player.z + fz * 2, 30, { dir:new THREE.Vector3(fx, 0.2, fz), spd:12, spread:3, size:0.6, size1:1.6, life:0.6, col:[0.9, 0.8, 0.6], g:0 });
       shake = Math.max(shake, 0.4); SFX.boom();
     }
+  } else if(player.cls === 'dozhdevik'){
+    if(k === 'q'){
+      for(const e of enemies){ if(e.dead) continue; const dx = e.x - player.x, dz = e.z - player.z, d = Math.hypot(dx, dz); if(d < 7){ e.stun = 2.6; damageEnemy(e, 15, 'ab', dx / (d || 1) * 10, dz / (d || 1) * 10); } }
+      emit('soft', player.x, player.y + 1, player.z, 70, { spd:9, up:0.5, size:1.6, size1:4, life:1.4, col:[0.95, 0.94, 0.86], g:0.4, drag:2.5 });
+      SFX.boom();
+    } else {
+      heart.hp = Math.min(heart.max, heart.hp + 180); player.hp = Math.min(player.max, player.hp + 70);
+      for(const pl of plants) pl.hp = pl.max;
+      emit('glow', 0, groundH(0, 0) + 6, 0, 60, { spd:5, up:1, size:0.6, size1:0.05, life:1.2, col:[0.6, 1, 0.6], g:-2, r:3 });
+      emit('glow', player.x, player.y + 1, player.z, 30, { spd:3, up:1.2, size:0.5, size1:0.05, life:1, col:[0.6, 1, 0.6], g:-2 });
+      msg('', 'Грибница +180', 1.2);
+    }
   } else {
     if(k === 'q'){ player.dash = 0.22; player.dashX = fx; player.dashZ = fz; }
     else {
@@ -984,7 +1013,10 @@ function updatePlayer(dt){
   const pd = Math.hypot(player.x, player.z); if(pd > R_PLAY){ player.x *= R_PLAY / pd; player.z *= R_PLAY / pd; }
   // vertical
   const gh = groundH(player.x, player.z);
-  if(player.ground && (keys.Space || touch.jump)){ player.vy = 10; player.ground = false; SFX.jump(); touch.jump = false; }
+  if(player.ground && (keys.Space || touch.jump)){
+    player.vy = 10; player.ground = false; SFX.jump(); touch.jump = false;
+    for(const e of enemies){ if(e.latched){ e.latched = false; const a = rand(0, TAU); e.kx = Math.cos(a) * 9; e.kz = Math.sin(a) * 9; damageEnemy(e, 12, 'ab'); } }
+  }
   player.vy -= 28 * dt; player.y += player.vy * dt;
   if(player.y <= gh){
     if(!player.ground){
@@ -1005,7 +1037,7 @@ function updatePlayer(dt){
       const mz2 = player.mesh.userData;
       const from = new THREE.Vector3(0.55, 0.85, 0.85).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw + Math.PI).add(new THREE.Vector3(player.x, player.y, player.z));
       const Wm = Object.assign({}, W, { dmg:W.dmg * (1 + 0.2 * UP('dmg')) });
-      spawnShot(from, aimPoint, Wm);
+      for(let k = 0; k < (W.pellets || 1); k++) spawnShot(from, aimPoint, Wm);
       if(UP('twin') && shotCount % Math.max(2, 6 - UP('twin')) === 0) spawnShot(from.clone().add(new THREE.Vector3(0, 0.25, 0)), aimPoint, Wm);
       SFX.shot(W.kind);
       emit('glow', from.x, from.y, from.z, 4, { spd:2, size:W.size * 2.5, size1:0.05, life:0.12, col:W.col, g:0 });
@@ -1075,7 +1107,7 @@ function updateShots(dt){
       for(const o of obstacles){ if(Math.hypot(s.p.x - o.x, s.p.z - o.z) < o.r && s.p.y < groundH(o.x, o.z) + 2.5){ s.life = 0; impact(s); break; } }
       if(s.life <= 0) break;
       for(const e of enemies){
-        if(e.dead) continue;
+        if(e.dead || e.latched) continue;
         const T = ETYPES[e.type];
         if(Math.hypot(s.p.x - e.x, s.p.y - (e.y + T.h), s.p.z - e.z) < T.r + s.r){
           const crit = s.p.y > e.y + T.h * 1.4 && (UP('crit') || Math.random() < 0.6);
@@ -1108,6 +1140,7 @@ function updateEnemies(dt){
     if(e.dead) continue;
     for(const pl of plants){ if(pl.kind === 'sundew' && !pl.dead && !T.fly && Math.hypot(e.x - pl.pot.x, e.z - pl.pot.z) < 3){ slow = Math.min(slow, 0.35); e.hp -= 22 * dt; if(e.hp <= 0){ killEnemy(e); break; } } }
     if(e.dead) continue;
+    if(e.stun > 0){ e.stun -= dt; e.g.rotation.y += dt * 4; if(Math.random() < dt * 6) emit('glow', e.x, e.y + ETYPES[e.type].h * 2 + 0.5, e.z, 1, { spd:0.5, size:0.3, size1:0.05, life:0.5, col:[1, 1, 0.6], g:0 }); e.x += e.kx * dt; e.z += e.kz * dt; e.kx *= Math.exp(-5 * dt); e.kz *= Math.exp(-5 * dt); continue; }
     // choose a target: player if close, plants nearby, else the heart
     const pd = player.dead ? 1e9 : Math.hypot(player.x - e.x, player.z - e.z);
     let tx = heart.x, tz = heart.z, tr = heart.r, tgt = 'heart';
@@ -1121,6 +1154,22 @@ function updateEnemies(dt){
     e.yaw += dy * Math.min(1, dt * (T.boss ? 1.5 : 6));
     let sp = T.speed * slow;
     const reach = tr + T.r + 0.3;
+    if(T.latch){
+      if(e.latched){
+        if(player.dead){ e.latched = false; }
+        else {
+          const a = e.slot * 2.1 + time * 0.5;
+          e.x = player.x + Math.cos(a) * 0.45; e.z = player.z + Math.sin(a) * 0.45; e.y = player.y + 0.9 + e.slot * 0.2;
+          e.g.position.set(e.x, e.y, e.z); e.g.rotation.set(0, a, 0);
+          damagePlayer(T.dmg * dt, undefined, undefined, true);
+          continue;
+        }
+      } else if(tgt === 'player' && d < 2.4 && !player.dead){
+        e.latched = true; e.slot = enemies.filter(o => o.latched).length;
+        tip('<b>Клещ!</b> ' + (TOUCH ? 'Нажми «Прыг»' : 'Прыгни (пробел)') + ', чтобы стряхнуть его.', 3);
+        continue;
+      }
+    }
     // beetle charge
     if(T.charge){
       if(e.state === 'walk' && tgt === 'player' && d < 12 && e.atk <= 0){ e.state = 'wind'; e.st = 0.7; }
@@ -1362,6 +1411,7 @@ let chosen = 'amanita';
 function renderMenu(){
   const icon = c => {
     const C = CLASSES[c];
+    if(C.puff) return '<svg viewBox="0 0 72 72" aria-hidden="true"><rect x="28" y="48" width="16" height="12" rx="6" fill="#E9DFC9"/><circle cx="36" cy="34" r="22" fill="#F4EFE4"/><circle cx="30" cy="36" r="2.4" fill="#15110E"/><circle cx="42" cy="36" r="2.4" fill="#15110E"/><circle cx="26" cy="22" r="2" fill="#D9CDB3"/><circle cx="44" cy="20" r="2.4" fill="#D9CDB3"/><circle cx="50" cy="30" r="1.8" fill="#D9CDB3"/></svg>';
     const capPath = c === 'lisichka' ? '<path d="M8 30 Q36 4 64 30 Q50 34 36 32 Q22 34 8 30Z" fill="' + C.cap + '"/>' : '<path d="M6 34 Q36 -4 66 34 Z" fill="' + C.cap + '"/>';
     const spots = C.spots ? '<circle cx="24" cy="22" r="4" fill="#fff"/><circle cx="40" cy="15" r="3.2" fill="#fff"/><circle cx="52" cy="26" r="3.6" fill="#fff"/>' : '';
     return '<svg viewBox="0 0 72 72" aria-hidden="true"><rect x="26" y="32" width="20" height="28" rx="9" fill="#F1E6CF"/><circle cx="32" cy="42" r="2.4" fill="#15110E"/><circle cx="40" cy="42" r="2.4" fill="#15110E"/>' + capPath + spots + '</svg>';
