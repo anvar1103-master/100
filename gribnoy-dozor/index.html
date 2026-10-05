@@ -45,6 +45,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .ammo small{font-size:18px;color:var(--muted)}
 .ammo.low{color:var(--red)}
 .abil{display:flex;gap:8px}
+@media (pointer:coarse){.abil{display:none}.br{bottom:calc(16px + env(safe-area-inset-bottom,0px))}.plant{bottom:calc(260px + env(safe-area-inset-bottom,0px))}}
 .ab{position:relative;width:58px;height:58px;border-radius:14px;background:var(--glass);border:1px solid var(--line);display:grid;place-items:center;overflow:hidden;font:400 13px/1.1 var(--font-display);text-align:center;padding:4px}
 .ab .k{position:absolute;left:5px;top:3px;font-size:12px;color:var(--amber)}
 .ab .cd{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);height:0}
@@ -56,7 +57,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .pc span{color:var(--spore)}
 .pc.no{opacity:.45}
 .pc kbd{font:400 12px var(--font-display);color:var(--amber)}
-.msg{position:fixed;left:0;right:0;top:30%;text-align:center;font:400 clamp(30px,7vw,58px)/1.05 var(--font-display);color:var(--ink);text-shadow:0 4px 0 rgba(20,40,20,.6),0 0 30px rgba(255,200,90,.45);opacity:0;transform:scale(.9);transition:opacity .3s,transform .3s}
+.msg{position:fixed;left:0;right:0;top:36%;text-align:center;font:400 clamp(30px,7vw,58px)/1.05 var(--font-display);color:var(--ink);text-shadow:0 4px 0 rgba(20,40,20,.6),0 0 30px rgba(255,200,90,.45);opacity:0;transform:scale(.9);transition:opacity .3s,transform .3s}
 .msg.on{opacity:1;transform:none}
 .msg small{display:block;font:700 17px/1.4 var(--font-body);color:var(--ink-2);margin-top:8px}
 .tip{position:fixed;left:0;right:0;margin-inline:auto;width:fit-content;max-width:min(calc(100vw - 32px),640px);top:calc(124px + env(safe-area-inset-top,0px));padding:9px 16px;border-radius:12px;background:var(--glass);border:1px solid var(--line);font-size:15px;text-align:center;transition:opacity .4s;text-shadow:none}
@@ -89,6 +90,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 .res div{background:rgba(255,255,255,.05);border-radius:12px;padding:10px}
 .res b{display:block;font:400 24px/1.1 var(--font-display)}
 .res span{font-size:12px;color:var(--muted)}
+.tc{position:fixed;inset:0;pointer-events:none}
+.stick{position:fixed;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(255,255,255,.25);background:rgba(10,20,12,.25);display:none}
+.stick i{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,240,200,.45)}
+.tbtns{position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(110px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(3,56px);gap:8px;pointer-events:auto}
+.tb{width:56px;height:56px;border-radius:50%;border:1px solid var(--line);background:var(--glass);font:400 14px/1 var(--font-display);color:var(--ink);touch-action:none}
+.tb.fire{grid-column:3;grid-row:1 / span 2;width:56px;height:120px;border-radius:28px;background:radial-gradient(circle at 50% 35%,#FFD36B,#E58A2A);color:#3A2306}
+.tb.on{filter:brightness(1.3)}
 .load{position:fixed;inset:0;display:grid;place-items:center;font:400 24px var(--font-display);color:var(--ink-2);background:var(--moss)}
 .pause{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 20px;border-radius:14px;background:var(--glass);border:1px solid var(--line);font:400 18px var(--font-display);pointer-events:none}
 </style>
@@ -115,6 +123,13 @@ button{font:inherit;color:inherit;cursor:pointer}
   </div>
   <div class="plant" id="plant" hidden></div>
   <div class="msg" id="msg"></div>
+  <div class="tc" id="tc" hidden>
+    <div class="stick" id="stick"><i></i></div>
+    <div class="tbtns">
+      <button class="tb" id="t-q">Q</button><button class="tb" id="t-e">E</button><button class="tb fire" id="t-fire">Огонь</button>
+      <button class="tb" id="t-jump">Прыг</button><button class="tb" id="t-r">R</button>
+    </div>
+  </div>
   <div class="pause" id="pause" hidden>Кликни, чтобы вернуться в бой</div>
 </div>
 
@@ -124,6 +139,14 @@ button{font:inherit;color:inherit;cursor:pointer}
     <p class="lead">Лесные вредители ползут к Грибнице-матушке. Выбери гриба, сажай союзные растения и продержись десять волн.</p>
     <div class="classes" id="classes"></div>
     <div class="row"><button class="go" id="play">В лес!</button><p class="keys" id="keys"><span><b>WASD</b> бег</span><span><b>Мышь</b> прицел</span><span><b>ЛКМ</b> огонь</span><span><b>Q / E</b> умения</span><span><b>R</b> перезарядка</span><span><b>Пробел</b> прыжок</span><span><b>Shift</b> спринт</span><span><b>1 2 3</b> посадить растение у горшка</span></p></div>
+  </div>
+</div>
+
+<div class="overlay" id="up" hidden>
+  <div class="card" style="width:min(820px,100%);align-items:center;text-align:center">
+    <div class="title" style="font-size:clamp(28px,6vw,42px)">Гриб подрос</div>
+    <p class="lead">Выбери одно улучшение на весь бой.</p>
+    <div class="classes" id="up-list" style="width:100%"></div>
   </div>
 </div>
 
@@ -333,7 +356,7 @@ const shafts = [];
 {
   const g = new THREE.CylinderGeometry(1.2, 3.6, 28, 16, 1, true); g.translate(0, -14, 0);
   for(let i = 0; i < 7; i++){
-    const mat = new THREE.MeshBasicMaterial({ color:'#FFF1C2', transparent:true, opacity:0.06, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false });
+    const mat = new THREE.MeshBasicMaterial({ color:'#FFF1C2', transparent:true, opacity:0.03, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false });
     const sh = new THREE.Mesh(g, mat);
     const a = rand(0, TAU), d = rand(14, 38);
     sh.position.set(Math.cos(a) * d, 36, Math.sin(a) * d); sh.rotation.set(0.3, 0, -0.22);
@@ -589,6 +612,38 @@ function buildEnemy(type){
   return { g, parts };
 }
 
+/* ================= upgrades ================= */
+const UPGRADES = [
+  { id:'hp',    name:'Крепкая ножка',     desc:'+25% здоровья, и сразу полное лечение.' },
+  { id:'dmg',   name:'Острые споры',      desc:'+20% урона основным оружием.' },
+  { id:'speed', name:'Быстрые ножки',     desc:'+15% к скорости бега.' },
+  { id:'mag',   name:'Глубокий карман',   desc:'+50% к магазину, перезарядка на 25% быстрее.' },
+  { id:'cd',    name:'Грибная медитация', desc:'Умения перезаряжаются на 30% быстрее.' },
+  { id:'leech', name:'Споровый вампиризм',desc:'Каждое убийство лечит на 6 здоровья.' },
+  { id:'twin',  name:'Двойной гриб',      desc:'Каждый пятый выстрел летит сдвоенным.' },
+  { id:'knock', name:'Корни-якоря',       desc:'Твои попадания отбрасывают врагов вдвое сильнее.' },
+  { id:'magnet',name:'Мицелий-магнит',    desc:'Споры летят к тебе издалека, +20% спор с врагов.' },
+  { id:'crit',  name:'Глаз лесника',      desc:'Попадания в верх врага наносят двойной урон.' }
+];
+let ups = {}, shotCount = 0, upT = -1;
+const UP = id => ups[id] || 0;
+function offerUpgrade(){
+  const pool = UPGRADES.filter(u => UP(u.id) < 2).sort(() => Math.random() - 0.5).slice(0, 3);
+  if(!pool.length) return;
+  state = 'upgrade';
+  if(document.exitPointerLock && locked) document.exitPointerLock();
+  $('up-list').innerHTML = pool.map(u => '<button class="cls" data-up="' + u.id + '"><b>' + u.name + (UP(u.id) ? ' II' : '') + '</b><p>' + u.desc + '</p></button>').join('');
+  $('up').hidden = false;
+}
+$('up-list').addEventListener('click', e => {
+  const b = e.target.closest('[data-up]'); if(!b) return;
+  const id = b.dataset.up; ups[id] = UP(id) + 1;
+  if(id === 'hp'){ player.max = Math.round(player.max * 1.25); player.hp = player.max; }
+  $('up').hidden = true; state = 'play';
+  SFX.plant();
+  if(!TOUCH){ try{ const r = canvas.requestPointerLock(); if(r && r.catch) r.catch(() => {}); }catch(err){} }
+});
+
 /* ================= state ================= */
 const player = { x:0, y:0, z:9, vy:0, yaw:Math.PI, pitch:-0.12, hp:150, max:150, cls:'amanita', ground:true, dead:false, respawn:0,
   ammo:24, reloading:0, fireT:0, cdQ:0, cdE:0, shield:0, dash:0, slam:false, mesh:null, walk:0, kx:0, kz:0 };
@@ -658,8 +713,9 @@ function killEnemy(e){
   const col = e.type === 'slug' ? [0.85, 0.7, 0.35] : e.type === 'beetle' ? [0.2, 0.5, 0.35] : e.type === 'wasp' ? [1, 0.8, 0.1] : e.type === 'snail' ? [0.7, 0.55, 0.35] : [0.45, 0.15, 0.1];
   emit('soft', e.x, e.y + T.h, e.z, e.type === 'snail' ? 80 : 18, { spd:5, up:1.2, size:0.45, size1:0.15, life:0.8, col, g:-14, r:T.r * 0.5 });
   emit('glow', e.x, e.y + T.h, e.z, 10, { spd:3, up:1, size:0.5, size1:0.05, life:0.6, col:[0.7, 1, 1], g:-2 });
-  const n = Math.max(1, Math.round(T.reward / 3));
-  for(let i = 0; i < n; i++) orbs.push(makeOrb(e.x + rand(-0.5, 0.5), e.y + 1, e.z + rand(-0.5, 0.5), Math.ceil(T.reward / n)));
+  const rew = T.reward * (1 + 0.2 * UP('magnet')), n = Math.max(1, Math.round(rew / 3));
+  for(let i = 0; i < n; i++) orbs.push(makeOrb(e.x + rand(-0.5, 0.5), e.y + 1, e.z + rand(-0.5, 0.5), Math.ceil(rew / n)));
+  if(UP('leech') && !player.dead) player.hp = Math.min(player.max, player.hp + 6 * UP('leech'));
   if(e.type === 'snail'){ shake = 1; for(let i = 0; i < 6; i++) queueEnemy('slug', e.x + rand(-3, 3), e.z + rand(-3, 3)); }
   hitMarker(true);
   e.dieT = 0.35;
@@ -715,8 +771,8 @@ function renderAbilities(){
 function waveDef(n){
   const W = [
     ['slug', 6], ['slug', 7, 'ant', 6], ['slug', 7, 'ant', 8, 'beetle', 1], ['ant', 12, 'beetle', 2, 'wasp', 2],
-    ['slug', 10, 'beetle', 2, 'wasp', 3], ['ant', 16, 'wasp', 4, 'beetle', 2], ['slug', 12, 'beetle', 4, 'wasp', 4, 'ant', 8],
-    ['beetle', 5, 'wasp', 6, 'ant', 14], ['slug', 14, 'beetle', 5, 'wasp', 7, 'ant', 12], ['snail', 1, 'slug', 8, 'ant', 10, 'wasp', 4]
+    ['slug', 10, 'beetle', 2, 'wasp', 3], ['ant', 16, 'wasp', 4, 'beetle', 2], ['slug', 10, 'beetle', 3, 'wasp', 3, 'ant', 6],
+    ['beetle', 4, 'wasp', 5, 'ant', 12], ['slug', 12, 'beetle', 4, 'wasp', 5, 'ant', 10], ['snail', 1, 'slug', 6, 'ant', 8, 'wasp', 3]
   ];
   const d = W[n - 1], list = [];
   for(let i = 0; i < d.length; i += 2) for(let k = 0; k < d[i + 1]; k++) list.push(d[i]);
@@ -850,8 +906,9 @@ addEventListener('mousemove', e => {
 });
 
 /* ================= abilities ================= */
+function weaponNow(){ const W = CLASSES[player.cls].weapon; return Object.assign({}, W, { mag:Math.round(W.mag * (1 + 0.5 * UP('mag'))), reload:W.reload * Math.pow(0.75, UP('mag')) }); }
 function reload(){
-  const W = CLASSES[player.cls].weapon;
+  const W = weaponNow();
   if(player.reloading > 0 || player.ammo >= W.mag || player.dead) return;
   player.reloading = W.reload; SFX.reload();
 }
@@ -859,7 +916,8 @@ function ability(k){
   if(player.dead) return;
   const C = CLASSES[player.cls], A = C[k];
   if((k === 'q' ? player.cdQ : player.cdE) > 0) return;
-  if(k === 'q') player.cdQ = A.cd; else player.cdE = A.cd;
+  const cdm = Math.pow(0.7, UP('cd'));
+  if(k === 'q') player.cdQ = A.cd * cdm; else player.cdE = A.cd * cdm;
   SFX.ability();
   const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
   if(player.cls === 'amanita'){
@@ -897,7 +955,7 @@ function explodeAt(x, y, z, r, dmg){
 const camPos = new THREE.Vector3(0, 6, 18), camLook = new THREE.Vector3();
 const ray = new THREE.Ray();
 function updatePlayer(dt){
-  const C = CLASSES[player.cls], W = C.weapon;
+  const C = CLASSES[player.cls], W = weaponNow();
   player.cdQ = Math.max(0, player.cdQ - dt); player.cdE = Math.max(0, player.cdE - dt);
   player.shield = Math.max(0, player.shield - dt);
   if(player.dead){
@@ -915,7 +973,7 @@ function updatePlayer(dt){
   mx += touch.mx * fx + touch.mx2 * rx; mz += touch.mx * fz + touch.mx2 * rz;
   const ml = Math.hypot(mx, mz);
   const sprint = (keys.ShiftLeft || keys.ShiftRight) && !mouseDown;
-  let spd = C.speed * (sprint ? 1.45 : 1) * (player.shield > 0 ? 0.6 : 1);
+  let spd = C.speed * (1 + 0.15 * UP('speed')) * (sprint ? 1.45 : 1) * (player.shield > 0 ? 0.6 : 1);
   if(ml > 0.01){ mx /= Math.max(1, ml); mz /= Math.max(1, ml); }
   let vx = mx * spd + player.kx, vz = mz * spd + player.kz;
   if(player.dash > 0){ player.dash -= dt; vx = player.dashX * 34; vz = player.dashZ * 34; if(Math.random() < 0.8) emit('glow', player.x, player.y + 1, player.z, 2, { spd:1, size:0.5, size1:0.1, life:0.35, col:[1, 0.75, 0.3], g:0 }); }
@@ -943,10 +1001,12 @@ function updatePlayer(dt){
   if(wantFire && player.fireT <= 0 && player.reloading <= 0 && player.dash <= 0){
     if(player.ammo <= 0){ SFX.empty(); reload(); }
     else {
-      player.ammo--; player.fireT = 1 / W.rate;
+      player.ammo--; player.fireT = 1 / W.rate; shotCount++;
       const mz2 = player.mesh.userData;
       const from = new THREE.Vector3(0.55, 0.85, 0.85).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw + Math.PI).add(new THREE.Vector3(player.x, player.y, player.z));
-      spawnShot(from, aimPoint, W);
+      const Wm = Object.assign({}, W, { dmg:W.dmg * (1 + 0.2 * UP('dmg')) });
+      spawnShot(from, aimPoint, Wm);
+      if(UP('twin') && shotCount % Math.max(2, 6 - UP('twin')) === 0) spawnShot(from.clone().add(new THREE.Vector3(0, 0.25, 0)), aimPoint, Wm);
       SFX.shot(W.kind);
       emit('glow', from.x, from.y, from.z, 4, { spd:2, size:W.size * 2.5, size1:0.05, life:0.12, col:W.col, g:0 });
       recoil = W.kind === 'heavy' ? 0.05 : W.kind === 'rapid' ? 0.008 : 0.018;
@@ -1018,10 +1078,11 @@ function updateShots(dt){
         if(e.dead) continue;
         const T = ETYPES[e.type];
         if(Math.hypot(s.p.x - e.x, s.p.y - (e.y + T.h), s.p.z - e.z) < T.r + s.r){
-          const crit = s.p.y > e.y + T.h * 1.4 && Math.random() < 0.6;
-          const d = s.dmg * (crit ? 1.5 : 1);
+          const crit = s.p.y > e.y + T.h * 1.4 && (UP('crit') || Math.random() < 0.6);
+          const d = s.dmg * (crit ? (UP('crit') ? 2 : 1.5) : 1);
           const vn = s.v.clone().normalize();
-          damageEnemy(e, d, 'shot', vn.x * (s.kind === 'heavy' ? 6 : 1.2), vn.z * (s.kind === 'heavy' ? 6 : 1.2), crit);
+          const kb = (s.kind === 'heavy' ? 6 : 1.2) * (s.kind === 'plant' ? 1 : 1 + UP('knock'));
+          damageEnemy(e, d, 'shot', vn.x * kb, vn.z * kb, crit);
           s.life = 0; impact(s, e); break;
         }
       }
@@ -1153,7 +1214,7 @@ function updateOrbs(dt){
   for(const o of orbs){
     o.t += dt;
     const dx = player.x - o.m.position.x, dy = player.y + 1 - o.m.position.y, dz = player.z - o.m.position.z, d = Math.hypot(dx, dy, dz);
-    if(!player.dead && d < 7 && o.t > 0.4){ const s = 22 / Math.max(1, d); o.vx = dx * s * 0.6; o.vy = dy * s * 0.6; o.vz = dz * s * 0.6; }
+    if(!player.dead && d < 7 + 8 * UP('magnet') && o.t > 0.4){ const s = 22 / Math.max(1, d); o.vx = dx * s * 0.6; o.vy = dy * s * 0.6; o.vz = dz * s * 0.6; }
     else { o.vy -= 15 * dt; o.vx *= 0.96; o.vz *= 0.96; }
     o.m.position.x += o.vx * dt; o.m.position.y += o.vy * dt; o.m.position.z += o.vz * dt;
     const gh = groundH(o.m.position.x, o.m.position.z) + 0.25;
@@ -1173,7 +1234,7 @@ function updateWaves(dt){
     heart.pulse = 8;
     const near = enemies.some(e => !e.dead && Math.hypot(e.x, e.z) < 8);
     if(near){
-      splash(0, groundH(0, 0) + 0.8, 0, 7.5, 28, 'ab', 22);
+      splash(0, groundH(0, 0) + 0.8, 0, 8, 40, 'ab', 24);
       emit('glow', 0, groundH(0, 0) + 1, 0, 70, { spd:12, up:0.15, size:0.7, size1:0.1, life:0.7, col:[0.6, 1, 1], g:0 });
       SFX.ability();
     }
@@ -1186,9 +1247,11 @@ function updateWaves(dt){
       spores += 40 + wave * 8;
       heart.hp = Math.min(heart.max, heart.hp + heart.max * 0.15);
       msg('Волна отбита!', '+' + (40 + wave * 8) + ' спор · Грибница лечится');
+      upT = 1.4;
       if(wave === 1) tip('Подойди к <b>глиняному горшку</b> и нажми <b>' + (TOUCH ? 'кнопку растения' : '1, 2 или 3') + '</b>, чтобы посадить союзника.', 8);
     }
   } else if(waveState === 'break'){
+    if(upT >= 0){ upT -= dt; if(upT < 0){ offerUpgrade(); return; } }
     waveT -= dt;
     $('wave').textContent = 'Волна ' + (wave + 1) + ' через ' + Math.ceil(waveT);
     if(waveT <= 0) startWave();
@@ -1197,7 +1260,7 @@ function updateWaves(dt){
 
 /* ================= HUD update ================= */
 function updateHud(dt){
-  const C = CLASSES[player.cls], W = C.weapon;
+  const C = CLASSES[player.cls], W = weaponNow();
   $('hp').textContent = Math.ceil(player.hp);
   $('hp-bar').style.width = (player.hp / player.max * 100) + '%';
   $('heart-bar').style.width = (heart.hp / heart.max * 100) + '%';
@@ -1207,7 +1270,7 @@ function updateHud(dt){
   a.classList.toggle('low', player.ammo <= W.mag * 0.2);
   for(const k of ['Q', 'E']){
     const el = $('ab-' + k); if(!el) continue;
-    const cd = k === 'Q' ? player.cdQ : player.cdE, max = C[k.toLowerCase()].cd;
+    const cd = k === 'Q' ? player.cdQ : player.cdE, max = C[k.toLowerCase()].cd * Math.pow(0.7, UP('cd'));
     el.querySelector('.cd').style.height = (cd / max * 100) + '%';
     el.classList.toggle('ready', cd <= 0);
   }
@@ -1257,6 +1320,42 @@ $('plant').addEventListener('pointerdown', e => { const b = e.target.closest('[d
 
 /* ================= touch controls ================= */
 const touch = { mx:0, mx2:0, fire:false, jump:false };
+if(TOUCH){
+  $('tc').hidden = false;
+  $('keys').innerHTML = '<span><b>Левый палец</b> бег</span><span><b>Правый палец</b> обзор</span><span><b>Огонь, Q, E</b> кнопки справа</span><span><b>Горшок</b> подойди и выбери растение</span>';
+  const stick = $('stick'), knob = stick.querySelector('i');
+  let moveId = null, lookId = null, sx = 0, sy = 0, lx = 0, ly = 0;
+  canvas.addEventListener('touchstart', e => {
+    audio(); if(AC && AC.state === 'suspended') AC.resume();
+    for(const t of e.changedTouches){
+      if(t.clientX < innerWidth * 0.45 && moveId === null){ moveId = t.identifier; sx = t.clientX; sy = t.clientY; stick.style.display = 'block'; stick.style.left = sx + 'px'; stick.style.top = sy + 'px'; knob.style.transform = ''; }
+      else if(lookId === null){ lookId = t.identifier; lx = t.clientX; ly = t.clientY; }
+    }
+    e.preventDefault();
+  }, { passive:false });
+  canvas.addEventListener('touchmove', e => {
+    for(const t of e.changedTouches){
+      if(t.identifier === moveId){
+        let dx = t.clientX - sx, dy = t.clientY - sy; const d = Math.hypot(dx, dy), m = 50;
+        if(d > m){ dx *= m / d; dy *= m / d; }
+        knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+        touch.mx = -dy / m; touch.mx2 = dx / m;
+      } else if(t.identifier === lookId){
+        player.yaw -= (t.clientX - lx) * 0.0055; player.pitch = clamp(player.pitch - (t.clientY - ly) * 0.0045, -0.9, 0.55);
+        lx = t.clientX; ly = t.clientY;
+      }
+    }
+    e.preventDefault();
+  }, { passive:false });
+  const end = e => { for(const t of e.changedTouches){ if(t.identifier === moveId){ moveId = null; touch.mx = touch.mx2 = 0; stick.style.display = 'none'; } if(t.identifier === lookId) lookId = null; } };
+  canvas.addEventListener('touchend', end); canvas.addEventListener('touchcancel', end);
+  const hold = (id, on, off) => { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); b.classList.add('on'); on(); }); for(const n of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(n, () => { b.classList.remove('on'); if(off) off(); }); };
+  hold('t-fire', () => { touch.fire = true; }, () => { touch.fire = false; });
+  hold('t-jump', () => { touch.jump = true; });
+  hold('t-q', () => ability('q'));
+  hold('t-e', () => ability('e'));
+  hold('t-r', () => reload());
+}
 
 /* ================= game flow ================= */
 let chosen = 'amanita';
@@ -1285,11 +1384,11 @@ function startGame(){
   audio(); if(AC && AC.state === 'suspended') AC.resume();
   clearAll();
   setClass(chosen); spawnPlayer();
-  heart.hp = heart.max; heart.pulse = 6; spores = 80; wave = 0; kills = 0; planted = 0;
+  heart.hp = heart.max; heart.pulse = 6; spores = 80; ups = {}; shotCount = 0; upT = -1; $('up').hidden = true; wave = 0; kills = 0; planted = 0;
   waveState = 'break'; waveT = 4;
   state = 'play';
   $('menu').hidden = true; $('end').hidden = true; $('hud').hidden = false;
-  tip(TOUCH ? 'Левый джойстик — бег, правый — прицел и огонь.' : '<b>Кликни</b>, чтобы захватить мышь. <b>WASD</b> — бег, <b>ЛКМ</b> — огонь, <b>Q/E</b> — умения.', 7);
+  tip(TOUCH ? 'Левый палец — бег, правый — обзор. Кнопка <b>Огонь</b> справа.' : '<b>Кликни</b>, чтобы захватить мышь. <b>WASD</b> — бег, <b>ЛКМ</b> — огонь, <b>Q/E</b> — умения.', 7);
   if(!TOUCH){ try{ const r = canvas.requestPointerLock(); if(r && r.catch) r.catch(() => {}); }catch(e){} }
 }
 function gameOver(won){
@@ -1316,7 +1415,7 @@ function tick(dt){
   if(state === 'play'){
     updatePlayer(dt); updateEnemies(dt); updateShots(dt); updateClouds(dt); updatePlants(dt); updateOrbs(dt); updateWaves(dt);
     updateCamera(dt); updateHud(dt); updateArrows();
-  } else {
+  } else if(state !== 'upgrade'){
     // menu flyover
     menuA += dt * 0.06;
     camera.position.set(Math.cos(menuA) * 22, 9, Math.sin(menuA) * 22);
@@ -1326,7 +1425,7 @@ function tick(dt){
   // world fx
   const glow = heartG.userData.glow; glow.intensity = 26 + Math.sin(time * 2) * 6;
   heartCapM.emissiveIntensity = 0.45 + Math.sin(time * 2) * 0.15 + (1 - heart.hp / heart.max) * Math.abs(Math.sin(time * 9)) * 0.6;
-  for(const s of shafts) s.material.opacity = 0.045 + Math.sin(time * 0.6 + s.userData.ph) * 0.02;
+  for(const s of shafts) s.material.opacity = 0.025 + Math.sin(time * 0.6 + s.userData.ph) * 0.012;
   for(let i = 0; i < ffN; i++){ const f = ffSeed[i]; ffPos[i * 3] = f.x + Math.sin(time * f.s + f.p) * 1.5; ffPos[i * 3 + 1] = groundH(f.x, f.z) + f.y + Math.sin(time * f.s * 1.3 + f.p) * 0.6; ffPos[i * 3 + 2] = f.z + Math.cos(time * f.s * 0.8 + f.p) * 1.5; }
   ffGeo.attributes.position.needsUpdate = true;
   updateParticles(dt);
@@ -1348,5 +1447,5 @@ window.__gdReady = true;
 $('load').hidden = true;
 showMenu();
 requestAnimationFrame(frame);
-window.__gd = { cam:camera, spawn:spawnEnemy, get s(){ return { state, wave, waveState, hp:player.hp, heart:heart.hp, spores, kills, enemies:enemies.length, ammo:player.ammo }; }, player, startGame, sim(sec){ for(let i = 0, n = Math.round(sec * 60); i < n; i++) tick(1 / 60); }, setFire(v){ mouseDown = v; }, enemies:() => enemies, tryPlant, ability, keys, setChosen(c){ chosen = c; } };
+window.__gd = { pickUp(){ const b = document.querySelector('#up-list [data-up]'); if(b) b.click(); }, get ups(){ return ups; }, cam:camera, spawn:spawnEnemy, get s(){ return { state, wave, waveState, hp:player.hp, heart:heart.hp, spores, kills, enemies:enemies.length, ammo:player.ammo }; }, player, startGame, sim(sec){ for(let i = 0, n = Math.round(sec * 60); i < n; i++) tick(1 / 60); }, setFire(v){ mouseDown = v; }, enemies:() => enemies, tryPlant, ability, keys, setChosen(c){ chosen = c; } };
 </script>
