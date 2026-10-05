@@ -30,6 +30,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .timer{font:400 clamp(22px,4vw,30px)/1 var(--font-display);font-variant-numeric:tabular-nums}
 .timer.low{color:var(--bad)}
 .houses{display:flex;gap:5px}
+.tool{font-size:12.5px;color:var(--ink-2);padding:3px 9px;border-radius:999px;background:var(--glass);border:1px solid var(--line)}
+.tool b{color:#FFD36B}
 .houses i{width:16px;height:14px;border-radius:3px;background:var(--teal);clip-path:polygon(50% 0,100% 45%,100% 100%,0 100%,0 45%)}
 .houses i.hurt{background:var(--bad)}
 .topbtns{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;pointer-events:auto}
@@ -88,7 +90,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 <div class="hud" id="hud" hidden>
   <div class="lvl" id="lvl">Уровень 1<b>Первый удар</b></div>
   <div class="prog"><div class="bar"><i id="bar"></i></div><small id="prog">0% снесено</small></div>
-  <div class="right"><div class="timer" id="timer">1:30</div><div class="houses" id="houses"></div></div>
+  <div class="right"><div class="timer" id="timer">1:30</div><div class="houses" id="houses"></div><div class="tool" id="tool"></div></div>
 </div>
 <div class="topbtns" id="topbtns" hidden>
   <button class="ib" id="b-menu" aria-label="Меню"><svg viewBox="0 0 24 24" fill="none" stroke="#FFF6E8" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
@@ -100,6 +102,7 @@ button{font:inherit;color:inherit;cursor:pointer}
     <button class="cb" id="b-up" aria-label="Поднять шар"><svg viewBox="0 0 24 24" fill="none" stroke="#FFF6E8" stroke-width="2.400" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
     <button class="cb" id="b-down" aria-label="Опустить шар"><svg viewBox="0 0 24 24" fill="none" stroke="#FFF6E8" stroke-width="2.400" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
   </div>
+  <button class="cb" id="b-tool" aria-label="Сменить инструмент" style="width:60px;height:60px"><svg viewBox="0 0 24 24" fill="none" stroke="#FFF6E8" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v8a6 6 0 0 0 12 0V4"/><path d="M6 8h4M14 8h4"/></svg></button>
   <button class="drop" id="b-drop">Отцепить</button>
 </div>
 <div class="hint" id="hint" style="opacity:0"></div>
@@ -113,7 +116,8 @@ button{font:inherit;color:inherit;cursor:pointer}
     <dl class="keys" id="keys">
       <dt>Мышь</dt><dd>ведёт крюк, шар раскачивается сам</dd>
       <dt>Колесо, W/S</dt><dd>поднять или опустить шар</dd>
-      <dt>Клик, пробел</dt><dd>отцепить шар, он полетит по инерции</dd>
+      <dt>Клик, пробел</dt><dd>отцепить шар или бросить груз</dd>
+      <dt>E</dt><dd>сменить шар на магнит и обратно</dd>
     </dl>
   </div>
 </div>
@@ -482,6 +486,7 @@ const SFX = {
 let objs = [];            // { body, mesh, kind, start, ... }
 let balls = [];           // loose balls (released)
 let ball = null, hookBody = null, rope = null;
+let tool = 'ball', carry = null, grabCool = 0, headTop = BALL_R;
 let L = 13.6, Ltarget = 13.6;
 const hook = { x:0, z:0, vx:0, vz:0, tx:0, tz:0 };
 let level = null, levelIdx = 0, state = 'load', tLeft = 0, tUsed = 0, sandbox = false;
@@ -501,7 +506,7 @@ function addBody(body, mesh, kind, extra){
 }
 function block(x, y, z, sx, sy, sz, opts){
   opts = opts || {};
-  const body = new CANNON.Body({ mass:(opts.mass || 1.4) * sx * sy * sz, material:mBlock, shape:new CANNON.Box(new CANNON.Vec3(sx / 2, sy / 2, sz / 2)), position:new CANNON.Vec3(x, y, z) });
+  const body = new CANNON.Body({ mass:(opts.mass || (opts.stone ? 4 : 1.4)) * sx * sy * sz, material:mBlock, shape:new CANNON.Box(new CANNON.Vec3(sx / 2, sy / 2, sz / 2)), position:new CANNON.Vec3(x, y, z) });
   if(opts.ry) body.quaternion.setFromEuler(0, opts.ry, 0);
   body.sleepSpeedLimit = 0.25; body.sleepTimeLimit = 0.5; body.linearDamping = 0.02; body.angularDamping = 0.05;
   const mat = opts.stone ? stoneMats[Math.floor(Math.random() * stoneMats.length)] : brickMats[Math.floor(Math.random() * brickMats.length)];
@@ -628,6 +633,7 @@ const boomBall = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.M
 scene.add(boomBall); let boomT = 0;
 
 function removeObj(o){
+  if(carry && carry.body === o.body){ world.removeConstraint(carry.lock); carry = null; magGlow.opacity = 0; }
   world.removeBody(o.body); scene.remove(o.mesh);
   o.dead = true;
 }
@@ -655,17 +661,70 @@ function makeBall(x, y, z){
   scene.add(mesh);
   return { body, mesh };
 }
+const magCore = new THREE.MeshStandardMaterial({ color:'#3B3742', roughness:0.4, metalness:0.8 });
+const magGlow = new THREE.MeshBasicMaterial({ color:'#7FE3FF', transparent:true, opacity:0.0, blending:THREE.AdditiveBlending, depthWrite:false });
+function makeMagnet(x, y, z){
+  const body = new CANNON.Body({ mass:28, material:mBall, shape:new CANNON.Cylinder(1.15, 1.15, 0.55, 14), position:new CANNON.Vec3(x, y, z), linearDamping:0.08, angularDamping:0.9 });
+  body.allowSleep = false;
+  body.userData = { kind:'ball' };
+  body.addEventListener('collide', onMagnetHit);
+  world.addBody(body);
+  const g = new THREE.Group();
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.55, 32), magCore); disc.castShadow = true; g.add(disc);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 1.18, 0.18, 32), new THREE.MeshStandardMaterial({ color:'#F2B033', roughness:0.5 })); g.add(band);
+  const glow = new THREE.Mesh(new THREE.CircleGeometry(1.05, 32), magGlow); glow.rotation.x = Math.PI / 2; glow.position.y = -0.29; g.add(glow);
+  const lug = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.07, 8, 16), darkM); lug.position.y = 0.4; g.add(lug);
+  scene.add(g);
+  return { body, mesh:g };
+}
+function onMagnetHit(e){
+  if(carry || grabCool > 0 || mode === 'menu') return;
+  const o = e.body.userData;
+  if(!o || !o.body || o.dead || o.kind === 'ball') return;
+  if(e.body.mass <= 0 || e.body.mass > 45) return;
+  const lock = new CANNON.LockConstraint(ball, e.body, { maxForce:2e5 });
+  lock.collideConnected = false;
+  world.addConstraint(lock);
+  e.body.wakeUp();
+  carry = { body:e.body, lock, o };
+  magGlow.opacity = 0.75;
+  SFX.attach();
+}
+function dropCarry(){
+  if(!carry) return;
+  world.removeConstraint(carry.lock);
+  carry = null; grabCool = 0.7; magGlow.opacity = 0;
+  SFX.release();
+}
 function attachBall(){
   const hx = hook.x, hz = hook.z;
-  const b = makeBall(hx, JIB_Y - L, hz);
+  const b = tool === 'magnet' ? makeMagnet(hx, JIB_Y - L, hz) : makeBall(hx, JIB_Y - L, hz);
+  headTop = tool === 'magnet' ? 0.3 : BALL_R;
   ball = b.body; ballMesh = b.mesh;
   rope = new CANNON.DistanceConstraint(hookBody, ball, L, 1e7);
   world.addConstraint(rope);
   SFX.attach();
 }
 let ballMesh = null;
+function switchTool(){
+  if(!ball || reloadT > 0 || (mode !== 'play' && mode !== 'menu')) return;
+  dropCarry();
+  const pos = ball.position.clone(), vel = ball.velocity.clone();
+  world.removeConstraint(rope); rope = null;
+  world.removeBody(ball); scene.remove(ballMesh); ball = null;
+  tool = tool === 'ball' ? 'magnet' : 'ball';
+  attachBall();
+  ball.position.copy(pos); ball.velocity.copy(vel);
+  renderTool();
+  hint(tool === 'magnet' ? '<b>Магнит</b> хватает всё, чего коснётся. ' + T('Клик', 'Отцепить') + ' бросает груз.' : '<b>Шар</b> снова на тросе.', 3);
+}
+function renderTool(){
+  $('tool').innerHTML = (tool === 'ball' ? 'шар' : '<b>магнит</b>') + (TOUCH ? '' : ' · E');
+  $('b-drop').textContent = tool === 'ball' ? 'Отцепить' : 'Бросить';
+}
 function releaseBall(){
   if(!ball || mode !== 'play' || reloadT > 0) return;
+  if(tool === 'magnet'){ dropCarry(); return; }
   world.removeConstraint(rope); rope = null;
   balls.push({ body:ball, mesh:ballMesh, t:0 });
   if(balls.length > 3){ const old = balls.shift(); world.removeBody(old.body); scene.remove(old.mesh); }
@@ -681,7 +740,7 @@ const LEVELS = [
     build(){ tower(3, 4, 3, 3, 5); } },
   { name:'Соседи', time:90, par:40, hint:T('<b>Колесо мыши или W/S</b> поднимает шар. Пронеси его над домиками.', '<b>Стрелки справа</b> поднимают шар. Пронеси его над домиками.'),
     build(){ tower(7, -1, 2, 2, 7); tower(1, 8, 2, 2, 5); house(2.5, 2.5, 0.3); house(8.5, 4.5, -0.2); house(-3, 6, 0.1); } },
-  { name:'Домино', time:80, par:30, need:0.85, hint:T('Одного толчка бывает достаточно. <b>Клик</b> отцепляет шар, и он летит по инерции.', 'Одного толчка бывает достаточно. <b>Отцепить</b> — и шар летит по инерции.'),
+  { name:'Домино', time:90, par:35, need:0.85, hint:T('Одного толчка бывает достаточно. <b>Клик</b> отцепляет шар, и он летит по инерции.', 'Одного толчка бывает достаточно. <b>Отцепить</b> — и шар летит по инерции.'),
     build(){
       for(let i = 0; i < 14; i++){ const a = -0.5 + i * 0.16, r = 9; domino(Math.cos(a) * r + 1, Math.sin(a) * r - 2, -a); }
       slabTower(-1.5, 8.2, 8, 0.3);
@@ -695,6 +754,16 @@ const LEVELS = [
       tower(5, 4, 1, 1, 6);
       tower(-4, 8, 2, 2, 6); barrel(-4, 10.5); barrel(-2, 6);
       house(10, 9, 0.2); house(0, 1, -0.3); house(-7, 2, 0.1);
+    } },
+  { name:'Бункер', time:120, par:55, hint:T('Каменные стены крепкие. Нажми <b>E</b>: магнит донесёт порох прямо к башне.', 'Каменные стены крепкие. <b>Подкова</b> включает магнит: он донесёт порох прямо к башне.'),
+    build(){
+      tower(6, 5, 3, 3, 6);
+      for(let i = -3; i <= 3; i++) for(let y = 0; y < 4; y++){
+        block(6 + i, y + 0.5, 5 - 3, 1, 1, 1, { stone:true }); block(6 + i, y + 0.5, 5 + 3, 1, 1, 1, { stone:true });
+        if(i > -3 && i < 3){ block(6 - 3, y + 0.5, 5 + i, 1, 1, 1, { stone:true }); block(6 + 3, y + 0.5, 5 + i, 1, 1, 1, { stone:true }); }
+      }
+      barrel(-8, -1); barrel(-9.2, 0.6); barrel(-7.4, 1.4); barrel(-6, 9);
+      house(12.5, -2, 0.3); house(0, 11.5, -0.2); house(-3, -5, 0);
     } },
   { name:'Небоскрёб', time:110, par:55, hint:'Высокое падает далеко. Подумай, <b>куда</b> его уронить.',
     build(){ tower(7, 7, 3, 3, 12); tower(-2, 9, 2, 2, 4); house(2, 11.5, 0.5); house(11.5, 1.5, -0.4); house(1.5, 3, 0); barrel(9.5, 4); } },
@@ -722,6 +791,7 @@ function clearLevel(){
   objs = [];
   for(const b of balls){ world.removeBody(b.body); scene.remove(b.mesh); }
   balls = [];
+  if(carry){ world.removeConstraint(carry.lock); carry = null; magGlow.opacity = 0; }
   if(rope){ world.removeConstraint(rope); rope = null; }
   if(ball){ world.removeBody(ball); scene.remove(ballMesh); ball = null; ballMesh = null; }
   for(const f of floats) f.el.remove();
@@ -740,7 +810,9 @@ function startLevel(i){
   hook.x = hook.tx = 2; hook.z = hook.tz = -4; hook.vx = hook.vz = 0;
   L = Ltarget = 13.6;
   hookBody.position.set(hook.x, JIB_Y, hook.z);
+  tool = 'ball';
   attachBall();
+  renderTool();
   mode = 'play';
   $('menu').hidden = true; $('done').hidden = true;
   $('hud').hidden = false; $('topbtns').hidden = false; $('ctrl').hidden = false;
@@ -830,7 +902,7 @@ function updateHud(){
   else { t.textContent = fmtTime(tLeft); t.classList.toggle('low', tLeft < 15); }
 }
 function renderMenu(){
-  if(TOUCH) $('keys').innerHTML = '<dt>Палец</dt><dd>ведёт крюк, шар раскачивается сам</dd><dt>▲ ▼</dt><dd>поднять или опустить шар</dd><dt>Отцепить</dt><dd>шар полетит по инерции</dd>';
+  if(TOUCH) $('keys').innerHTML = '<dt>Палец</dt><dd>ведёт крюк, шар раскачивается сам</dd><dt>▲ ▼</dt><dd>поднять или опустить шар</dd><dt>Отцепить</dt><dd>шар полетит по инерции, магнит бросит груз</dd><dt>Подкова</dt><dd>сменить шар на магнит</dd>';
   $('levels').innerHTML = LEVELS.map((l, i) => {
     const st = progress[i] || 0, locked = i > 0 && !progress[i - 1];
     return '<button class="lv" data-lv="' + i + '"' + (locked ? ' disabled' : '') + '><span>Уровень ' + (i + 1) + '</span><b>' + l.name + '</b><span class="st">' + '★★★'.slice(0, st) + '<span style="color:rgba(255,255,255,.2)">' + '★★★'.slice(st) + '</span></span></button>';
@@ -881,6 +953,7 @@ const holdBtn = (id, dir) => {
 };
 holdBtn('b-up', -1); holdBtn('b-down', 1);
 $('b-drop').addEventListener('pointerdown', e => { e.preventDefault(); releaseBall(); });
+$('b-tool').addEventListener('pointerdown', e => { e.preventDefault(); switchTool(); });
 const keys = {};
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
@@ -889,6 +962,7 @@ addEventListener('keydown', e => {
   if((k === 'r' || k === 'к') && (mode === 'play' || mode === 'won' || mode === 'lost')) startLevel(levelIdx);
   if((k === 'm' || k === 'ь')) { audio(); setMute(!muted); }
   if(k === 'escape' && mode !== 'menu') showMenu();
+  if((k === 'e' || k === 'у' || k === 'q' || k === 'й' || k === 'tab') && mode === 'play'){ e.preventDefault(); switchTool(); }
   if(['arrowup', 'arrowdown', 'w', 's', 'ц', 'ы'].includes(k)) e.preventDefault();
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
@@ -948,6 +1022,7 @@ function tick(rdt, now){
     }
     hook.x = hookBody.position.x; hook.z = hookBody.position.z;
     hookBody.position.y = JIB_Y;
+    if(grabCool > 0) grabCool -= dt;
     if(reloadT > 0 && mode === 'play'){ reloadT -= rdt; if(reloadT <= 0){ attachBall(); $('b-drop').disabled = false; } }
     // menu ball
     if(mode === 'menu' && !ball){ attachBall(); }
@@ -968,7 +1043,7 @@ function tick(rdt, now){
     // cable
     const top = new THREE.Vector3(hook.x, JIB_Y - 0.3, hook.z);
     if(ball){
-      const bp = tmpV.set(ball.position.x, ball.position.y + BALL_R, ball.position.z);
+      const bp = tmpV.set(ball.position.x, ball.position.y + headTop, ball.position.z);
       const len = top.distanceTo(bp);
       cable.visible = true;
       cable.position.copy(top).add(bp).multiplyScalar(0.5);
@@ -1034,5 +1109,5 @@ $('load').hidden = true;
 showMenu();
 requestAnimationFrame(frame);
 
-window.__sb = { get s(){ return { mode, pct, hurt, tLeft, tUsed, objs:objs.length, L, hook:{ ...hook } }; }, startLevel, releaseBall, hook, setL(v){ Ltarget = v; }, LEVELS, world, sim(sec){ for(let i = 0, n = Math.round(sec * 60); i < n; i++) tick(1 / 60, performance.now()); }, objs:() => objs };
+window.__sb = { switchTool, get carry(){ return !!carry; }, get s(){ return { mode, pct, hurt, tLeft, tUsed, objs:objs.length, L, hook:{ ...hook } }; }, startLevel, releaseBall, hook, setL(v){ Ltarget = v; }, LEVELS, world, sim(sec){ for(let i = 0, n = Math.round(sec * 60); i < n; i++) tick(1 / 60, performance.now()); }, objs:() => objs };
 </script>
