@@ -179,6 +179,16 @@ button{cursor:pointer}
 .has3d .cldetail{grid-template-columns:1fr;min-height:300px;padding-right:calc(min(270px,42%) + 20px)}
 .has3d .cldetail svg{display:none}
 .has3d .cldetail ul{grid-column:1!important}
+.lvl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:13px;color:var(--muted)}
+.lvl span b{font:400 20px var(--font-display);color:var(--ink)}
+.hb.xp{flex:1;min-width:120px;height:9px}
+.hb.xp i{background:linear-gradient(90deg,#FFC94D,#FFE9A8)}
+.lvl small{flex-basis:100%;font-size:11.5px}
+.hats{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.hats button{padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);font:800 12px var(--font-body);color:var(--ink-2)}
+.hats button.sel{border-color:var(--amber);color:var(--ink);background:rgba(255,201,77,.14)}
+.hats button:disabled{opacity:.42;cursor:default}
+.hats button small{font-size:10px;color:var(--muted)}
 .stats{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .stats i{font-style:normal;color:var(--ink)}
 @media (max-width:560px){.has3d .cldetail{min-height:220px}.pv{width:40%}.tile svg{width:42px;height:42px}.tile b{font-size:12.5px}.tile small{display:none}.cldetail{grid-template-columns:72px 1fr;padding:12px}.cldetail svg{width:72px;height:72px}.cldetail b{font-size:24px}}
@@ -1090,7 +1100,56 @@ function buildGun(arch, fac, mat, glow){
   const muzzle = new THREE.Object3D(); muzzle.position.set(0, 0.02, mz); g.add(muzzle);
   return { g, muzzle };
 }
-function buildModel(fac, arch){
+/* ================= hats ================= */
+const HATS = {
+  acorn:{ name:'Жёлудь-каска', lvl:10 }, leaf:{ name:'Кленовый лист', lvl:12 }, flower:{ name:'Ромашка', lvl:14 }, berry:{ name:'Земляничка', lvl:17 },
+  crown:{ name:'Шишечная корона', lvl:20 }, shell:{ name:'Ракушка', lvl:24 }, lamp:{ name:'Гриб-фонарик', lvl:28 }, prop:{ name:'Вертолётик', lvl:33 }
+};
+const HAT_IDS = Object.keys(HATS);
+const HAT_AT = { guard_soldier:[1.86, 0, 0.62], guard_tank:[2.24, 0, 0.75], guard_scout:[1.55, 0, 0.62], guard_sniper:[1.82, 0.04, 0.45], guard_medic:[1.6, 0, 0.6],
+  rot_soldier:[1.66, 0, 0.5], rot_tank:[2.04, 0.22, 0.55], rot_scout:[1.68, 0.12, 0.45], rot_sniper:[1.86, 0.12, 0.42], rot_medic:[1.56, 0.06, 0.48] };
+const shellTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#C8874E'; g.fillRect(0, 0, w, h); g.strokeStyle = '#6E3F22'; g.lineWidth = 12;
+  g.beginPath(); for(let a = 0; a < 6 * TAU; a += 0.05){ const r = 4 + a * 3.2; g.lineTo(128 + Math.cos(a) * r, 128 + Math.sin(a) * r); } g.stroke();
+});
+function buildHat(id, mat){
+  const h = new THREE.Group();
+  if(id === 'acorn'){
+    mk(h, DOME, mat('#8A5A30', { roughness:0.85 }), 0, 0, 0, 0.62, 0.5, 0.62, true);
+    const rim = mk(h, new THREE.TorusGeometry(0.6, 0.06, 6, 24), mat('#6E4424', { roughness:0.9 }), 0, 0.02, 0, 1); rim.rotation.x = Math.PI / 2;
+    mk(h, CYL, mat('#5A3A1E'), 0, 0.56, 0, 0.05, 0.18, 0.05);
+  } else if(id === 'leaf'){
+    const l = mk(h, SPH, mat('#E0702A', { roughness:0.6, side:THREE.DoubleSide }), 0, 0.1, 0, 0.62, 0.05, 0.42, true); l.rotation.set(0.12, 0.4, 0.14);
+    mk(h, CYL, mat('#7A4A24'), 0.12, 0.24, -0.05, 0.03, 0.32, 0.03).rotation.z = -0.6;
+  } else if(id === 'flower'){
+    const pm = mat('#FFFFFF', { roughness:0.5 });
+    for(let i = 0; i < 10; i++){ const a = i / 10 * TAU, p = mk(h, SPH, pm, Math.cos(a) * 0.3, 0.06, Math.sin(a) * 0.3, 0.2, 0.04, 0.09); p.rotation.y = -a; }
+    mk(h, SPH, mat('#FFC93C', { roughness:0.5 }), 0, 0.09, 0, 0.16, 0.09, 0.16, true); h.rotation.z = 0.28;
+  } else if(id === 'berry'){
+    mk(h, lathe('berry', [[0, 0], [0.42, 0.02], [0.41, 0.24], [0.29, 0.5], [0.12, 0.68], [0, 0.72]], 20), mat('#E2302E', { roughness:0.35 }), 0, 0, 0, 1, 1, 1, true);
+    const sm = mat('#FFE07A');
+    for(let i = 0; i < 16; i++){ const a = rand(0, TAU), y = rand(0.08, 0.6), r = 0.42 * (1 - y / 0.75) + 0.03; mk(h, SPH_LO, sm, Math.cos(a) * r, y, Math.sin(a) * r, 0.022); }
+    const lm = mat('#4FA83A', { roughness:0.7 });
+    for(let i = 0; i < 6; i++){ const a = i / 6 * TAU, lf = mk(h, SPH, lm, Math.cos(a) * 0.42, 0.04, Math.sin(a) * 0.42, 0.18, 0.03, 0.08); lf.rotation.y = -a; }
+  } else if(id === 'crown'){
+    mk(h, CYL, mat('#C89A4A', { roughness:0.45, metalness:0.35 }), 0, 0.08, 0, 0.42, 0.16, 0.42, true);
+    const cm = mat('#8A5A2A', { roughness:0.7 });
+    for(let i = 0; i < 8; i++){ const a = i / 8 * TAU; mk(h, CONE, cm, Math.cos(a) * 0.38, 0.3, Math.sin(a) * 0.38, 0.09, 0.3, 0.09); }
+  } else if(id === 'shell'){
+    const s = mk(h, SPH, mat('#ffffff', { map:shellTex, roughness:0.45 }), 0, 0.32, -0.04, 0.4, 0.38, 0.3, true); s.rotation.y = Math.PI / 2;
+  } else if(id === 'lamp'){
+    mk(h, CYL, mat('#F1E6CF'), 0, 0.18, 0, 0.06, 0.36, 0.06);
+    mk(h, DOME, glowM('#8FF7FF', 2.2), 0, 0.34, 0, 0.3, 0.2, 0.3);
+  } else if(id === 'prop'){
+    mk(h, SPH, mat('#8A5A30'), 0, 0.06, 0, 0.08);
+    const rot = new THREE.Group(); rot.position.y = 0.12; h.add(rot);
+    const bm = mat('#C9A060', { roughness:0.6, side:THREE.DoubleSide });
+    for(const s of [-1, 1]){ const b = mk(rot, SPH, bm, s * 0.36, 0, 0, 0.36, 0.02, 0.11); b.rotation.x = s * 0.3; }
+    h.userData.spin = rot;
+  }
+  return h;
+}
+function buildModel(fac, arch, hat){
   const mats = [];
   const mat = (c, o) => { const m = new THREE.MeshStandardMaterial(Object.assign({ color:c, roughness:0.55 }, o || {})); m.userData.e0 = m.emissive.clone(); m.userData.ei = m.emissiveIntensity; mats.push(m); return m; };
   const F = FACTIONS[fac], glow = glowM(F.glow, 2.4);
@@ -1242,6 +1301,7 @@ function buildModel(fac, arch){
     const sm = new THREE.MeshBasicMaterial({ color:new THREE.Color(F.color).multiplyScalar(0.55), transparent:true, opacity:0.22, blending:THREE.AdditiveBlending, depthWrite:false });
     M.shield = new THREE.Mesh(SPH, sm); M.shield.scale.setScalar(1.45); M.shield.position.y = 1.1; M.shield.visible = false; g.add(M.shield);
   }
+  if(hat && HATS[hat]){ const at = HAT_AT[key] || [2, 0, 0.6], h = buildHat(hat, mat); h.position.set(0, at[0], at[1]); h.scale.setScalar(at[2]); body.add(h); M.hat = h; }
   // outlines
   M.ol = outlineMat('#101810');
   const add = [];
@@ -1279,6 +1339,7 @@ function animFighter(f, dt){
   M.pivot.position.z = 0.12 - f.recoil * 0.1;
   if(M.wings){ const fl = Math.sin(time * (M.slowWings ? 30 : 55) + f.id) * 0.5, half = M.wings.length / 2; M.wings.forEach((w, i) => { w.rotation.z = (i < half ? -1 : 1) * fl * (i % 2 ? 0.8 : 1); }); }
   for(let i = 0; i < M.fronds.length; i++) M.fronds[i].rotation.z = Math.sin(time * 2.5 + i + f.id) * 0.08 + Math.sin(ph) * 0.05 * mv;
+  if(M.hat && M.hat.userData.spin) M.hat.userData.spin.rotation.y += dt * (6 + mv * 14);
   for(let i = 0; i < M.stalks.length; i++){ M.stalks[i].rotation.z = Math.sin(time * 3 + i * 2 + f.id) * 0.12; M.stalks[i].rotation.x = -0.15 + Math.sin(time * 2.2 + i) * 0.1; }
   if(M.shield){ M.shield.visible = f.shieldT > 0; if(f.shieldT > 0){ M.shield.material.opacity = 0.18 + Math.sin(time * 12) * 0.05 + (f.flash > 0 ? 0.25 * f.flash : 0); M.shield.rotation.y += dt; } }
   if(f.flash > 0 || f.flashOn){
@@ -1302,8 +1363,8 @@ function makeFighter(o){
     hp:A.hp, max:A.hp, alive:false, respawnT:0.2 + Math.random() * 0.4, deathT:0, ammo:A.w.mag, reloadT:0, fireT:0,
     cdQ:0, cdE:0, shieldT:0, invisT:0, dashT:0, dashX:0, dashZ:0, ramT:0, ramHit:null, slowT:0, rootT:0, prot:0, hurtT:99, spreadAcc:0, slam:false,
     kills:0, deaths:0, assists:0, score:0, streak:0, best:0, heads:0, shotsF:0, shotsH:0, dmgDone:0, dmgBy:new Map(), lastKiller:null, lastAtt:null, lastAttT:-9,
-    walk:0, flash:0, flashOn:false, recoil:0, firedT:-9, inp:newInput(), bot:null, M:null, tag:null, nid:null, remote:false, owner:null, human:false, life:0 };
-  f.M = buildModel(f.fac, f.arch); f.M.g.visible = false; scene.add(f.M.g);
+    walk:0, flash:0, flashOn:false, recoil:0, firedT:-9, inp:newInput(), bot:null, M:null, tag:null, nid:null, remote:false, owner:null, human:false, life:0, hat:o.hat || null };
+  f.M = buildModel(f.fac, f.arch, f.hat); f.M.g.visible = false; scene.add(f.M.g);
   fighters.push(f);
   return f;
 }
@@ -1318,7 +1379,8 @@ function pickSpawn(f){
   return sc[0].s;
 }
 function respawn(f){
-  if(f.nextArch !== f.arch){ scene.remove(f.M.g); disposeModel(f.M); f.arch = f.nextArch; f.M = buildModel(f.fac, f.arch); scene.add(f.M.g); setOutline(f); }
+  const wantHat = f.isPlayer ? PROF.hat[f.fac + '_' + f.nextArch] || null : f.hat;
+  if(f.nextArch !== f.arch || wantHat !== f.hat){ scene.remove(f.M.g); disposeModel(f.M); f.arch = f.nextArch; f.hat = wantHat; f.M = buildModel(f.fac, f.arch, f.hat); scene.add(f.M.g); setOutline(f); }
   const A = ARCH[f.arch], sp = pickSpawn(f);
   f.x = sp.x + rand(-0.5, 0.5); f.z = sp.z + rand(-0.5, 0.5); f.y = groundH(f.x, f.z) + 0.05;
   f.vx = f.vy = f.vz = f.kx = f.kz = 0; f.yaw = sp.yaw; f.pitch = 0; f.ground = true;
@@ -2638,7 +2700,7 @@ function clientStart(m){
   const mode = m.md === 'ffa' ? 'ffa' : m.md === 'cap' ? 'cap' : 'tdm';
   capReset();
   Object.assign(match, { mode, diff:DIFF[m.df] ? m.df : 'normal', limit:cl(m.li, 1, 999), dur:cl(m.du, 30, 3600), t:num(m.t), scores:{ guard:num(m.sg) | 0, rot:num(m.sr) | 0 }, over:false, winner:null, firstBlood:true, attract:false, live:true, frozen:false });
-  me = makeFighter({ name:'Ты', team:mode !== 'ffa' ? menuSel.fac : 'p' + NET.myPeer, fac:menuSel.fac, arch:menuSel.arch, isPlayer:true });
+  me = makeFighter({ name:'Ты', team:mode !== 'ffa' ? menuSel.fac : 'p' + NET.myPeer, fac:menuSel.fac, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(menuSel.fac, menuSel.arch)] || null });
   me.nid = 'p' + NET.myPeer; setOutline(me); respawn(me); me.prot = 1.5;
   renderScore(); renderMeBox(); renderAbil(true);
   state = 'play'; endT = 0;
@@ -2660,7 +2722,7 @@ function netHostLost(){ netLeave(); setNote('Хозяин покинул игр�
 // ---- outgoing ----
 function netEv(...a){ if(NET.on) NET.events.push({ t:performance.now(), e:[++NET.seq, ...a] }); }
 function flagsOf(f){ return (f.alive ? 1 : 0) | (f.ground ? 2 : 0) | (f.inp.fire && f.alive ? 4 : 0) | (f.inp.scope ? 8 : 0) | (f.shieldT > 0 ? 16 : 0) | (f.invisT > 0 ? 32 : 0) | (f.dashT > 0 ? 64 : 0) | (f.ramT > 0 ? 128 : 0) | (f.inp.sprint ? 256 : 0) | (f.reloadT > 0 ? 512 : 0) | (f.rootT > 0 ? 1024 : 0) | (f.slowT > 0 ? 2048 : 0); }
-function packF(f){ return [f.fac, f.arch, f.team, r2(f.x), r2(f.y), r2(f.z), r3(f.yaw), r3(f.pitch), r2(f.vx + f.kx), r2(f.vz + f.kz), Math.max(0, Math.round(f.hp)), flagsOf(f), f.kills, f.deaths, f.assists, f.score, f.life || 0]; }
+function packF(f){ return [f.fac, f.arch, f.team, r2(f.x), r2(f.y), r2(f.z), r3(f.yaw), r3(f.pitch), r2(f.vx + f.kx), r2(f.vz + f.kz), Math.max(0, Math.round(f.hp)), flagsOf(f), f.kills, f.deaths, f.assists, f.score, f.life || 0, f.hat || 0]; }
 function netPack(){
   const now = performance.now();
   while(NET.events.length && (now - NET.events[0].t > 1500 || NET.events.length > 26)) NET.events.shift();
@@ -2714,7 +2776,7 @@ function netReceive(peer, pr, now){
   if(Array.isArray(pr.me)) netPuppet('p' + peer, pr.me, info.nick, now, peer, true);
   if(pr.r === 'h' && NET.role === 'client' && Array.isArray(pr.bots)){
     const keep = new Set();
-    for(const b of pr.bots.slice(0, 16)){ if(!Array.isArray(b) || !/^b\d{1,6}$/.test(String(b[0]))) continue; keep.add(String(b[0])); netPuppet(String(b[0]), b.slice(1, 18), cleanNick(b[18]) || 'Бот', now, peer, false); }
+    for(const b of pr.bots.slice(0, 16)){ if(!Array.isArray(b) || !/^b\d{1,6}$/.test(String(b[0]))) continue; keep.add(String(b[0])); netPuppet(String(b[0]), b.slice(1, 19), cleanNick(b[19]) || 'Бот', now, peer, false); }
     for(const [nid, f] of NET.remote) if(f.owner === peer && !f.human && !keep.has(nid)) removeFighter(f);
   }
   if(Array.isArray(pr.ev)) for(const e of pr.ev){ if(!Array.isArray(e)) continue; const s = num(e[0]); if(s > info.seq){ info.seq = s; try{ netEvent(peer, e); }catch(err){} } }
@@ -2732,10 +2794,11 @@ function removeFighter(f){
 }
 function netPuppet(nid, a, name, now, owner, human){
   const fac = FACTIONS[a[0]] ? a[0] : 'guard', arch = ARCH[a[1]] ? a[1] : 'soldier', team = String(a[2]).slice(0, 24);
+  const hat = HATS[a[17]] ? a[17] : null;
   let f = NET.remote.get(nid);
-  if(f && (f.fac !== fac || f.arch !== arch)){ removeFighter(f); f = null; }
+  if(f && (f.fac !== fac || f.arch !== arch || f.hat !== hat)){ removeFighter(f); f = null; }
   if(!f){
-    f = makeFighter({ name, team, fac, arch }); f.remote = true; f.nid = nid; f.owner = owner; f.human = human; f.buf = []; f.lifeSeen = -1;
+    f = makeFighter({ name, team, fac, arch, hat }); f.remote = true; f.nid = nid; f.owner = owner; f.human = human; f.buf = []; f.lifeSeen = -1;
     NET.remote.set(nid, f); setOutline(f); makeTag(f);
   }
   if(f.team !== team){ f.team = team; setOutline(f); f.tag.className = 'tag' + (isEnemy(me, f) ? ' foe' : ''); }
@@ -2837,7 +2900,7 @@ function netBalance(dt){
     if(all.length > cap && bots.length) removeFighter(bots.find(b => !b.alive) || bots[bots.length - 1]);
     else if(all.length < cap){
       const fac = team || pick(['guard', 'rot']), used = new Set(fighters.map(f => f.name)), free = NAMES[fac].filter(n => !used.has(n)), name = pick(free.length ? free : NAMES[fac]);
-      const f = makeFighter({ name, team:team || 'b' + (NET.botSeq + 1), fac, arch:pick(ARCHS) });
+      const f = makeFighter({ name, team:team || 'b' + (NET.botSeq + 1), fac, arch:pick(ARCHS), hat:botHat() });
       f.bot = newBot(); f.nid = 'b' + (++NET.botSeq); f.respawnT = 1.5; setOutline(f); makeTag(f);
     }
   }
@@ -3001,9 +3064,15 @@ function renderMenu(){
   $('classes').innerHTML = ARCHS.map(a => { const C = clsOf(menuSel.fac, a); return '<button class="tile' + (a === menuSel.arch ? ' sel' : '') + '" data-a="' + a + '" aria-pressed="' + (a === menuSel.arch) + '">' + icon(menuSel.fac, a) + '<b>' + C.name + '</b><small>' + C.role + '</small></button>'; }).join('');
   const C = clsOf(menuSel.fac, menuSel.arch), A = ARCH[menuSel.arch], W = A.w;
   const dps = Math.round(W.dmg * W.rate * (W.burst || 1) + (W.splashDmg || 0) * W.rate * 0.5);
-  $('cldetail').innerHTML = icon(menuSel.fac, menuSel.arch) + '<span class="role">' + C.role + '</span><b>' + C.name + '</b><p>' + C.desc + '</p><div class="stats"><span>Здоровье <i>' + A.hp + '</i></span><span>Скорость <i>' + A.speed + '</i></span><span>Урон в секунду <i>~' + dps + '</i></span><span>Обойма <i>' + W.mag + '</i></span></div><ul style="grid-column:2"><li><b>Q · ' + C.q[0] + '</b> — ' + C.q[1] + '</li><li><b>E · ' + C.e[0] + '</b> — ' + C.e[1] + '</li></ul>';
+  $('cldetail').innerHTML = icon(menuSel.fac, menuSel.arch) + '<span class="role">' + C.role + '</span><b>' + C.name + '</b><p>' + C.desc + '</p><div class="stats"><span>Здоровье <i>' + A.hp + '</i></span><span>Скорость <i>' + A.speed + '</i></span><span>Урон в секунду <i>~' + dps + '</i></span><span>Обойма <i>' + W.mag + '</i></span></div><ul style="grid-column:2"><li><b>Q · ' + C.q[0] + '</b> — ' + C.q[1] + '</li><li><b>E · ' + C.e[0] + '</b> — ' + C.e[1] + '</li></ul>' + profHTML();
   $('sens').value = settings.sens; $('qual').value = settings.quality;
 }
+function profHTML(){
+  const key = clsKey(menuSel.fac, menuSel.arch), L = lvlOf(PROF.xp[key]), tot = totalLevel(), cur = PROF.hat[key] || '';
+  const hats = ['', ...HAT_IDS].map(h => { const open = !h || HATS[h].lvl <= tot; return '<button data-h="' + h + '"' + (h === cur ? ' class="sel"' : '') + (open ? '' : ' disabled title="Откроется на общем уровне ' + HATS[h].lvl + '"') + '>' + (h ? HATS[h].name : 'Без шапки') + (open ? '' : ' <small>ур. ' + HATS[h].lvl + '</small>') + '</button>'; }).join('');
+  return '<div class="lvl"><span>Уровень <b>' + L.l + '</b></span><div class="hb xp"><i style="width:' + (L.cur / L.need * 100).toFixed(1) + '%"></i></div><small>' + L.cur + ' / ' + L.need + ' опыта · общий уровень ' + tot + '</small></div><div class="hats" id="hats">' + hats + '</div>';
+}
+$('cldetail').addEventListener('click', e => { const b = e.target.closest('[data-h]'); if(!b || b.disabled) return; const key = clsKey(menuSel.fac, menuSel.arch); if(b.dataset.h) PROF.hat[key] = b.dataset.h; else delete PROF.hat[key]; saveProf(); renderMenu(); });
 for(const [id, key] of [['m-mode', 'mode'], ['m-fac', 'fac'], ['m-diff', 'diff']]) $(id).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if(!b) return; menuSel[key] = b.dataset.v; store.set(key, b.dataset.v); renderMenu(); });
 $('classes').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if(!b) return; menuSel.arch = b.dataset.a; store.set('arch', b.dataset.a); renderMenu(); });
 $('classes').addEventListener('dblclick', e => { if(e.target.closest('[data-a]')) startMatch(); });
@@ -3013,6 +3082,23 @@ $('play').addEventListener('click', () => startMatch());
 $('e-again').addEventListener('click', () => { if(!(NET.on && NET.role === 'client')) startMatch(); });
 $('e-menu').addEventListener('click', () => quitMatch());
 $('dead').addEventListener('click', e => { if(!e.target.closest('button')) requestLock(); });
+
+/* ================= progression ================= */
+const PROF = (() => { const p = store.get('prof', null); return p && typeof p === 'object' ? { xp:Object.assign({}, p.xp), hat:Object.assign({}, p.hat) } : { xp:{}, hat:{} }; })();
+const saveProf = () => store.set('prof', PROF);
+const clsKey = (fac, arch) => fac + '_' + arch;
+function lvlOf(xp){ let l = 1, need = 300; xp = Math.max(0, xp || 0); while(xp >= need && l < 50){ xp -= need; l++; need = Math.round(need * 1.3); } return { l, cur:Math.floor(xp), need }; }
+function totalLevel(){ let s = 0; for(const fac of ['guard', 'rot']) for(const a of ARCHS) s += lvlOf(PROF.xp[clsKey(fac, a)]).l; return s; }
+const botHat = () => Math.random() < 0.45 ? pick(HAT_IDS) : null;
+function awardXP(won, draw){
+  if(!me || match.xpGiven) return null;
+  match.xpGiven = true;
+  const key = clsKey(me.fac, me.arch), before = lvlOf(PROF.xp[key]).l, tb = totalLevel();
+  const gain = Math.round(me.score * 0.4) + (won ? 300 : draw ? 200 : 120);
+  PROF.xp[key] = (PROF.xp[key] || 0) + gain; saveProf();
+  const after = lvlOf(PROF.xp[key]).l, ta = totalLevel();
+  return { gain, before, after, hats:HAT_IDS.filter(h => HATS[h].lvl > tb && HATS[h].lvl <= ta) };
+}
 
 /* ================= 3D preview of the chosen fighter ================= */
 const PV = { r:null, scene:null, cam:null, M:null, key:'', t:0 };
@@ -3034,10 +3120,10 @@ function initPreview(){
 function updatePreview(dt){
   if(!PV.r || $('menu').hidden) return;
   PV.t += dt;
-  const key = menuSel.fac + '_' + menuSel.arch;
+  const hat = PROF.hat[clsKey(menuSel.fac, menuSel.arch)] || null, key = menuSel.fac + '_' + menuSel.arch + '_' + hat;
   if(PV.key !== key){
     if(PV.M){ PV.scene.remove(PV.M.g); disposeModel(PV.M); }
-    PV.M = buildModel(menuSel.fac, menuSel.arch); PV.M.ol.uniforms.w.value = 0.0045; PV.key = key; PV.spin = 0.6;
+    PV.M = buildModel(menuSel.fac, menuSel.arch, hat); PV.M.ol.uniforms.w.value = 0.0045; PV.key = key; PV.spin = 0.6;
     PV.M.g.traverse(o => { if(o.isMesh) o.castShadow = true; });
     PV.scene.add(PV.M.g);
   }
@@ -3051,6 +3137,7 @@ function updatePreview(dt){
   M.body.position.y = Math.sin(PV.t * 2.2) * 0.02; M.pivot.rotation.x = Math.sin(PV.t * 0.8) * 0.12 - 0.05;
   if(M.wings){ const fl = Math.sin(PV.t * (M.slowWings ? 30 : 55)) * 0.5, half = M.wings.length / 2; M.wings.forEach((wg, i) => { wg.rotation.z = (i < half ? -1 : 1) * fl; }); }
   for(let i = 0; i < M.fronds.length; i++) M.fronds[i].rotation.z = Math.sin(PV.t * 2.5 + i) * 0.08;
+  if(M.hat && M.hat.userData.spin) M.hat.userData.spin.rotation.y += dt * 8;
   const H = A.h * 0.5; PV.cam.position.set(0, H + 0.45, 2.5 + A.h * 1.6); PV.cam.lookAt(0, H - 0.1, 0);
   PV.r.render(PV.scene, PV.cam);
 }
@@ -3071,7 +3158,7 @@ function startAttract(){
   clearMatch();
   capReset();
   Object.assign(match, { mode:Math.random() < 0.5 ? 'cap' : 'tdm', diff:'normal', limit:1e9, dur:1e9, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:true, attract:true, live:true, frozen:false });
-  for(const fac of ['guard', 'rot']) for(const a of ARCHS){ const f = makeFighter({ name:pick(NAMES[fac]), team:fac, fac, arch:a }); f.bot = newBot(); }
+  for(const fac of ['guard', 'rot']) for(const a of ARCHS){ const f = makeFighter({ name:pick(NAMES[fac]), team:fac, fac, arch:a, hat:botHat() }); f.bot = newBot(); }
   for(const f of fighters){ setOutline(f); respawn(f); f.prot = 0; }
 }
 function showMenu(){
@@ -3088,14 +3175,14 @@ function startMatch(){
   Object.assign(match, { mode:menuSel.mode, diff:menuSel.diff, limit:menuSel.mode === 'tdm' ? 50 : menuSel.mode === 'cap' ? 150 : 20, dur:480, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:false, attract:false, live:false, frozen:true });
   const pf = menuSel.fac;
   capReset();
-  me = makeFighter({ name:'Ты', team:teamMode() ? pf : 'p0', fac:pf, arch:menuSel.arch, isPlayer:true });
+  me = makeFighter({ name:'Ты', team:teamMode() ? pf : 'p0', fac:pf, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(pf, menuSel.arch)] || null });
   const used = new Set(), nameFor = fac => { const l = NAMES[fac].filter(n => !used.has(n)), n = pick(l.length ? l : NAMES[fac]); used.add(n); return n; };
   if(teamMode()){
     const other = pf === 'guard' ? 'rot' : 'guard';
-    for(const a of shuffle(['soldier', 'tank', 'scout', 'sniper', 'medic'])){ const f = makeFighter({ name:nameFor(pf), team:pf, fac:pf, arch:a }); f.bot = newBot(); }
-    for(const a of shuffle(['soldier', 'tank', 'scout', 'sniper', 'medic', pick(['soldier', 'tank', 'scout'])])){ const f = makeFighter({ name:nameFor(other), team:other, fac:other, arch:a }); f.bot = newBot(); }
+    for(const a of shuffle(['soldier', 'tank', 'scout', 'sniper', 'medic'])){ const f = makeFighter({ name:nameFor(pf), team:pf, fac:pf, arch:a, hat:botHat() }); f.bot = newBot(); }
+    for(const a of shuffle(['soldier', 'tank', 'scout', 'sniper', 'medic', pick(['soldier', 'tank', 'scout'])])){ const f = makeFighter({ name:nameFor(other), team:other, fac:other, arch:a, hat:botHat() }); f.bot = newBot(); }
   } else {
-    for(let i = 0; i < 7; i++){ const fac = i % 2 ? pf : (pf === 'guard' ? 'rot' : 'guard'); const f = makeFighter({ name:nameFor(fac), team:'b' + i, fac, arch:pick(ARCHS) }); f.bot = newBot(); }
+    for(let i = 0; i < 7; i++){ const fac = i % 2 ? pf : (pf === 'guard' ? 'rot' : 'guard'); const f = makeFighter({ name:nameFor(fac), team:'b' + i, fac, arch:pick(ARCHS), hat:botHat() }); f.bot = newBot(); }
   }
   for(const f of fighters){ setOutline(f); makeTag(f); respawn(f); f.prot = 0; }
   if(NET.on && NET.role === 'host') netHostStarted();
@@ -3133,6 +3220,8 @@ function showEnd(){
   $('e-title').textContent = w === null ? 'Ничья' : won ? 'Победа!' : 'Поражение';
   $('e-lead').textContent = teamMode() ? FACTIONS.guard.name + ' ' + match.scores.guard + ' : ' + match.scores.rot + ' ' + FACTIONS.rot.name
     : (w ? (w === me ? 'Ты' : w.name) + ' — первое место, ' + w.kills + ' побед.' : 'Время вышло, лидеров несколько.');
+  const xp = awardXP(won, w === null);
+  if(xp){ let t = ' +' + xp.gain + ' опыта.'; if(xp.after > xp.before) t += ' ' + clsOf(me.fac, me.arch).name + ': уровень ' + xp.after + '!'; if(xp.hats.length) t += ' Новая шапка: ' + xp.hats.map(h => HATS[h].name).join(', ') + '.'; $('e-lead').textContent += t; }
   const acc = me.shotsF ? Math.round(me.shotsH / me.shotsF * 100) : 0;
   $('e-res').innerHTML = [[me.kills, 'убийств'], [me.deaths, 'смертей'], [me.assists, 'помощь'], [acc + '%', 'точность']].map(r => '<div><b>' + r[0] + '</b><span>' + r[1] + '</span></div>').join('');
   $('e-board').innerHTML = boardHTML();
