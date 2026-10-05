@@ -245,6 +245,30 @@ const SFX = {
   charge(){ if(!AC || muted || !canPlay('charge', 120)) return; const t = AC.currentTime; tone(t, 'sawtooth', 120, 420, 0.06, 0.05, 0.6); }
 };
 
+let musicOn = false;
+function startMusic(){
+  if(!AC || musicOn) return;
+  musicOn = true;
+  const g = AC.createGain(); g.gain.setValueAtTime(0.0001, AC.currentTime); g.gain.exponentialRampToValueAtTime(0.055, AC.currentTime + 4); g.connect(master);
+  const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 650; lp.Q.value = 0.6; lp.connect(g);
+  const lfo = AC.createOscillator(), lfoG = AC.createGain(); lfo.frequency.value = 0.07; lfoG.gain.value = 260; lfo.connect(lfoG); lfoG.connect(lp.frequency); lfo.start();
+  const chords = [[110, 130.8, 164.8], [87.3, 110, 130.8], [98, 123.5, 146.8], [82.4, 103.8, 123.5]];
+  const voices = [0, 1, 2].map(() => {
+    const a = AC.createOscillator(), b = AC.createOscillator(), vg = AC.createGain();
+    a.type = 'triangle'; b.type = 'sine'; b.detune.value = 8; vg.gain.value = 0.3;
+    a.connect(vg); b.connect(vg); vg.connect(lp); a.start(); b.start();
+    return { a, b };
+  });
+  let i = 0;
+  const bell = (f, t) => { const o = AC.createOscillator(), e = AC.createGain(); o.type = 'sine'; o.frequency.value = f; e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(0.035, t + 0.01); e.gain.exponentialRampToValueAtTime(0.0001, t + 1.6); o.connect(e); e.connect(master); o.start(t); o.stop(t + 1.7); };
+  const next = () => {
+    const c = chords[i++ % chords.length], t = AC.currentTime;
+    voices.forEach((v, k) => { v.a.frequency.setTargetAtTime(c[k], t, 0.9); v.b.frequency.setTargetAtTime(c[k] * 2, t, 0.9); });
+    if(state === 'play') for(let n = 0; n < 3; n++) if(Math.random() < 0.7) bell(c[Math.floor(Math.random() * 3)] * 4, t + n * 0.9 + 0.2);
+  };
+  next(); setInterval(next, 6400);
+}
+
 /* ============ canvas ============ */
 const cv = $('c'), ctx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1, SC = 1, CX = 0, CY = 0;
@@ -290,6 +314,7 @@ let score = 0, wave = 0, lives = 3, combo = 0, comboT = 0, bestCombo = 0, best =
 let tricksSeen = {};
 let spawnQ = [], spawnT = 0, waveClearT = -1, respawnT = -1;
 let ts = 1, slowT = 0, slowTo = 1, freeze = 0, trauma = 0, flash = 0, time = 0;
+let camZ = 1, camTZ = 1, camFX = 0, camFY = 0, camT = 0;
 let layoutIdx = 0, layoutAnim = 1, overT = -1;
 let perks = {}, dashCount = 0, perkChoices = [], deaths = [];
 const cd = () => COOLDOWN * (perks.quick ? 0.5 : 1);
@@ -340,6 +365,7 @@ function startWave(){
     1:'<b>Зажми где угодно, оттяни и отпусти.</b> Сталкивай всех за край.',
     2:'<b>Бомба</b> взрывается от сильного удара и раскидывает всех. Тебя тоже.',
     3:'<b>Красный</b> разгоняется по линии. Увернись у края, и он улетит сам.',
+    4:'<b>Короткий тап</b> без оттягивания — резкий тормоз. Спасает у самого края.',
     5:'<b>Тяжёлого</b> не сдвинуть в лоб. Пусть его толкнут взрыв или чужой рывок.',
     7:'<b>Магнит</b> стягивает всех в кучу. Куча шаров — лучшая цель для бомбы.'
   }[wave];
@@ -446,6 +472,9 @@ function award(b){
   label(lx, ly, txt, T.col, kind !== 'out' && kind !== 'self');
   if(combo >= 2){ label(lx, ly - 30, 'КОМБО ×' + combo, '#FFFFFF', true); }
   if(combo >= 3) slowmo(0.35, 0.35);
+  if(state === 'play' && !spawnQ.length && enemies().length === 0){
+    slowmo(0.18, 1.1); camTZ = 1.18; camT = 1.1; camFX = b.x * 0.75; camFY = b.y * 0.75;
+  }
   SFX.score(combo + (kind === 'out' || kind === 'self' ? 0 : 2));
   updateHud();
 }
@@ -485,7 +514,6 @@ function onHit(a, b, spd, x, y, nx, ny){
       o.fuse = 1.25; o.cred = other.type === 'player' ? { src:'P', depth:1, t:time, bank:false, boom:false } : (other.cred ? Object.assign({}, other.cred, { t:time }) : o.cred);
       SFX.fuse();
     }
-    if(o.type === 'player' && other.type !== 'bomb') o.hitBy = other.type;
     if(o.type === 'charger' && other.type === 'player') o.oled = true;
     if((o.type === 'grunt' || o.type === 'heavy') && other.type === 'player'){ o.rest = o.type === 'grunt' ? 0.55 : 0.3; }
     if(o.type === 'charger' && o.st === 'dash' && other.type !== 'player' && spd > 250){ o.st = 'stun'; o.t = 0.5; }
@@ -499,8 +527,16 @@ function collide(a, b){
   a.x -= nx * corr * ia; a.y -= ny * corr * ia; b.x += nx * corr * ib; b.y += ny * corr * ib;
   const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
   if(rv >= 0) return;
+  if(a.type === 'player' || b.type === 'player'){
+    const pl = a.type === 'player' ? a : b, o = pl === a ? b : a;
+    if(o.type !== 'bomb') pl.hitBy = len(o.vx, o.vy) > len(pl.vx, pl.vy) * 0.8 ? o.type : null;
+  }
   const e = 0.9, j = -(1 + e) * rv / (ia + ib);
   a.vx -= j * ia * nx; a.vy -= j * ia * ny; b.vx += j * ib * nx; b.vy += j * ib * ny;
+  if(-rv > 200){
+    const pl = a.type === 'player' ? a : b.type === 'player' ? b : null;
+    if(pl){ pl.vx *= 0.55; pl.vy *= 0.55; }
+  }
   onHit(a, b, -rv, a.x + nx * a.r, a.y + ny * a.r, nx, ny);
 }
 function collideBumper(b, p){
@@ -806,9 +842,10 @@ window.addEventListener('keydown', e => {
 /* ============ game flow ============ */
 function newGame(){
   audio(); if(AC && AC.state === 'suspended') AC.resume();
+  startMusic();
   bodies = []; parts = []; labels = []; rings = [];
   score = 0; wave = 0; lives = 3; combo = 0; bestCombo = 0; tricksSeen = {}; perks = {}; dashCount = 0; deaths = [];
-  ts = 1; slowT = 0; freeze = 0; trauma = 0; respawnT = -1; waveClearT = -1; overT = -1; queued = null;
+  ts = 1; slowT = 0; freeze = 0; trauma = 0; camZ = 1; camTZ = 1; camT = 0; respawnT = -1; waveClearT = -1; overT = -1; queued = null;
   player = mk('player', 0, 60); player.drop = 0.6; player.cool = 0;
   bodies.push(player);
   state = 'play';
@@ -965,6 +1002,8 @@ function update(rdt){
   for(const p of bumpers){ p.flash = Math.max(0, p.flash - rdt * 5); p.pop = Math.max(0, p.pop - rdt * 6); }
   layoutAnim = Math.min(1, layoutAnim + rdt * 2.5);
   trauma = Math.max(0, trauma - rdt * 1.6);
+  if(camT > 0){ camT -= rdt; if(camT <= 0) camTZ = 1; }
+  camZ += (camTZ - camZ) * Math.min(1, rdt * (camTZ > camZ ? 7 : 3));
   flash = Math.max(0, flash - rdt * 3);
   if(combo && time - comboT > 1.4){ combo = 0; }
   $('combo').textContent = combo >= 2 ? 'комбо ×' + combo : '';
@@ -1246,7 +1285,8 @@ function render(){
   ctx.drawImage(stars, 0, 0);
   const sh = trauma * trauma * 14;
   const ox = sh ? rand(-sh, sh) : 0, oy = sh ? rand(-sh, sh) : 0;
-  ctx.setTransform(DPR * SC, 0, 0, DPR * SC, DPR * (CX + ox), DPR * (CY + oy));
+  const z = SC * camZ;
+  ctx.setTransform(DPR * z, 0, 0, DPR * z, DPR * (CX + ox + SC * camFX * (1 - camZ)), DPR * (CY + oy + SC * camFY * (1 - camZ)));
   // void glow under platform
   const vg = ctx.createRadialGradient(0, 40, R * 0.6, 0, 40, R * 1.5);
   vg.addColorStop(0, 'rgba(95,227,179,.07)'); vg.addColorStop(1, 'rgba(0,0,0,0)');
