@@ -166,7 +166,8 @@ const G = -20;
 /* ================= renderer / scene ================= */
 const canvas = $('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
-renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+let PR = Math.min(matchMedia('(pointer:coarse)').matches ? 1.5 : 2, window.devicePixelRatio || 1);
+renderer.setPixelRatio(PR);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = true;
@@ -198,7 +199,7 @@ scene.add(hemi);
 const sun = new THREE.DirectionalLight('#FFD6AE', 4.2);
 sun.position.copy(SUN_DIR).multiplyScalar(60);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(matchMedia('(pointer:coarse)').matches ? 1024 : 2048, matchMedia('(pointer:coarse)').matches ? 1024 : 2048);
 const sc = sun.shadow.camera; sc.left = -26; sc.right = 26; sc.top = 26; sc.bottom = -26; sc.near = 10; sc.far = 140;
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
 scene.add(sun); scene.add(sun.target);
@@ -994,8 +995,12 @@ world.addBody(hookBody);
 
 let last = performance.now(), acc = 0, progT = 0, menuT = 0, trailT = 0, introT = 0;
 const tmpV = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+let perfN = 0, perfSum = 0;
 function frame(now){
-  const rdt = Math.min(0.05, (now - last) / 1000); last = now;
+  const raw = (now - last) / 1000;
+  const rdt = Math.min(0.05, raw); last = now;
+  // adaptive resolution: if frames are slow in the first seconds, render fewer pixels
+  if(perfN < 180 && raw < 0.5){ perfN++; perfSum += raw; if(perfN === 180 && perfSum / 180 > 0.026 && PR > 1){ PR = Math.max(1, PR * 0.7); renderer.setPixelRatio(PR); resize(); perfN = 0; perfSum = 0; } }
   tick(rdt, now);
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
