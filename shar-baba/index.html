@@ -381,6 +381,10 @@ cable.castShadow = true; scene.add(cable);
 const ballMat = new THREE.MeshStandardMaterial({ color:'#3A3640', roughness:0.32, metalness:0.85 });
 const hookMarker = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.75, 32), new THREE.MeshBasicMaterial({ color:'#FFD36B', transparent:true, opacity:0.55, depthWrite:false }));
 hookMarker.rotation.x = -Math.PI / 2; scene.add(hookMarker);
+const ballSpot = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshBasicMaterial({ color:'#2A1530', transparent:true, opacity:0.35, depthWrite:false }));
+ballSpot.rotation.x = -Math.PI / 2; ballSpot.renderOrder = 2; scene.add(ballSpot);
+const dropLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, -1, 0)]), new THREE.LineDashedMaterial({ color:'#FFE3B0', dashSize:0.35, gapSize:0.3, transparent:true, opacity:0.55 }));
+dropLine.computeLineDistances(); scene.add(dropLine);
 
 /* ================= particles ================= */
 const PMAX = 1400;
@@ -820,6 +824,7 @@ function startLevel(i){
   $('b-drop').disabled = false;
   renderHouses(); updateHud();
   hint(level.hint, 7);
+  introT = 1;
   toast(level.name, sandbox ? 'сноси что хочешь' : 'снеси ' + Math.round(need() * 100) + '% красного за ' + fmtTime(level.time));
 }
 const UPV = new CANNON.Vec3(0, 1, 0);
@@ -853,6 +858,8 @@ function win(){
   slowmo(0.3, 1.4);
   SFX.win();
   toast('Снесено!', '');
+  const cols = [[1, 0.8, 0.3], [0.4, 0.9, 0.8], [1, 0.45, 0.35], [0.95, 0.95, 1]];
+  for(let k = 0; k < 4; k++) emit('fire', rand(-6, 8), 12, rand(-4, 8), 70, { spd:9, up:1.2, upMin:0.2, size:0.35, size1:0.25, life:2.6, lmin:1.4, col:cols[k], g:-9, drag:1.1, r:3 });
   const stars = Math.max(1, (tUsed <= level.par ? 3 : tUsed <= level.par * 1.7 ? 2 : 1) - hurt);
   const prev = progress[levelIdx] || 0;
   if(stars > prev){ progress[levelIdx] = stars; saveProgress(); }
@@ -982,9 +989,10 @@ function camDist(){ const a = camera.aspect; return a < 0.8 ? 62 : a < 1.2 ? 52 
 /* ================= loop ================= */
 hookBody = new CANNON.Body({ mass:0, type:CANNON.Body.KINEMATIC, position:new CANNON.Vec3(0, JIB_Y, 0) });
 hookBody.collisionFilterGroup = 0; hookBody.collisionFilterMask = 0;
+hookBody.allowSleep = false;
 world.addBody(hookBody);
 
-let last = performance.now(), acc = 0, progT = 0, menuT = 0;
+let last = performance.now(), acc = 0, progT = 0, menuT = 0, trailT = 0, introT = 0;
 const tmpV = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 function frame(now){
   const rdt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -1053,6 +1061,13 @@ function tick(rdt, now){
       cable.visible = true; cable.position.set(hook.x, JIB_Y - 1.3, hook.z); cable.scale.set(1, 2, 1); cable.quaternion.identity();
     }
     hookMarker.position.set(hook.x, 0.03, hook.z);
+    if(ball && mode === 'play'){
+      const h = Math.max(0.01, ball.position.y - 0.05);
+      ballSpot.visible = dropLine.visible = true;
+      ballSpot.position.set(ball.position.x, 0.04, ball.position.z);
+      ballSpot.scale.setScalar(0.6 + Math.min(1.2, 5 / (h + 3)));
+      dropLine.position.copy(ball.position); dropLine.scale.set(1, h, 1);
+    } else { ballSpot.visible = dropLine.visible = false; }
     hookMarker.visible = mode === 'play';
     // timers
     if(mode === 'play'){
@@ -1076,18 +1091,29 @@ function tick(rdt, now){
     }
   }
   // fx
+  trailT -= dt;
+  if(trailT <= 0){
+    trailT = 0.016;
+    for(const bd of [ball, ...balls.map(x => x.body)]){
+      if(!bd) continue;
+      const v = bd.velocity.length();
+      if(v > 8) emit('dust', bd.position.x, bd.position.y, bd.position.z, 1, { spd:0.2, up:0, size:BALL_R * 1.4, size1:BALL_R * 0.3, life:Math.min(0.5, 0.15 + v * 0.015), lmin:0.15, col:[1, 0.93, 0.85], g:0, r:0.15 });
+    }
+  }
   updateParticles(dt);
   if(boomT > 0){ boomT += dt; const k = boomT / 0.6; boomBall.scale.setScalar(1 + k * 5.5); boomBall.material.opacity = Math.max(0, 1 - k); if(k >= 1) boomT = 0; }
   flashLight.intensity *= Math.exp(-rdt * 7);
   glowMat.emissiveIntensity = 0.35 + 0.35 * Math.sin(now / 160);
   for(const c of clouds){ c.position.x += c.userData.spd * rdt; if(c.position.x > 140) c.position.x = -140; }
   // camera
-  const d = camDist();
+  if(introT > 0) introT = Math.max(0, introT - rdt / 1.8);
+  const ease = introT * introT * (3 - 2 * introT);
+  const d = camDist() * (1 + ease * 0.7);
   const focus = ball ? ball.position : hookBody.position;
   camTarget.set(0 + (focus.x) * 0.15, 3.5, 1 + (focus.z - 1) * 0.15);
   camLook.lerp(camTarget, Math.min(1, rdt * 2));
   const ang = 0.62 + (mode === 'menu' ? Math.sin(now / 9000) * 0.25 : 0);
-  camera.position.set(camLook.x + Math.sin(ang) * d * 0.8, camLook.y + d * 0.47, camLook.z + Math.cos(ang) * d * 0.8);
+  camera.position.set(camLook.x + Math.sin(ang + ease * 0.5) * d * 0.8, camLook.y + d * (0.47 + ease * 0.25), camLook.z + Math.cos(ang + ease * 0.5) * d * 0.8);
   if(shake > 0){ camera.position.x += rand(-1, 1) * shake * 0.6; camera.position.y += rand(-1, 1) * shake * 0.6; shake = Math.max(0, shake - rdt * 2.2); }
   camera.lookAt(camLook);
   // floating labels
