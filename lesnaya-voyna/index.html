@@ -327,6 +327,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
     </div>
     <div class="row">
       <label class="set">Мышь <input type="range" id="sens" min="0.4" max="2.5" step="0.05"></label>
+      <label class="set">Время <select id="tod"><option value="rand">Случайно</option><option value="day">День</option><option value="dusk">Закат</option><option value="night">Ночь</option></select></label>
       <label class="set">Графика <select id="qual"><option value="high">Красивая</option><option value="low">Быстрая</option></select></label>
     </div>
     <p class="keys" id="keys"><span><b>WASD</b> бег</span><span><b>Мышь</b> прицел</span><span><b>ЛКМ</b> огонь</span><span><b>ПКМ</b> прицеливание</span><span><b>Q / E</b> умения</span><span><b>R</b> перезарядка</span><span><b>Пробел</b> прыжок</span><span><b>Shift</b> спринт</span><span><b>Tab</b> счёт</span><span><b>M</b> звук</span></p>
@@ -364,7 +365,7 @@ const store = {
   set(k, v){ try{ localStorage.setItem('lv_' + k, JSON.stringify(v)); }catch(e){} }
 };
 const settings = { sens:store.get('sens', 1), quality:store.get('q', TOUCH ? 'low' : 'high') };
-const menuSel = { mode:store.get('mode', 'tdm'), fac:store.get('fac', 'guard'), arch:store.get('arch', 'soldier'), diff:store.get('diff', 'normal') };
+const menuSel = { mode:store.get('mode', 'tdm'), fac:store.get('fac', 'guard'), arch:store.get('arch', 'soldier'), diff:store.get('diff', 'normal'), tod:store.get('tod', 'rand') };
 let state = 'load', me = null, time = 0, muted = false;
 const view = { yaw:0, pitch:0 };
 const V1 = new THREE.Vector3(), V2 = new THREE.Vector3(), V3 = new THREE.Vector3();
@@ -385,10 +386,10 @@ scene.background = FOG_COL.clone();
 const camera = new THREE.PerspectiveCamera(70, 1, 0.08, 800);
 const SUN_DIR = new THREE.Vector3(-0.45, 0.62, 0.64).normalize();
 
-const skyU = { top:{ value:new THREE.Color('#3B8EE0') }, hor:{ value:new THREE.Color('#D2EAE2') }, sunDir:{ value:SUN_DIR }, t:{ value:0 } };
+const skyU = { top:{ value:new THREE.Color('#3B8EE0') }, hor:{ value:new THREE.Color('#D2EAE2') }, sunDir:{ value:SUN_DIR }, t:{ value:0 }, disc:{ value:new THREE.Color('#FFDBA0') }, cloud:{ value:new THREE.Color('#FFFDF6') }, stars:{ value:0 } };
 const skyMat = new THREE.ShaderMaterial({ side:THREE.BackSide, depthWrite:false, fog:false, uniforms:skyU,
   vertexShader:'varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-  fragmentShader:`uniform vec3 top; uniform vec3 hor; uniform vec3 sunDir; uniform float t; varying vec3 vDir;
+  fragmentShader:`uniform vec3 top; uniform vec3 hor; uniform vec3 sunDir; uniform float t; uniform vec3 disc; uniform vec3 cloud; uniform float stars; varying vec3 vDir;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
@@ -398,11 +399,12 @@ void main(){
   vec3 col = mix(hor, top, pow(clamp(h, 0.0, 1.0), 0.5));
   col = mix(col, hor * 0.9, smoothstep(0.0, -0.3, h));
   float s = max(dot(d, sunDir), 0.0);
-  col += vec3(1.0, 0.86, 0.62) * (pow(s, 900.0) * 16.0 + pow(s, 30.0) * 0.4 + pow(s, 4.0) * 0.1);
+  col += disc * (pow(s, 900.0) * 16.0 + pow(s, 30.0) * 0.4 + pow(s, 4.0) * 0.1);
+  if(stars > 0.0 && h > 0.0){ vec3 sd = d * 260.0; vec3 id = floor(sd); float hs = fract(sin(dot(id, vec3(12.9898, 78.233, 37.719))) * 43758.5453); if(hs > 0.993){ float st = smoothstep(0.42, 0.0, length(fract(sd) - 0.5)); col += vec3(0.9, 0.95, 1.0) * st * stars * (0.55 + 0.45 * sin(t * 2.0 + hs * 400.0)) * smoothstep(0.02, 0.3, h) * 1.6; } }
   if(h > 0.0){
     vec2 uv = d.xz / (h + 0.16) * 1.3 + vec2(t * 0.012, t * 0.005);
     float c = smoothstep(0.5, 0.8, fbm(uv)) * smoothstep(0.0, 0.25, h);
-    vec3 cc = vec3(1.0, 0.99, 0.96) * (0.9 + 0.2 * fbm(uv * 2.0 + 3.0)) + vec3(1.0, 0.82, 0.55) * pow(s, 6.0) * 0.7;
+    vec3 cc = cloud * (0.9 + 0.2 * fbm(uv * 2.0 + 3.0)) + disc * pow(s, 6.0) * 0.7;
     col = mix(col, cc, c * 0.85);
   }
   gl_FragColor = vec4(col, 1.0);
@@ -411,13 +413,16 @@ void main(){
 }` });
 const sky = new THREE.Mesh(new THREE.SphereGeometry(500, 32, 16), skyMat);
 sky.renderOrder = -10; sky.frustumCulled = false; scene.add(sky);
-{
+let envRT = null;
+const envGnd = new THREE.MeshBasicMaterial({ color:'#55703A', side:THREE.DoubleSide });
+function regenEnv(){
   const pm = new THREE.PMREMGenerator(renderer), es = new THREE.Scene();
   es.add(new THREE.Mesh(new THREE.SphereGeometry(50, 32, 16), skyMat));
-  const gnd = new THREE.Mesh(new THREE.CircleGeometry(49, 24), new THREE.MeshBasicMaterial({ color:'#55703A', side:THREE.DoubleSide }));
-  gnd.rotation.x = -Math.PI / 2; gnd.position.y = -6; es.add(gnd);
-  scene.environment = pm.fromScene(es, 0.04, 0.1, 200).texture; pm.dispose();
+  const gnd = new THREE.Mesh(new THREE.CircleGeometry(49, 24), envGnd); gnd.rotation.x = -Math.PI / 2; gnd.position.y = -6; es.add(gnd);
+  const rt = pm.fromScene(es, 0.04, 0.1, 200); pm.dispose();
+  if(envRT) envRT.dispose(); envRT = rt; scene.environment = rt.texture;
 }
+regenEnv();
 const hemi = new THREE.HemisphereLight('#DDEEFF', '#5C6E3A', 0.5); scene.add(hemi);
 const sun = new THREE.DirectionalLight('#FFE3B8', 3.0);
 sun.castShadow = true;
@@ -876,6 +881,47 @@ for(let k = 0; k < 400 && bushN < 640; k++){
 }
 bushIM.count = bushN;
 
+/* ================= static merging (fewer draw calls) ================= */
+// (called once below, after the static world is built)
+function mergeGeos(meshes){
+  const parts = meshes.map(m => { m.updateMatrix(); const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone(); g.applyMatrix4(m.matrix); return g; });
+  const out = new THREE.BufferGeometry();
+  for(const n of ['position', 'normal', 'uv', 'color']){
+    if(!parts.every(g => g.attributes[n])) continue;
+    const size = parts[0].attributes[n].itemSize; let len = 0; for(const g of parts) len += g.attributes[n].count * size;
+    const arr = new Float32Array(len); let o = 0;
+    for(const g of parts){ const a = g.attributes[n]; for(let i = 0; i < a.count; i++) for(let k = 0; k < size; k++) arr[o++] = a.getComponent(i, k); }
+    out.setAttribute(n, new THREE.BufferAttribute(arr, size));
+  }
+  parts.forEach(g => g.dispose());
+  return out;
+}
+const KEEP_MAT = new Set();
+function matSig(m){ return KEEP_MAT.has(m) ? m.uuid : [m.type, m.color ? m.color.getHex() : 0, m.roughness, m.metalness, m.emissive ? m.emissive.getHex() : 0, m.emissiveIntensity, m.map ? m.map.uuid : 0, m.side, m.flatShading, m.vertexColors].join(','); }
+function mergeChildren(parent, keep, bySig){
+  const buckets = new Map();
+  for(const c of parent.children.slice()){
+    if(!c.isMesh || c.isInstancedMesh || c.children.length || (keep && keep.has(c)) || Array.isArray(c.material) || c.material.isShaderMaterial || c.material.transparent) continue;
+    const k = (bySig ? matSig(c.material) : c.material.uuid) + '|' + c.castShadow + c.receiveShadow + '|' + (c.userData.ol ? 1 : 0) + '|' + (c.geometry.attributes.uv ? 1 : 0) + (c.geometry.attributes.color ? 1 : 0);
+    if(!buckets.has(k)) buckets.set(k, []);
+    buckets.get(k).push(c);
+  }
+  for(const list of buckets.values()){
+    if(list.length < 2) continue;
+    const m = new THREE.Mesh(mergeGeos(list), list[0].material);
+    m.castShadow = list[0].castShadow; m.receiveShadow = list[0].receiveShadow; if(list[0].userData.ol) m.userData.ol = 1;
+    for(const c of list) parent.remove(c);
+    parent.add(m);
+  }
+}
+function mergeWorld(root){
+  for(const c of root.children.slice()) if(c.isGroup || (c.type === 'Group')) mergeWorld(c);
+  mergeChildren(root, null, true);
+}
+
+KEEP_MAT.add(baseFx.guardMat); KEEP_MAT.add(baseFx.gills); KEEP_MAT.add(baseFx.rotMat);
+mergeWorld(scene);
+
 /* ================= ambient life ================= */
 const shafts = [];
 {
@@ -964,10 +1010,27 @@ for(const [x, z] of [[-33, 46], [33, 46], [-36, 24], [36, 24], [-20, 12], [20, -
 const NAV = [];
 for(let x = -36; x <= 36; x += 6) for(let z = -46; z <= 46; z += 6) if(freeAt(x, z, 1.8) && waterDepth(x, z) < 0.3) NAV.push({ x, z });
 
+const SKIES = {
+  day:{ name:'День', top:'#3B8EE0', hor:'#D2EAE2', fog:'#BCD8C6', fogD:0.0092, sunC:'#FFE3B8', sunI:3.0, dir:[-0.45, 0.62, 0.64], hs:'#DDEEFF', hg:'#5C6E3A', hi:0.5, exp:1.0, disc:'#FFDBA0', cloud:'#FFFDF6', stars:0, shaft:'#FFF1C2', shaftK:1, mote:[1.6, 1.4, 0.9], moteS:0.16, gnd:'#55703A' },
+  dusk:{ name:'Закат', top:'#33407E', hor:'#FFAD72', fog:'#C99F8A', fogD:0.0105, sunC:'#FFB070', sunI:2.6, dir:[-0.72, 0.2, 0.66], hs:'#FFC9A8', hg:'#4A4232', hi:0.5, exp:1.08, disc:'#FFB060', cloud:'#FFC7A0', stars:0.12, shaft:'#FFC890', shaftK:1.7, mote:[1.7, 1.1, 0.6], moteS:0.17, gnd:'#4A4030' },
+  night:{ name:'Ночь', top:'#060D24', hor:'#22355A', fog:'#1C2A40', fogD:0.0125, sunC:'#A8BEFF', sunI:1.05, dir:[0.35, 0.72, -0.6], hs:'#7090D0', hg:'#18221A', hi:0.65, exp:1.32, disc:'#DCE6FF', cloud:'#33435E', stars:1, shaft:'#A8C0FF', shaftK:0, mote:[0.9, 1.8, 0.45], moteS:0.3, gnd:'#141C16' }
+};
+let skyName = 'day';
+function applySky(n){
+  const S = SKIES[n] || SKIES.day; skyName = SKIES[n] ? n : 'day';
+  skyU.top.value.set(S.top); skyU.hor.value.set(S.hor); skyU.disc.value.set(S.disc); skyU.cloud.value.set(S.cloud); skyU.stars.value = S.stars;
+  SUN_DIR.set(S.dir[0], S.dir[1], S.dir[2]).normalize();
+  FOG_COL.set(S.fog); scene.fog.color.copy(FOG_COL); scene.fog.density = S.fogD; scene.background.copy(FOG_COL);
+  sun.color.set(S.sunC); sun.intensity = S.sunI; hemi.color.set(S.hs); hemi.groundColor.set(S.hg); hemi.intensity = S.hi;
+  renderer.toneMappingExposure = S.exp;
+  for(const s of shafts){ s.material.color.set(S.shaft); s.visible = S.shaftK > 0; s.userData.k = S.shaftK; }
+  motes.material.color.setRGB(S.mote[0], S.mote[1], S.mote[2]); motes.material.size = S.moteS;
+  envGnd.color.set(S.gnd); regenEnv();
+}
 function updateWorld(dt){
   skyU.t.value = time; windU.value = time;
   waterN.offset.x = (waterN.offset.x + dt * 0.025) % 1; waterN.offset.y = Math.sin(time * 0.2) * 0.05;
-  for(const s of shafts) s.material.opacity = 0.02 + Math.sin(time * 0.5 + s.userData.ph) * 0.01;
+  for(const s of shafts) s.material.opacity = (0.02 + Math.sin(time * 0.5 + s.userData.ph) * 0.01) * (s.userData.k === undefined ? 1 : s.userData.k);
   const gl = 2.2 + Math.sin(time * 1.6) * 0.5; baseFx.guardMat.emissiveIntensity = gl; baseFx.gills.emissiveIntensity = 0.3 + Math.sin(time * 1.6) * 0.08;
   baseFx.rotMat.emissiveIntensity = 1.1 + Math.sin(time * 2.3) * 0.35; baseFx.rotLight.intensity = 55 + Math.sin(time * 2.3) * 12;
   for(let i = 0; i < moteN; i++){ const m = moteSeed[i]; motePos[i * 3] = m.x + Math.sin(time * m.s + m.p) * 1.4; motePos[i * 3 + 1] = groundH(m.x, m.z) + m.y + Math.sin(time * m.s * 1.3 + m.p) * 0.5; motePos[i * 3 + 2] = m.z + Math.cos(time * m.s * 0.8 + m.p) * 1.4; }
@@ -1301,7 +1364,10 @@ function buildModel(fac, arch, hat){
     const sm = new THREE.MeshBasicMaterial({ color:new THREE.Color(F.color).multiplyScalar(0.55), transparent:true, opacity:0.22, blending:THREE.AdditiveBlending, depthWrite:false });
     M.shield = new THREE.Mesh(SPH, sm); M.shield.scale.setScalar(1.45); M.shield.position.y = 1.1; M.shield.visible = false; g.add(M.shield);
   }
-  if(hat && HATS[hat]){ const at = HAT_AT[key] || [2, 0, 0.6], h = buildHat(hat, mat); h.position.set(0, at[0], at[1]); h.scale.setScalar(at[2]); body.add(h); M.hat = h; }
+  if(hat && HATS[hat]){ const at = HAT_AT[key] || [2, 0, 0.6], h = buildHat(hat, mat); h.position.set(0, at[0], at[1]); h.scale.setScalar(at[2]); body.add(h); M.hat = h; mergeChildren(h); }
+  const keep = new Set([...(M.wings || []), ...M.fronds, M.shield].filter(Boolean));
+  mergeChildren(body, keep); mergeChildren(pivot, keep); mergeChildren(gun.g, keep);
+  for(const s of M.stalks) mergeChildren(s, keep);
   // outlines
   M.ol = outlineMat('#101810');
   const add = [];
@@ -1344,7 +1410,8 @@ function animFighter(f, dt){
   if(M.shield){ M.shield.visible = f.shieldT > 0; if(f.shieldT > 0){ M.shield.material.opacity = 0.18 + Math.sin(time * 12) * 0.05 + (f.flash > 0 ? 0.25 * f.flash : 0); M.shield.rotation.y += dt; } }
   if(f.flash > 0 || f.flashOn){
     const k = Math.max(0, f.flash);
-    for(const m of M.mats){ m.emissive.copy(m.userData.e0).lerp(WHITE, k * 0.6); m.emissiveIntensity = Math.max(m.userData.ei, k * 0.55); }
+    const fk = f === me ? 0.3 : 0.6;
+    for(const m of M.mats){ m.emissive.copy(m.userData.e0).lerp(WHITE, k * fk); m.emissiveIntensity = Math.max(m.userData.ei, k * fk * 0.9); }
     f.flashOn = k > 0; f.flash = Math.max(0, f.flash - dt * 7);
   }
 }
@@ -2698,7 +2765,7 @@ function clientStart(m){
   NET.waiting = false; NET.epoch = num(m.ep);
   clearMatch();
   const mode = m.md === 'ffa' ? 'ffa' : m.md === 'cap' ? 'cap' : 'tdm';
-  capReset();
+  capReset(); applySky(SKIES[m.td] ? m.td : 'day');
   Object.assign(match, { mode, diff:DIFF[m.df] ? m.df : 'normal', limit:cl(m.li, 1, 999), dur:cl(m.du, 30, 3600), t:num(m.t), scores:{ guard:num(m.sg) | 0, rot:num(m.sr) | 0 }, over:false, winner:null, firstBlood:true, attract:false, live:true, frozen:false });
   me = makeFighter({ name:'Ты', team:mode !== 'ffa' ? menuSel.fac : 'p' + NET.myPeer, fac:menuSel.fac, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(menuSel.fac, menuSel.arch)] || null });
   me.nid = 'p' + NET.myPeer; setOutline(me); respawn(me); me.prot = 1.5;
@@ -2730,7 +2797,7 @@ function netPack(){
   if(me) o.me = packF(me);
   if(NET.role === 'host'){
     const w = match.winner;
-    o.m = { ep:NET.epoch, md:match.mode, df:match.diff, t:r2(match.t), sg:match.scores.guard, sr:match.scores.rot, li:match.limit, du:match.dur, st:state === 'end' || match.over ? 'end' : state === 'countdown' ? 'cd' : 'play', w:w == null ? 0 : typeof w === 'string' ? w : w.nid || 0, cp:CAPS.map(c => r2(c.prog)), co:CAPS.map(c => c.owner ? c.owner[0] : '0').join('') };
+    o.m = { ep:NET.epoch, md:match.mode, df:match.diff, t:r2(match.t), sg:match.scores.guard, sr:match.scores.rot, li:match.limit, du:match.dur, st:state === 'end' || match.over ? 'end' : state === 'countdown' ? 'cd' : 'play', w:w == null ? 0 : typeof w === 'string' ? w : w.nid || 0, cp:CAPS.map(c => r2(c.prog)), co:CAPS.map(c => c.owner ? c.owner[0] : '0').join(''), td:skyName };
     o.bots = fighters.filter(f => f.bot && f !== me && !f.remote && f.nid).map(f => [f.nid, ...packF(f), f.name]);
   }
   o.ev = NET.events.map(x => x.e);
@@ -2846,6 +2913,7 @@ function netMatchIn(m){
     Object.assign(match, { t:num(m.t), scores:{ guard:num(m.sg) | 0, rot:num(m.sr) | 0 }, over:false, winner:null, live:true, frozen:false, firstBlood:false });
     for(const k of ['kills', 'deaths', 'assists', 'score', 'streak', 'best', 'heads', 'shotsF', 'shotsH', 'dmgDone']) me[k] = 0;
     state = 'play'; endT = 0; $('end').hidden = true; $('hud').hidden = false; $('dead').hidden = true; respawn(me);
+    if(SKIES[m.td] && m.td !== skyName) applySky(m.td);
     announce('Новый бой!', 'хозяин начал снова', 2); requestLock(); updatePause();
     return;
   }
@@ -3065,7 +3133,7 @@ function renderMenu(){
   const C = clsOf(menuSel.fac, menuSel.arch), A = ARCH[menuSel.arch], W = A.w;
   const dps = Math.round(W.dmg * W.rate * (W.burst || 1) + (W.splashDmg || 0) * W.rate * 0.5);
   $('cldetail').innerHTML = icon(menuSel.fac, menuSel.arch) + '<span class="role">' + C.role + '</span><b>' + C.name + '</b><p>' + C.desc + '</p><div class="stats"><span>Здоровье <i>' + A.hp + '</i></span><span>Скорость <i>' + A.speed + '</i></span><span>Урон в секунду <i>~' + dps + '</i></span><span>Обойма <i>' + W.mag + '</i></span></div><ul style="grid-column:2"><li><b>Q · ' + C.q[0] + '</b> — ' + C.q[1] + '</li><li><b>E · ' + C.e[0] + '</b> — ' + C.e[1] + '</li></ul>' + profHTML();
-  $('sens').value = settings.sens; $('qual').value = settings.quality;
+  $('sens').value = settings.sens; $('qual').value = settings.quality; $('tod').value = menuSel.tod;
 }
 function profHTML(){
   const key = clsKey(menuSel.fac, menuSel.arch), L = lvlOf(PROF.xp[key]), tot = totalLevel(), cur = PROF.hat[key] || '';
@@ -3077,6 +3145,8 @@ for(const [id, key] of [['m-mode', 'mode'], ['m-fac', 'fac'], ['m-diff', 'diff']
 $('classes').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if(!b) return; menuSel.arch = b.dataset.a; store.set('arch', b.dataset.a); renderMenu(); });
 $('classes').addEventListener('dblclick', e => { if(e.target.closest('[data-a]')) startMatch(); });
 $('sens').addEventListener('input', e => { settings.sens = +e.target.value; store.set('sens', settings.sens); });
+$('tod').addEventListener('change', e => { menuSel.tod = e.target.value; store.set('tod', menuSel.tod); });
+const pickSky = () => { if(SKIES[menuSel.tod]) return menuSel.tod; const r = Math.random(); return r < 0.45 ? 'day' : r < 0.75 ? 'dusk' : 'night'; };
 $('qual').addEventListener('change', e => { settings.quality = e.target.value; store.set('q', settings.quality); applyQuality(); });
 $('play').addEventListener('click', () => startMatch());
 $('e-again').addEventListener('click', () => { if(!(NET.on && NET.role === 'client')) startMatch(); });
@@ -3156,7 +3226,7 @@ function clearMatch(){
 }
 function startAttract(){
   clearMatch();
-  capReset();
+  capReset(); applySky(pick(['day', 'day', 'dusk', 'night']));
   Object.assign(match, { mode:Math.random() < 0.5 ? 'cap' : 'tdm', diff:'normal', limit:1e9, dur:1e9, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:true, attract:true, live:true, frozen:false });
   for(const fac of ['guard', 'rot']) for(const a of ARCHS){ const f = makeFighter({ name:pick(NAMES[fac]), team:fac, fac, arch:a, hat:botHat() }); f.bot = newBot(); }
   for(const f of fighters){ setOutline(f); respawn(f); f.prot = 0; }
@@ -3174,7 +3244,7 @@ function startMatch(){
   clearMatch();
   Object.assign(match, { mode:menuSel.mode, diff:menuSel.diff, limit:menuSel.mode === 'tdm' ? 50 : menuSel.mode === 'cap' ? 150 : 20, dur:480, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:false, attract:false, live:false, frozen:true });
   const pf = menuSel.fac;
-  capReset();
+  capReset(); applySky(pickSky());
   me = makeFighter({ name:'Ты', team:teamMode() ? pf : 'p0', fac:pf, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(pf, menuSel.arch)] || null });
   const used = new Set(), nameFor = fac => { const l = NAMES[fac].filter(n => !used.has(n)), n = pick(l.length ? l : NAMES[fac]); used.add(n); return n; };
   if(teamMode()){
