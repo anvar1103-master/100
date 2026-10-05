@@ -4,6 +4,7 @@ root = pathlib.Path(__file__).resolve().parent.parent
 GAMES = {
     'vyshibala': ('docs/index.html', 'Вышибала', 'Бильярд-сумо на краю пустоты.'),
     'shar-baba': ('docs/shar-baba/index.html', 'Шар-баба', 'Башенный кран, шар для сноса и парящий остров.'),
+    'gribnoy-dozor': ('docs/gribnoy-dozor/index.html', 'Грибной дозор', 'Грибы-бойцы защищают лес от вредителей.'),
 }
 for folder, (out, title, desc) in GAMES.items():
     src = (root / folder / 'index.html').read_text(encoding='utf-8')
