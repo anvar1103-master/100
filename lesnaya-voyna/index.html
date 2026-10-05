@@ -104,6 +104,7 @@ button{cursor:pointer}
 .tag.foe{--tc:var(--foe)}
 .dmg{position:fixed;left:0;top:0;font:400 20px var(--font-display);color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.6);white-space:nowrap;will-change:transform}
 .dmg.head{color:var(--amber);font-size:26px}
+.dmg.heal{color:#8CFFA8;font-size:19px}
 #m-mode button{flex:1 1 40%}
 .caps{display:flex;gap:4px;justify-content:center;margin-top:4px}
 .cap{--p:0;--fc:#fff;--oc:rgba(255,255,255,.35);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:400 13px/1 var(--font-display);font-style:normal;color:#fff;background:conic-gradient(var(--fc) calc(var(--p) * 1%), rgba(10,20,14,.55) 0);border:2px solid var(--oc);text-shadow:0 1px 2px rgba(0,0,0,.8)}
@@ -157,7 +158,30 @@ button{cursor:pointer}
 .seg.fac button.r.sel{border-color:var(--rot);background:rgba(224,123,255,.12)}
 .seg.fac button.g{color:#D6FFDE}
 .seg.fac button.r{color:#F6DDFF}
-.classes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start}
+.clsbox{display:flex;flex-direction:column;gap:12px;min-width:0}
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px 8px;border-radius:16px;border:2px solid var(--line);background:rgba(255,255,255,.035);min-width:0}
+.tile svg{width:60px;height:60px}
+.tile b{font:400 16px/1.1 var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tile small{font:800 10.5px/1.2 var(--font-body);color:var(--amber);text-transform:uppercase;letter-spacing:.06em}
+.tile:hover{background:rgba(255,255,255,.07)}
+.tile.sel{border-color:var(--amber);background:rgba(255,201,77,.1)}
+.cldetail{display:grid;grid-template-columns:110px 1fr;gap:4px 18px;align-items:start;padding:16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+.cldetail svg{grid-row:1 / span 4;width:110px;height:110px}
+.cldetail .role{font:800 12px/1.2 var(--font-body);color:var(--amber);text-transform:uppercase;letter-spacing:.08em}
+.cldetail b{font:400 30px/1 var(--font-display)}
+.cldetail p{margin:0;color:var(--ink-2);font-size:14px}
+.cldetail ul{margin:4px 0 0;padding-left:18px;font-size:13.5px;color:var(--muted)}
+.cldetail ul b{font:800 13.5px var(--font-body);color:var(--ink)}
+.clwrap{position:relative}
+.pv{position:absolute;right:10px;top:10px;width:min(270px,42%);height:calc(100% - 20px);pointer-events:none;display:none}
+.has3d .pv{display:block}
+.has3d .cldetail{grid-template-columns:1fr;min-height:300px;padding-right:calc(min(270px,42%) + 20px)}
+.has3d .cldetail svg{display:none}
+.has3d .cldetail ul{grid-column:1!important}
+.stats{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.stats i{font-style:normal;color:var(--ink)}
+@media (max-width:560px){.has3d .cldetail{min-height:220px}.pv{width:40%}.tile svg{width:42px;height:42px}.tile b{font-size:12.5px}.tile small{display:none}.cldetail{grid-template-columns:72px 1fr;padding:12px}.cldetail svg{width:72px;height:72px}.cldetail b{font-size:24px}}
 @media (max-width:560px){.classes{grid-template-columns:1fr}}
 .cls{display:grid;grid-template-columns:62px 1fr;grid-auto-rows:min-content;gap:3px 12px;align-content:start;text-align:left;padding:12px;border-radius:18px;border:2px solid var(--line);background:rgba(255,255,255,.035)}
 .cls svg{grid-row:1 / span 3;width:62px;height:62px}
@@ -289,7 +313,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
           <small id="n-note"></small>
         </div></div>
       </div>
-      <div class="classes" id="classes"></div>
+      <div class="clsbox"><div class="tiles" id="classes"></div><div class="clwrap" id="clwrap"><div class="cldetail" id="cldetail"></div><canvas id="pv" class="pv" aria-hidden="true"></canvas></div></div>
     </div>
     <div class="row">
       <label class="set">Мышь <input type="range" id="sens" min="0.4" max="2.5" step="0.05"></label>
@@ -966,20 +990,24 @@ const ARCH = {
   sniper:{ hp:140, speed:6.8, rad:0.45, eye:1.62, h:2.05, body:[0.8, 0.5], head:[1.62, 0.46], headY:1.35, camD:4.3, camS:1.1,
     w:{ kind:'snipe', dmg:55, rate:0.75, mag:5, reload:2.1, speed:400, spread:0.03, scoped:0.0012, bloom:0, headMul:2.2, range:220 }, cdQ:10, cdE:12 }
 };
-const ARCHS = ['soldier', 'tank', 'scout', 'sniper'];
+ARCH.medic = { hp:160, speed:7.2, rad:0.5, eye:1.5, h:1.95, body:[0.85, 0.6], head:[1.5, 0.52], headY:1.25, camD:4.2, camS:1.1,
+  w:{ kind:'burst', dmg:9, rate:2.3, burst:3, mag:24, reload:1.5, speed:120, spread:0.013, bloom:0.03, headMul:1.5, range:85 }, cdQ:11, cdE:16 };
+const ARCHS = ['soldier', 'tank', 'scout', 'sniper', 'medic'];
 const FACTIONS = {
   guard:{ name:'Лесная стража', short:'Стража', color:'#7BE38F', tracer:[0.9, 1.6, 0.45], glow:'#D8FF6A',
     classes:{
       soldier:{ name:'Мухомор', role:'Боец', desc:'Споромёт-автомат. Надёжен на любой дистанции.', q:['Ядовитое облако', 'облако яда в точке прицела'], e:['Споровый прыжок', 'взлёт и удар о землю'] },
       tank:{ name:'Боровик', role:'Танк', desc:'Жёлудемёт бьёт навесом и взрывается. Очень крепкий.', q:['Шляпочный щит', 'почти без урона 4 секунды'], e:['Таран', 'рывок плечом, сбивает врагов'] },
       scout:{ name:'Лисичка', role:'Разведчик', desc:'Скорострельные иглы вблизи. Быстрая и вёрткая.', q:['Рывок', 'мгновенный рывок, неуязвимость'], e:['Огненный гриб', 'граната с огненными спорами'] },
-      sniper:{ name:'Папоротник', role:'Снайпер', desc:'Тростниковая винтовка. ПКМ — прицел, в голову ×2.', q:['Скачок', 'прыжок назад и маскировка'], e:['Колючий капкан', 'держит и ранит врага'] } } },
+      sniper:{ name:'Папоротник', role:'Снайпер', desc:'Тростниковая винтовка. ПКМ — прицел, в голову ×2.', q:['Скачок', 'прыжок назад и маскировка'], e:['Колючий капкан', 'держит и ранит врага'] },
+      medic:{ name:'Дождевик', role:'Лекарь', desc:'Споровый пистолет бьёт очередями. Лечит своих.', q:['Целебные споры', 'лечит себя и союзников рядом'], e:['Целебная грибница', 'грибница лечит всех рядом'] } } },
   rot:{ name:'Гнилое войско', short:'Гниль', color:'#E07BFF', tracer:[1.6, 0.5, 1.5], glow:'#FF6AE6',
     classes:{
       soldier:{ name:'Слизень', role:'Боец', desc:'Слиземёт-автомат. Надёжен на любой дистанции.', q:['Кислотная лужа', 'лужа кислоты в точке прицела'], e:['Слизне-прыжок', 'взлёт и шлепок о землю'] },
       tank:{ name:'Жук-рогач', role:'Танк', desc:'Навесные слизевые бомбы. Толстый панцирь.', q:['Хитиновый панцирь', 'почти без урона 4 секунды'], e:['Рогатый таран', 'рывок рогами, сбивает врагов'] },
       scout:{ name:'Оса', role:'Разведчик', desc:'Жаломёт вблизи. Быстрая и вёрткая.', q:['Рывок', 'мгновенный рывок, неуязвимость'], e:['Осиное гнездо', 'граната-гнездо'] },
-      sniper:{ name:'Богомол', role:'Снайпер', desc:'Шипомёт дальнего боя. ПКМ — прицел, в голову ×2.', q:['Скачок', 'прыжок назад и маскировка'], e:['Липкая ловушка', 'держит и ранит врага'] } } }
+      sniper:{ name:'Богомол', role:'Снайпер', desc:'Шипомёт дальнего боя. ПКМ — прицел, в голову ×2.', q:['Скачок', 'прыжок назад и маскировка'], e:['Липкая ловушка', 'держит и ранит врага'] },
+      medic:{ name:'Светлячок', role:'Лекарь', desc:'Искромёт бьёт очередями. Лечит своих.', q:['Тёплый свет', 'лечит себя и союзников рядом'], e:['Фонарик', 'фонарь лечит всех рядом'] } } }
 };
 const NAMES = {
   guard:['Груздь', 'Опёнок', 'Сморчок', 'Рыжик', 'Маслёнок', 'Волнушка', 'Строчок', 'Белянка', 'Подосиновик', 'Ежовик', 'Дубовик', 'Говорушка', 'Вешенка', 'Шампиньон'],
@@ -995,6 +1023,8 @@ const ICONS = {
   rot_scout:'<svg viewBox="0 0 72 72" aria-hidden="true"><ellipse cx="20" cy="22" rx="14" ry="8" fill="#DDF2FF" opacity=".75" transform="rotate(-25 20 22)"/><ellipse cx="52" cy="22" rx="14" ry="8" fill="#DDF2FF" opacity=".75" transform="rotate(25 52 22)"/><ellipse cx="36" cy="50" rx="11" ry="16" fill="#F5C21B"/><path d="M26 44H46M25 52H47M28 60H44" stroke="#1E1A14" stroke-width="4"/><circle cx="36" cy="26" r="9" fill="#F5C21B"/><ellipse cx="30" cy="25" rx="3.4" ry="5" fill="#15110E"/><ellipse cx="42" cy="25" rx="3.4" ry="5" fill="#15110E"/></svg>',
   rot_sniper:'<svg viewBox="0 0 72 72" aria-hidden="true"><path d="M36 64V30" stroke="#D9A6E8" stroke-width="7" stroke-linecap="round"/><path d="M36 40L22 34L26 22M36 40L50 34L46 22" stroke="#C88ADB" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 14L50 14L36 32Z" fill="#E9BDF5"/><circle cx="24" cy="14" r="5" fill="#7AF0B0"/><circle cx="48" cy="14" r="5" fill="#7AF0B0"/><path d="M30 10L24 2M42 10L48 2" stroke="#C88ADB" stroke-width="2"/></svg>'
 };
+ICONS.guard_medic = '<svg viewBox="0 0 72 72" aria-hidden="true"><rect x="28" y="52" width="16" height="10" rx="5" fill="#E9E1CF"/><ellipse cx="36" cy="38" rx="24" ry="21" fill="#F4EEE2"/><circle cx="36" cy="19" r="3.6" fill="#C9BDA6"/><circle cx="23" cy="27" r="2.4" fill="#DDD2BE"/><circle cx="49" cy="27" r="2.6" fill="#DDD2BE"/><circle cx="18" cy="42" r="2" fill="#DDD2BE"/><circle cx="54" cy="44" r="2.2" fill="#DDD2BE"/><circle cx="30" cy="40" r="2.8" fill="#15110E"/><circle cx="42" cy="40" r="2.8" fill="#15110E"/><path d="M33 48 Q36 51 39 48" stroke="#15110E" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M13 32 Q36 25 59 32" stroke="#3FA34D" stroke-width="4" fill="none"/></svg>';
+ICONS.rot_medic = '<svg viewBox="0 0 72 72" aria-hidden="true"><ellipse cx="21" cy="30" rx="12" ry="6" fill="#DDF2FF" opacity=".7" transform="rotate(-30 21 30)"/><ellipse cx="51" cy="30" rx="12" ry="6" fill="#DDF2FF" opacity=".7" transform="rotate(30 51 30)"/><ellipse cx="36" cy="52" rx="11" ry="13" fill="#D8FF6A"/><ellipse cx="36" cy="53" rx="6" ry="8" fill="#F6FFB0"/><ellipse cx="36" cy="32" rx="10" ry="9" fill="#3A2A20"/><path d="M27 26 Q36 16 45 26 Z" fill="#F08A3C"/><circle cx="31" cy="32" r="2.6" fill="#15110E"/><circle cx="41" cy="32" r="2.6" fill="#15110E"/><path d="M31 22L26 10M41 22L46 10" stroke="#3A2A20" stroke-width="2"/></svg>';
 const icon = (fac, arch) => ICONS[fac + '_' + arch];
 const clsOf = (fac, arch) => FACTIONS[fac].classes[arch];
 
@@ -1049,6 +1079,8 @@ function buildGun(arch, fac, mat, glow){
   } else if(arch === 'scout'){
     cylZ(g, mat, 0, 0, 0.1, 0.08, 0.45, true); cylZ(g, darkM, 0, 0.03, 0.45, 0.035, 0.4); cylZ(g, darkM, 0, -0.04, 0.42, 0.03, 0.34);
     mk(g, BOX, glow, 0, -0.14, 0.05, 0.05, 0.16, 0.08); mz = 0.67;
+  } else if(arch === 'medic'){
+    cylZ(g, mat, 0, 0, 0.12, 0.09, 0.5, true); cylZ(g, darkM, 0, 0.02, 0.45, 0.045, 0.35); mk(g, SPH, glow, 0, 0.09, 0.08, 0.1); mk(g, BOX, darkM, 0, -0.12, 0.02, 0.06, 0.16, 0.09); mz = 0.66;
   } else {
     cylZ(g, mat, 0, 0, 0.35, 0.065, 1.25, true); cylZ(g, darkM, 0, 0, 1.0, 0.04, 0.3); mk(g, BOX, darkM, 0, -0.1, 0.0, 0.07, 0.16, 0.22);
     cylZ(g, darkM, 0, 0.13, 0.25, 0.05, 0.35); mk(g, SPH, glow, 0, 0.13, 0.43, 0.055, 0.055, 0.03); mz = 1.15;
@@ -1150,6 +1182,37 @@ function buildModel(fac, arch){
     M.wings = [];
     for(const s of [-1, 1]) for(let k = 0; k < 2; k++){ const w = new THREE.Mesh(wg, wm); w.position.set(s * 0.12, 1.3, -0.08 - k * 0.12); w.scale.set(s * (1 - k * 0.25), 1, 1 - k * 0.2); body.add(w); M.wings.push(w); }
     M.hover = 0.35; gunMat = mat('#2A2A2A'); pivotY = 1.0; pivotX = -0.3;
+  } else if(key === 'guard_medic'){
+    const puff = mat('#F3EDE0', { roughness:0.85 }), wart = mat('#DCD0B8', { roughness:0.9 });
+    mk(body, lathe('puffst', [[0, 0.14], [0.3, 0.17], [0.34, 0.42], [0.27, 0.6], [0, 0.64]]), puff, 0, 0, 0, 1, 1, 1, true);
+    mk(body, SPH, puff, 0, 1.02, 0, 0.66, 0.62, 0.64, true);
+    for(let i = 0; i < 22; i++){ const a = rand(0, TAU), el = rand(-0.2, 1.3), px = Math.cos(a) * Math.cos(el) * 0.66, py = Math.sin(el) * 0.62, pz = Math.sin(a) * Math.cos(el) * 0.64; if(pz > 0.45 && py < 0.35 && py > -0.15) continue; const s = rand(0.035, 0.06); const w = mk(body, SPH_LO, wart, px, 1.02 + py, pz, s, s * 0.7, s); orientUp(w, px, py, pz); }
+    const pore = mk(body, new THREE.TorusGeometry(0.1, 0.03, 6, 14), wart, 0, 1.63, 0, 1); pore.rotation.x = Math.PI / 2;
+    eyes(body, 1.06, 0.6, 0.17, 0.09, -0.2);
+    const sm = mk(body, new THREE.TorusGeometry(0.07, 0.016, 6, 12, Math.PI), browM, 0, 0.9, 0.63, 1); sm.rotation.z = Math.PI;
+    const band = mk(body, new THREE.TorusGeometry(0.6, 0.05, 8, 26), accent, 0, 1.3, -0.02, 1, 1, 0.95); band.rotation.x = Math.PI / 2 - 0.12;
+    const leaf = mk(body, SPH, accent, 0.42, 1.42, -0.2, 0.16, 0.05, 0.09); leaf.rotation.set(0.3, 0.4, 0.6);
+    mk(body, BOX, mat('#8A6A44', { roughness:0.9 }), 0.55, 0.78, -0.12, 0.12, 0.26, 0.3, true);
+    feet(mat('#E4DCCB'), 0.19, 0.2); gunMat = mat('#6E9A3A'); pivotY = 0.92; pivotX = -0.5;
+  } else if(key === 'rot_medic'){
+    const shell = mat('#3A2A20', { roughness:0.35 }), orange = mat('#F08A3C', { roughness:0.4 }), red = mat('#C8302A', { roughness:0.4 });
+    mk(body, SPH, shell, 0, 1.12, 0, 0.32, 0.34, 0.36, true);
+    mk(body, SPH, orange, 0, 1.45, 0.06, 0.32, 0.13, 0.34, true);
+    for(const s of [-1, 1]) mk(body, SPH_LO, red, s * 0.12, 1.53, 0.1, 0.07, 0.03, 0.07);
+    mk(body, SPH, shell, 0, 1.36, 0.3, 0.2, 0.17, 0.17, true);
+    for(const s of [-1, 1]){
+      mk(body, SPH, eyeB, s * 0.14, 1.38, 0.38, 0.09, 0.11, 0.09); mk(body, SPH_LO, eyeS, s * 0.16, 1.42, 0.45, 0.022);
+      limb(body, shell, s * 0.06, 1.48, 0.38, s * 0.24, 1.86, 0.56, 0.018);
+      const ely = mk(body, SPH, shell, s * 0.16, 1.12, -0.18, 0.18, 0.08, 0.42); ely.rotation.set(0.35, s * 0.25, s * 0.35);
+      for(let k = 0; k < 3; k++) limb(body, shell, s * 0.16, 1.0, 0.12 - k * 0.12, s * 0.3, 0.45, 0.16 - k * 0.15, 0.022);
+    }
+    const ab = mk(body, SPH, shell, 0, 0.86, -0.36, 0.27, 0.26, 0.4, true); ab.rotation.x = -0.55;
+    const lamp = mk(body, SPH, glowM('#D8FF6A', 2.6), 0, 0.66, -0.66, 0.22, 0.2, 0.26); lamp.rotation.x = -0.55;
+    const wm = new THREE.MeshStandardMaterial({ color:'#E6F6FF', transparent:true, opacity:0.35, side:THREE.DoubleSide, roughness:0.1, depthWrite:false });
+    const wg = new THREE.PlaneGeometry(0.7, 0.26); wg.translate(0.35, 0, 0); wg.rotateX(-Math.PI / 2);
+    M.wings = [];
+    for(const s of [-1, 1]){ const w = new THREE.Mesh(wg, wm); w.position.set(s * 0.1, 1.24, -0.2); w.scale.set(s, 1, 1); body.add(w); M.wings.push(w); }
+    M.hover = 0.25; M.slowWings = true; gunMat = mat('#4A3A2A'); pivotY = 1.0; pivotX = -0.32;
   } else {
     const pink = mat('#E2B0EE', { roughness:0.45 }), deep = mat('#B97ACC', { roughness:0.5 }), petal = mat('#F6D2FF', { roughness:0.5, side:THREE.DoubleSide });
     const ab = mk(body, SPH, pink, 0, 0.75, -0.3, 0.26, 0.26, 0.55, true); ab.rotation.x = 0.7;
@@ -1214,7 +1277,7 @@ function animFighter(f, dt){
   f.recoil = Math.max(0, f.recoil - dt * 8);
   M.pivot.rotation.x = -f.pitch - f.recoil * 0.35;
   M.pivot.position.z = 0.12 - f.recoil * 0.1;
-  if(M.wings){ const fl = Math.sin(time * 55 + f.id) * 0.5; M.wings.forEach((w, i) => { w.rotation.z = (i < 2 ? -1 : 1) * fl * (i % 2 ? 0.8 : 1); }); }
+  if(M.wings){ const fl = Math.sin(time * (M.slowWings ? 30 : 55) + f.id) * 0.5, half = M.wings.length / 2; M.wings.forEach((w, i) => { w.rotation.z = (i < half ? -1 : 1) * fl * (i % 2 ? 0.8 : 1); }); }
   for(let i = 0; i < M.fronds.length; i++) M.fronds[i].rotation.z = Math.sin(time * 2.5 + i + f.id) * 0.08 + Math.sin(ph) * 0.05 * mv;
   for(let i = 0; i < M.stalks.length; i++){ M.stalks[i].rotation.z = Math.sin(time * 3 + i * 2 + f.id) * 0.12; M.stalks[i].rotation.x = -0.15 + Math.sin(time * 2.2 + i) * 0.1; }
   if(M.shield){ M.shield.visible = f.shieldT > 0; if(f.shieldT > 0){ M.shield.material.opacity = 0.18 + Math.sin(time * 12) * 0.05 + (f.flash > 0 ? 0.25 * f.flash : 0); M.shield.rotation.y += dt; } }
@@ -1227,7 +1290,7 @@ function animFighter(f, dt){
 
 /* ================= match & fighters ================= */
 const GRAV = 26, JUMP_V = 9.5;
-let fighters = [], shots = [], zones = [], traps = [], grenades = [], beams = [];
+let fighters = [], shots = [], zones = [], traps = [], grenades = [], beams = [], stations = [];
 const match = { mode:'tdm', diff:'normal', limit:30, dur:420, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:false, frozen:false };
 let FID = 0;
 function isEnemy(a, b){ return a !== b && a.team !== b.team; }
@@ -1329,8 +1392,9 @@ function stepFighter(f, dt){
   f.fireT = Math.max(f.fireT - dt, -dt);
   if(inp.fire && !sprint && f.reloadT <= 0 && f.dashT <= 0 && f.ramT <= 0){
     if(f.ammo <= 0) startReload(f);
-    else if(f.fireT <= 0){ fireWeapon(f); f.fireT += 1 / W.rate; }
+    else if(f.fireT <= 0){ fireWeapon(f); f.fireT += 1 / W.rate; if(W.burst){ f.burstN = W.burst - 1; f.burstT = 0.075; } }
   }
+  if(f.burstN > 0){ f.burstT -= dt; if(f.burstT <= 0){ if(f.ammo > 0 && f.reloadT <= 0 && f.dashT <= 0){ fireWeapon(f); f.burstN--; f.burstT = 0.075; } else f.burstN = 0; } }
 }
 function land(f, v){
   if(f.slam){ f.slam = false; explode(f.x, f.y + 0.4, f.z, 5, 45, f, 'slam'); }
@@ -1541,6 +1605,8 @@ function useAbility(f, k){
   } else if(key === 'scoute') throwGrenade(f);
   else if(key === 'sniperq'){ if(f.rootT > 0) return false; blink(f, -fx, -fz); }
   else if(key === 'snipere') placeTrap(f);
+  else if(key === 'medicq') healBurst(f);
+  else if(key === 'medice') placeStation(f);
   if(k === 'q') f.cdQ = A.cdQ; else f.cdE = A.cdE;
   f.prot = 0;
   fxAbility(f, k);
@@ -1668,7 +1734,45 @@ function updateGrenades(dt){
     if(g.t <= 0 || hit){ explode(g.x, g.y + 0.3, g.z, 4.5, 65, g.owner, 'grenade'); scene.remove(g.m); g.m.material.dispose(); grenades.splice(i, 1); }
   }
 }
+function heal(t, amt, src){
+  if(!t.alive || amt <= 0 || match.over) return 0;
+  if(t.remote){ if(NET.on) netEv('hl', t.nid, Math.round(amt)); onHeal(t, Math.round(amt), src); if(src && !src.remote) src.score += Math.round(amt / 5); return amt; }
+  const before = t.hp; t.hp = Math.min(t.max, t.hp + amt); const got = t.hp - before;
+  if(got > 0){ onHeal(t, Math.round(got), src); if(src && src !== t && !src.remote) src.score += Math.round(got / 5); }
+  return got;
+}
+function healBurst(f){
+  for(const g of fighters) if(g.alive && !isEnemy(f, g) && Math.hypot(g.x - f.x, g.z - f.z) < 8 && Math.abs(g.y - f.y) < 4) heal(g, g === f ? 40 : 70, f);
+  const c = f.fac === 'guard' ? [0.55, 1, 0.5] : [0.95, 1, 0.4];
+  emit('glow', f.x, f.y + 1, f.z, 40, { spd:8, up:0.3, size:0.5, size1:0.05, life:0.7, col:c, g:0, drag:3 });
+  emit('soft', f.x, f.y + 0.6, f.z, 16, { spd:3, up:1, size:0.6, size1:1.6, life:1, col:f.fac === 'guard' ? [0.95, 0.94, 0.86] : [0.9, 0.95, 0.5], g:0.4 });
+}
+const STATION_G = new THREE.SphereGeometry(0.42, 16, 10, 0, TAU, 0, Math.PI / 2);
+function placeStation(f, x, z){
+  if(x === undefined){ x = f.x; z = f.z; }
+  for(const s of stations.slice()) if(s.owner === f) removeStation(s);
+  const G = new THREE.Group(), guard = f.fac === 'guard', y = groundH(x, z);
+  const st = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.7, 8), stdM(guard ? '#F1E6CF' : '#3A2A20')); st.position.y = 0.35; G.add(st);
+  const glow = glowM(guard ? '#9CFF7A' : '#D8FF6A', 2.2);
+  const cap = new THREE.Mesh(STATION_G, glow); cap.position.y = 0.68; cap.scale.y = guard ? 0.7 : 1.3; G.add(cap);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(4.6, 5, 48), new THREE.MeshBasicMaterial({ color:guard ? new THREE.Color(0.5, 1.2, 0.5) : new THREE.Color(1.1, 1.2, 0.4), transparent:true, opacity:0.35, depthWrite:false, side:THREE.DoubleSide }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.25; G.add(ring);
+  G.position.set(x, y, z); scene.add(G);
+  stations.push({ owner:f, x, z, y, t:9, tick:0, G, ring });
+  if(NET.on && !f.remote && f.nid) netEv('st', f.nid, r2(x), r2(z));
+}
+function removeStation(s){ const i = stations.indexOf(s); if(i >= 0) stations.splice(i, 1); scene.remove(s.G); }
+function updateStations(dt){
+  for(let i = stations.length - 1; i >= 0; i--){
+    const s = stations[i]; s.t -= dt; s.tick -= dt;
+    s.ring.material.opacity = 0.25 + Math.sin(time * 4) * 0.1; s.G.rotation.y += dt;
+    if(s.tick <= 0 && !s.owner.remote){ s.tick = 0.5; for(const g of fighters) if(g.alive && !isEnemy(s.owner, g) && Math.hypot(g.x - s.x, g.z - s.z) < 5 && Math.abs(g.y - s.y) < 3) heal(g, 8, s.owner); }
+    if(Math.random() < dt * 6){ const a = rand(0, TAU), d = rand(0, 4.5), x = s.x + Math.cos(a) * d, z = s.z + Math.sin(a) * d; emit('glow', x, groundH(x, z) + 0.2, z, 1, { spd:0.4, up:2, upMin:1, size:0.3, size1:0.05, life:1.1, col:s.owner.fac === 'guard' ? [0.55, 1, 0.5] : [0.95, 1, 0.4], g:0.6 }); }
+    if(s.t <= 0 || !fighters.includes(s.owner)) removeStation(s);
+  }
+}
 function clearCombat(){
+  for(const s of stations) scene.remove(s.G); stations = [];
   for(const s of shots) freeTracer(s.mesh, s.W.kind);
   for(const b of beams) freeTracer(b.m, 'snipe');
   for(const z of zones){ scene.remove(z.m); z.m.geometry.dispose(); z.m.material.dispose(); }
@@ -1683,7 +1787,7 @@ const DIFF = {
   normal:{ err:0.07, turn:4.4, react:0.34, cone:0.08, lead:0.7, head:0.15, jump:0.3,  abil:0.75, burst:0.8 },
   hard:  { err:0.04, turn:7.0, react:0.18, cone:0.05, lead:1.0, head:0.35, jump:0.45, abil:1,    burst:1 }
 };
-const BAND = { soldier:[10, 22], tank:[6, 14], scout:[4, 11], sniper:[26, 60] };
+const BAND = { soldier:[10, 22], tank:[6, 14], scout:[4, 11], sniper:[26, 60], medic:[12, 24] };
 function newBot(){ return { target:null, reactT:rand(0, 0.3), fireDelay:0, errT:0, ex:0, ey:0, strafeT:0, strafeDir:1, goal:null, goalT:0, stuckT:0, lx:0, lz:0, retreat:false, lastSeen:null, lastSeenT:-99, abilT:rand(1, 3), aimHead:false, jumpT:rand(2, 5), burstT:0, losT:0, los:false, hunt:null }; }
 function botReset(f){ Object.assign(f.bot, newBot()); f.bot.lx = f.x; f.bot.lz = f.z; }
 function botHurt(f, src){
@@ -1776,10 +1880,17 @@ function botAbilities(f, T, d, D){
   } else if(f.arch === 'scout'){
     if(f.cdE <= 0 && d > 5 && d < 20) inp.e = true;
     else if(f.cdQ <= 0 && (f.hp < f.max * 0.45 || d > 13)) inp.q = true;
-  } else {
+  } else if(f.arch === 'sniper'){
     if(f.cdQ <= 0 && d < 9) inp.q = true;
     else if(f.cdE <= 0 && d < 16) inp.e = true;
-  }
+  } else botMedic(f, true);
+}
+function botMedic(f, fighting){
+  if(f.cdQ > 0 && f.cdE > 0) return;
+  let hurt = f.hp < f.max * 0.6 ? 1 : 0, near = 0;
+  for(const g of fighters) if(g !== f && g.alive && !isEnemy(f, g)){ const d = Math.hypot(g.x - f.x, g.z - f.z); if(d < 8){ near++; if(g.hp < g.max * 0.65) hurt++; } }
+  if(f.cdQ <= 0 && hurt > 0) f.inp.q = true;
+  else if(f.cdE <= 0 && (near >= 2 || (fighting && near >= 1) || hurt > 1)) f.inp.e = true;
 }
 function botThink(f, dt){
   const B = f.bot, D = DIFF[match.diff], A = ARCH[f.arch], W = A.w, inp = f.inp;
@@ -1832,6 +1943,7 @@ function botThink(f, dt){
     inp.yaw = f.yaw + clamp(angDiff(f.yaw, yawT), -mt, mt); inp.pitch = f.pitch * (1 - Math.min(1, dt * 3));
     const cp = Math.cos(inp.pitch); inp.tx = ex - Math.sin(inp.yaw) * cp * 50; inp.ty = ey + Math.sin(inp.pitch) * 50; inp.tz = ez - Math.cos(inp.yaw) * cp * 50;
     if(f.ammo < W.mag * 0.6 && f.reloadT <= 0) inp.reload = true;
+    if(f.arch === 'medic' && B.abilT <= 0){ B.abilT = rand(0.5, 1.2); botMedic(f, false); }
     if(B.jumpT <= 0){ B.jumpT = rand(3, 7); if(Math.random() < D.jump) inp.jump = true; }
   }
   const mag = Math.min(1, Math.hypot(wantX, wantZ));
@@ -1876,6 +1988,7 @@ const SFX = {
     const o = spot(mine ? undefined : f.x, f.y, f.z); if(!o) return;
     const t = AC.currentTime, v = mine ? 1 : 0.55;
     if(kind === 'auto'){ nz(o, t, 'bandpass', 1500, 1.1, 0.3 * v, 0.09, 500); tn(o, t, 'triangle', 430, 160, 0.15 * v, 0.08); }
+    else if(kind === 'burst'){ nz(o, t, 'bandpass', 2000, 1.3, 0.26 * v, 0.07, 700); tn(o, t, 'sine', 640, 300, 0.12 * v, 0.07); }
     else if(kind === 'rapid'){ nz(o, t, 'bandpass', 2700, 2, 0.2 * v, 0.05); tn(o, t, 'square', 900, 480, 0.04 * v, 0.04); }
     else if(kind === 'lob'){ nz(o, t, 'lowpass', 700, 0.8, 0.5 * v, 0.22, 120); tn(o, t, 'sine', 150, 55, 0.5 * v, 0.2); }
     else { nz(o, t, 'highpass', 1800, 0.7, 0.45 * v, 0.06); nz(o, t + 0.01, 'lowpass', 900, 0.7, 0.4 * v, 0.55, 180); tn(o, t, 'sawtooth', 240, 60, 0.16 * v, 0.25); }
@@ -1898,6 +2011,7 @@ const SFX = {
   win(){ if(!AC || muted) return; const t = AC.currentTime; [523, 659, 784, 1046, 1318].forEach((f, i) => tn(master, t + i * 0.11, 'triangle', f, f, 0.2, 0.6)); },
   lose(){ if(!AC || muted) return; const t = AC.currentTime; [523, 466, 392, 311].forEach((f, i) => tn(master, t + i * 0.18, 'triangle', f, f * 0.98, 0.18, 0.6)); },
   streak(){ if(!AC || muted) return; const t = AC.currentTime; [784, 988, 1175].forEach((f, i) => tn(master, t + i * 0.07, 'square', f, f, 0.06, 0.2)); },
+  heal(){ if(!AC || muted || !ok('heal', 160)) return; const t = AC.currentTime; tn(master, t, 'sine', 660, 990, 0.08, 0.18); tn(master, t + 0.06, 'sine', 990, 1320, 0.06, 0.2); },
   snap(x, y, z){ const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'highpass', 2500, 1, 0.35, 0.08); tn(o, t, 'square', 180, 90, 0.12, 0.12); }
 };
 function ambience(){
@@ -1925,7 +2039,7 @@ addEventListener('keydown', e => {
   keys[e.code] = true;
   if(!inGame()) return;
   if(e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
-  if(/^Digit[1-4]$/.test(e.code) && me && !me.alive){ chooseNext(ARCHS[+e.code.slice(5) - 1]); return; }
+  if(/^Digit[1-5]$/.test(e.code) && me && !me.alive){ chooseNext(ARCHS[+e.code.slice(5) - 1]); return; }
   if(!me || !me.alive) return;
   if(e.code === 'KeyQ') me.inp.q = true;
   if(e.code === 'KeyE') me.inp.e = true;
@@ -2135,7 +2249,7 @@ function onDamage(t, amt, src, o){
     camShake = Math.max(camShake, Math.min(0.35, amt / 80));
   }
 }
-const KIND_LABEL = { auto:'очередь', rapid:'иглы', lob:'бомба', snipe:'выстрел', zone:'отрава', slam:'прыжок', grenade:'граната', ram:'таран', trap:'ловушка' };
+const KIND_LABEL = { burst:'очередь', auto:'очередь', rapid:'иглы', lob:'бомба', snipe:'выстрел', zone:'отрава', slam:'прыжок', grenade:'граната', ram:'таран', trap:'ловушка' };
 function onKill(t, killer, o, info){
   emit('soft', t.x, t.y + 1, t.z, 34, { spd:5, up:1.2, size:0.35, size1:0.08, life:0.9, col:gooCol(t), g:-8, r:0.4 });
   emit('glow', t.x, t.y + 1.2, t.z, 16, { spd:3, up:1.5, size:0.5, size1:0.05, life:0.8, col:fcol(t), g:-1, r:0.4 });
@@ -2153,6 +2267,10 @@ function onKill(t, killer, o, info){
   } else if(killer && killer.streak >= 5 && killer.streak % 5 === 0) announce(esc(killer.name) + ' неудержим', killer.streak + ' подряд', 1.6);
   if(info.ended && killer === me) killNotice('<em>+50</em> Прервал серию ' + esc(t.name));
   if(t === me){ deathView.yaw = view.yaw; deathView.pitch = -0.35; me.deathTimer = 0; updatePause(); }
+}
+function onHeal(t, amt, src){
+  if(src === me || t === me){ healNumber(t, amt); SFX.heal(); }
+  if(Math.random() < 0.5) emit('glow', t.x, t.y + 1.2, t.z, 3, { spd:1, up:2, upMin:1, size:0.35, size1:0.05, life:0.8, col:[0.5, 1, 0.55], g:0.5, r:0.4 });
 }
 function onAssist(t){ me.score += 0; killNotice('<em>+50</em> Помощь: ' + esc(t.name)); }
 function onMeSpawn(){
@@ -2172,6 +2290,10 @@ function dmgNumber(t, amt, head){
   const el = document.createElement('div'); el.className = 'dmg' + (head ? ' head' : ''); el.textContent = amt; $('hud').appendChild(el);
   dmgEls.push({ el, f:t, v:amt, head, t:0, p:new THREE.Vector3(t.x + rand(-0.4, 0.4), t.y + t.M.hover + ARCH[t.arch].h + 0.2, t.z + rand(-0.4, 0.4)) });
   if(dmgEls.length > 24){ const d = dmgEls.shift(); d.el.remove(); }
+}
+function healNumber(t, amt){
+  const el = document.createElement('div'); el.className = 'dmg heal'; el.textContent = '+' + amt; $('hud').appendChild(el);
+  dmgEls.push({ el, f:null, v:amt, head:false, t:0, p:new THREE.Vector3(t.x + rand(-0.3, 0.3), t.y + t.M.hover + ARCH[t.arch].h + 0.4, t.z + rand(-0.3, 0.3)) });
 }
 let hitT = 0;
 function hitMarker(kind){ const h = $('hitm'); h.className = 'hitm' + (kind === 'hit' ? '' : ' ' + kind); h.style.opacity = 1; h.style.transform = kind === 'kill' ? 'scale(1.35)' : kind === 'head' ? 'scale(1.15)' : ''; hitT = kind === 'kill' ? 0.35 : 0.14; }
@@ -2645,7 +2767,7 @@ function puppetStep(f, dt){
   const sp = Math.hypot(f.vx, f.vz); f.inp.f = sp > 0.6 ? 1 : 0; f.walk += sp * dt;
   f.inp.fire = !!(fl & 4);
   const W = ARCH[f.arch].w;
-  if(f.inp.fire){ f.firedT = match.t; if(W.kind === 'auto' || W.kind === 'rapid'){ f.fireT -= dt; if(f.fireT <= 0){ f.fireT += 1 / W.rate; visualShot(f, W); } } } else f.fireT = 0;
+  if(f.inp.fire){ f.firedT = match.t; if(W.kind === 'auto' || W.kind === 'rapid' || W.kind === 'burst'){ f.fireT -= dt; if(f.fireT <= 0){ f.fireT += 1 / (W.rate * (W.burst || 1)); visualShot(f, W); } } } else f.fireT = 0;
 }
 function visualShot(f, W){
   muzzleOf(f, MZ);
@@ -2675,6 +2797,9 @@ function netEvent(peer, e){
     const s = byNid(e[3]);
     damage(t, cl(e[4], 0, 300), s, { head:!!e[5], kind:KIND_LABEL[e[6]] ? e[6] : 'auto', x:num(e[7], t.x), z:num(e[8], t.z), kb:cl(e[9], 0, 20), net:true });
     if(num(e[10]) > 0 && t.alive) t.rootT = Math.max(t.rootT, cl(e[10], 0, 3));
+  } else if(type === 'hl'){
+    const t = byNid(e[2]); if(!t || t.remote) return;
+    heal(t, cl(e[3], 0, 200), from);
   } else if(type === 'k'){
     const v = byNid(e[2]); if(!v || !v.remote) return;
     const k = byNid(e[3]), head = !!e[5], kind = KIND_LABEL[e[4]] ? e[4] : 'auto';
@@ -2696,6 +2821,7 @@ function netEvent(peer, e){
   else if(type === 'l'){ MZ.set(cl(e[3], -70, 70), cl(e[4], -30, 60), cl(e[5], -80, 80)); DIR.set(num(e[6]), num(e[7]), num(e[8])); if(DIR.lengthSq() < 1e-6) return; DIR.normalize(); const W = ARCH[from.arch].w; spawnShot(from, MZ, DIR, W, true); fxShot(from, W, MZ, DIR); }
   else if(type === 'b'){ const W = ARCH.sniper.w, ax = num(e[3]), ay = num(e[4]), az = num(e[5]), bx = num(e[6]), by = num(e[7]), bz = num(e[8]); fxBeam(from, ax, ay, az, bx, by, bz); fxShot(from, W, MZ.set(ax, ay, az), DIR.set(bx - ax, by - ay, bz - az).normalize()); fxImpact(bx, by, bz, null, W, from, false); }
   else if(type === 'a') fxAbility(from, e[3] === 'e' ? 'e' : 'q');
+  else if(type === 'st') placeStation(from, cl(e[3], -MAP_X, MAP_X), cl(e[4], -MAP_Z, MAP_Z));
   else if(type === 'tx'){ const t = traps.find(x => x.id === String(e[3])); if(t) removeTrap(t); }
 }
 function netKill(t, killer, o, assists){ netEv('k', t.nid, killer ? killer.nid || 0 : 0, o.kind || 'auto', o.head ? 1 : 0, assists); }
@@ -2872,7 +2998,10 @@ function applyQuality(){
 const shuffle = a => { for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 function renderMenu(){
   for(const [id, key] of [['m-mode', 'mode'], ['m-fac', 'fac'], ['m-diff', 'diff']]) for(const b of $(id).querySelectorAll('button')) b.classList.toggle('sel', b.dataset.v === menuSel[key]);
-  $('classes').innerHTML = ARCHS.map(a => { const C = clsOf(menuSel.fac, a), A = ARCH[a]; return '<button class="cls' + (a === menuSel.arch ? ' sel' : '') + '" data-a="' + a + '">' + icon(menuSel.fac, a) + '<span class="role">' + C.role + ' · ' + A.hp + ' здоровья</span><b>' + C.name + '</b><p>' + C.desc + '</p><ul><li><b>Q</b> ' + C.q[0] + ': ' + C.q[1] + '</li><li><b>E</b> ' + C.e[0] + ': ' + C.e[1] + '</li></ul></button>'; }).join('');
+  $('classes').innerHTML = ARCHS.map(a => { const C = clsOf(menuSel.fac, a); return '<button class="tile' + (a === menuSel.arch ? ' sel' : '') + '" data-a="' + a + '" aria-pressed="' + (a === menuSel.arch) + '">' + icon(menuSel.fac, a) + '<b>' + C.name + '</b><small>' + C.role + '</small></button>'; }).join('');
+  const C = clsOf(menuSel.fac, menuSel.arch), A = ARCH[menuSel.arch], W = A.w;
+  const dps = Math.round(W.dmg * W.rate * (W.burst || 1) + (W.splashDmg || 0) * W.rate * 0.5);
+  $('cldetail').innerHTML = icon(menuSel.fac, menuSel.arch) + '<span class="role">' + C.role + '</span><b>' + C.name + '</b><p>' + C.desc + '</p><div class="stats"><span>Здоровье <i>' + A.hp + '</i></span><span>Скорость <i>' + A.speed + '</i></span><span>Урон в секунду <i>~' + dps + '</i></span><span>Обойма <i>' + W.mag + '</i></span></div><ul style="grid-column:2"><li><b>Q · ' + C.q[0] + '</b> — ' + C.q[1] + '</li><li><b>E · ' + C.e[0] + '</b> — ' + C.e[1] + '</li></ul>';
   $('sens').value = settings.sens; $('qual').value = settings.quality;
 }
 for(const [id, key] of [['m-mode', 'mode'], ['m-fac', 'fac'], ['m-diff', 'diff']]) $(id).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if(!b) return; menuSel[key] = b.dataset.v; store.set(key, b.dataset.v); renderMenu(); });
@@ -2884,6 +3013,47 @@ $('play').addEventListener('click', () => startMatch());
 $('e-again').addEventListener('click', () => { if(!(NET.on && NET.role === 'client')) startMatch(); });
 $('e-menu').addEventListener('click', () => quitMatch());
 $('dead').addEventListener('click', e => { if(!e.target.closest('button')) requestLock(); });
+
+/* ================= 3D preview of the chosen fighter ================= */
+const PV = { r:null, scene:null, cam:null, M:null, key:'', t:0 };
+function initPreview(){
+  try{
+    PV.r = new THREE.WebGLRenderer({ canvas:$('pv'), antialias:true, alpha:true });
+    PV.r.toneMapping = THREE.ACESFilmicToneMapping; PV.r.toneMappingExposure = 1.1; PV.r.shadowMap.enabled = true;
+  }catch(e){ PV.r = null; return; }
+  PV.scene = new THREE.Scene();
+  PV.cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
+  PV.scene.add(new THREE.HemisphereLight('#E8F4FF', '#4A5A30', 1.4));
+  const key = new THREE.DirectionalLight('#FFE6BE', 2.6); key.position.set(3, 5, 4); key.castShadow = true; key.shadow.mapSize.set(512, 512); Object.assign(key.shadow.camera, { left:-2, right:2, top:3, bottom:-1, near:1, far:15 }); PV.scene.add(key);
+  const rim = new THREE.DirectionalLight('#9FE0FF', 1.6); rim.position.set(-4, 3, -3); PV.scene.add(rim);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.4, 0.3, 40), new THREE.MeshStandardMaterial({ color:'#6E9A45', roughness:1, flatShading:true })); base.position.y = -0.15; base.receiveShadow = true; PV.scene.add(base);
+  const dirt = new THREE.Mesh(new THREE.CylinderGeometry(1.41, 1.2, 0.5, 40), new THREE.MeshStandardMaterial({ color:'#6A4A33', roughness:1 })); dirt.position.y = -0.55; PV.scene.add(dirt);
+  for(let i = 0; i < 14; i++){ const a = i / 14 * TAU + rand(-0.2, 0.2), r = rand(0.9, 1.2), fr = new THREE.Mesh(FROND, new THREE.MeshStandardMaterial({ vertexColors:true, color:'#5FAE45', side:THREE.DoubleSide, roughness:0.8 })); fr.rotation.order = 'YXZ'; fr.rotation.set(-0.25, a + Math.PI / 2, 0); fr.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); fr.scale.setScalar(rand(0.28, 0.4)); PV.scene.add(fr); }
+  $('clwrap').classList.add('has3d');
+}
+function updatePreview(dt){
+  if(!PV.r || $('menu').hidden) return;
+  PV.t += dt;
+  const key = menuSel.fac + '_' + menuSel.arch;
+  if(PV.key !== key){
+    if(PV.M){ PV.scene.remove(PV.M.g); disposeModel(PV.M); }
+    PV.M = buildModel(menuSel.fac, menuSel.arch); PV.M.ol.uniforms.w.value = 0.0045; PV.key = key; PV.spin = 0.6;
+    PV.M.g.traverse(o => { if(o.isMesh) o.castShadow = true; });
+    PV.scene.add(PV.M.g);
+  }
+  const c = $('pv'), w = c.clientWidth, h = c.clientHeight;
+  if(!w || !h) return;
+  if(PV.w !== w || PV.h !== h){ PV.w = w; PV.h = h; PV.r.setPixelRatio(Math.min(2, devicePixelRatio || 1)); PV.r.setSize(w, h, false); PV.cam.aspect = w / h; PV.cam.updateProjectionMatrix(); }
+  const A = ARCH[menuSel.arch], M = PV.M;
+  PV.spin = Math.max(0, (PV.spin || 0) - dt * 0.8);
+  M.g.rotation.y = 0.5 + Math.sin(PV.t * 0.5) * 0.6 + PV.spin * 6;
+  M.g.position.y = M.hover ? 0.1 + Math.sin(PV.t * 3) * 0.05 : 0;
+  M.body.position.y = Math.sin(PV.t * 2.2) * 0.02; M.pivot.rotation.x = Math.sin(PV.t * 0.8) * 0.12 - 0.05;
+  if(M.wings){ const fl = Math.sin(PV.t * (M.slowWings ? 30 : 55)) * 0.5, half = M.wings.length / 2; M.wings.forEach((wg, i) => { wg.rotation.z = (i < half ? -1 : 1) * fl; }); }
+  for(let i = 0; i < M.fronds.length; i++) M.fronds[i].rotation.z = Math.sin(PV.t * 2.5 + i) * 0.08;
+  const H = A.h * 0.5; PV.cam.position.set(0, H + 0.45, 2.5 + A.h * 1.6); PV.cam.lookAt(0, H - 0.1, 0);
+  PV.r.render(PV.scene, PV.cam);
+}
 
 /* ================= match flow ================= */
 let countT = 0, lastCount = 0, cmsgT = 0, endT = 0;
@@ -2922,8 +3092,8 @@ function startMatch(){
   const used = new Set(), nameFor = fac => { const l = NAMES[fac].filter(n => !used.has(n)), n = pick(l.length ? l : NAMES[fac]); used.add(n); return n; };
   if(teamMode()){
     const other = pf === 'guard' ? 'rot' : 'guard';
-    for(const a of shuffle(['soldier', 'tank', 'scout', 'sniper', pick(ARCHS)])){ const f = makeFighter({ name:nameFor(pf), team:pf, fac:pf, arch:a }); f.bot = newBot(); }
-    for(const a of shuffle(['soldier', 'tank', 'scout', 'sniper', pick(ARCHS), pick(['soldier', 'tank', 'scout'])])){ const f = makeFighter({ name:nameFor(other), team:other, fac:other, arch:a }); f.bot = newBot(); }
+    for(const a of shuffle(['soldier', 'tank', 'scout', 'sniper', 'medic'])){ const f = makeFighter({ name:nameFor(pf), team:pf, fac:pf, arch:a }); f.bot = newBot(); }
+    for(const a of shuffle(['soldier', 'tank', 'scout', 'sniper', 'medic', pick(['soldier', 'tank', 'scout'])])){ const f = makeFighter({ name:nameFor(other), team:other, fac:other, arch:a }); f.bot = newBot(); }
   } else {
     for(let i = 0; i < 7; i++){ const fac = i % 2 ? pf : (pf === 'guard' ? 'rot' : 'guard'); const f = makeFighter({ name:nameFor(fac), team:'b' + i, fac, arch:pick(ARCHS) }); f.bot = newBot(); }
   }
@@ -3006,14 +3176,14 @@ function tick(dt){
   if(state === 'play') match.t += dt;
   for(const f of fighters) if(f.bot) botThink(f, dt);
   for(const f of fighters) stepFighter(f, dt);
-  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateCaps(dt);
+  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateStations(dt); updateCaps(dt);
   for(const f of fighters) animFighter(f, dt);
   if(state === 'countdown') countdown(dt);
   if(cmsgT > 0){ cmsgT -= dt; if(cmsgT <= 0) $('cmsg').style.opacity = 0; }
   if(state === 'play' && !match.over && match.t >= match.dur && (!NET.on || NET.role === 'host')) timeUp();
   if(state === 'end'){ endT += dt; if(endT > 2.4 && $('end').hidden) showEnd(); }
   if(me && state !== 'menu'){ updateCamera(dt); updateHud(dt); } else menuCam(dt);
-  updateWorld(dt); updateParticles(dt);
+  updateWorld(dt); updateParticles(dt); updatePreview(dt);
   const fx = camera.position.x, fz = camera.position.z;
   sun.position.set(fx + SUN_DIR.x * 90, SUN_DIR.y * 90, fz + SUN_DIR.z * 90); sun.target.position.set(fx, 0, fz);
   sky.position.copy(camera.position);
@@ -3038,6 +3208,7 @@ function frame(now){
 addEventListener('resize', resize);
 resize();
 applyQuality();
+initPreview();
 showMenu();
 netInit();
 $('load').hidden = true;
