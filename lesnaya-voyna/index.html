@@ -70,6 +70,8 @@ button{cursor:pointer}
 .ann small{display:block;margin-top:6px;font:800 16px/1.3 var(--font-body);color:var(--ink-2);text-shadow:0 2px 4px rgba(0,0,0,.6)}
 .kn{position:fixed;left:0;right:0;top:calc(50% + 46px);text-align:center;font:400 20px/1.2 var(--font-display);color:#fff;opacity:0;transition:opacity .3s}
 .kn em{font-style:normal;color:var(--amber)}
+.plantp{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);padding:8px 14px;border-radius:12px;background:var(--glass);border:1px solid var(--line);font:800 14px var(--font-body);white-space:nowrap}
+.plantp b{font:400 16px var(--font-display);color:var(--amber);margin-right:4px}
 .kn.on{opacity:1}
 .cmsg{transition:opacity .4s;position:fixed;left:0;right:0;top:34%;text-align:center;font:400 clamp(60px,14vw,120px)/1 var(--font-display);color:#fff;text-shadow:0 6px 0 rgba(20,50,30,.6),0 0 40px rgba(140,255,170,.45)}
 .mebox{position:fixed;left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:18px;background:var(--glass);border:1px solid var(--line)}
@@ -257,6 +259,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
   <div class="feed" id="feed"></div>
   <div class="ann" id="ann"></div>
   <div class="kn" id="kn"></div>
+  <div class="plantp" id="plantp" hidden></div>
   <div class="cmsg" id="cmsg"></div>
   <div class="mebox" id="me-box">
     <div class="pt" id="portrait"></div>
@@ -276,7 +279,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
     <div class="stick" id="stick"><i></i></div>
     <div class="tbtns">
       <button class="tb" id="t-q">Q</button><button class="tb" id="t-e">E</button><button class="tb fire" id="t-fire">Огонь</button>
-      <button class="tb" id="t-jump">Прыг</button><button class="tb" id="t-aim">Прицел</button>
+      <button class="tb" id="t-jump">Прыг</button><button class="tb" id="t-aim">Прицел</button><button class="tb" id="t-plant" hidden>Сажать</button>
     </div>
     <button class="tb pz" id="t-pause" aria-label="Пауза">II</button>
   </div>
@@ -330,7 +333,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
       <label class="set">Время <select id="tod"><option value="rand">Случайно</option><option value="day">День</option><option value="dusk">Закат</option><option value="night">Ночь</option></select></label>
       <label class="set">Графика <select id="qual"><option value="high">Красивая</option><option value="low">Быстрая</option></select></label>
     </div>
-    <p class="keys" id="keys"><span><b>WASD</b> бег</span><span><b>Мышь</b> прицел</span><span><b>ЛКМ</b> огонь</span><span><b>ПКМ</b> прицеливание</span><span><b>Q / E</b> умения</span><span><b>R</b> перезарядка</span><span><b>Пробел</b> прыжок</span><span><b>Shift</b> спринт</span><span><b>Tab</b> счёт</span><span><b>M</b> звук</span></p>
+    <p class="keys" id="keys"><span><b>WASD</b> бег</span><span><b>Мышь</b> прицел</span><span><b>ЛКМ</b> огонь</span><span><b>ПКМ</b> прицеливание</span><span><b>Q / E</b> умения</span><span><b>R</b> перезарядка</span><span><b>F</b> посадить в горшок</span><span><b>Пробел</b> прыжок</span><span><b>Shift</b> спринт</span><span><b>Tab</b> счёт</span><span><b>M</b> звук</span></p>
   </div>
 </div>
 
@@ -1065,6 +1068,8 @@ const ARCH = {
 };
 ARCH.medic = { hp:160, speed:7.2, rad:0.5, eye:1.5, h:1.95, body:[0.85, 0.6], head:[1.5, 0.52], headY:1.25, camD:4.2, camS:1.1,
   w:{ kind:'burst', dmg:9, rate:2.3, burst:3, mag:24, reload:1.5, speed:120, spread:0.013, bloom:0.03, headMul:1.5, range:85 }, cdQ:11, cdE:16 };
+ARCH.sentry = { hp:150, speed:0, rad:0.55, eye:1.15, h:1.45, body:[0.8, 0.5], head:[1.24, 0.34], headY:1.1, camD:4, camS:1,
+  w:{ kind:'auto', dmg:7, rate:4, mag:9999, reload:1, speed:110, spread:0.02, bloom:0, headMul:1.2, range:50 }, cdQ:999, cdE:999 };
 const ARCHS = ['soldier', 'tank', 'scout', 'sniper', 'medic'];
 const FACTIONS = {
   guard:{ name:'Лесная стража', short:'Стража', color:'#7BE38F', tracer:[0.9, 1.6, 0.45], glow:'#D8FF6A',
@@ -1073,6 +1078,7 @@ const FACTIONS = {
       tank:{ name:'Боровик', role:'Танк', desc:'Жёлудемёт бьёт навесом и взрывается. Очень крепкий.', q:['Шляпочный щит', 'почти без урона 4 секунды'], e:['Таран', 'рывок плечом, сбивает врагов'] },
       scout:{ name:'Лисичка', role:'Разведчик', desc:'Скорострельные иглы вблизи. Быстрая и вёрткая.', q:['Рывок', 'мгновенный рывок, неуязвимость'], e:['Огненный гриб', 'граната с огненными спорами'] },
       sniper:{ name:'Папоротник', role:'Снайпер', desc:'Тростниковая винтовка. ПКМ — прицел, в голову ×2.', q:['Скачок', 'прыжок назад и маскировка'], e:['Колючий капкан', 'держит и ранит врага'] },
+      sentry:{ name:'Крапива', acc:'Крапиву', role:'Часовой', desc:'', q:['', ''], e:['', ''] },
       medic:{ name:'Дождевик', role:'Лекарь', desc:'Споровый пистолет бьёт очередями. Лечит своих.', q:['Целебные споры', 'лечит себя и союзников рядом'], e:['Целебная грибница', 'грибница лечит всех рядом'] } } },
   rot:{ name:'Гнилое войско', short:'Гниль', color:'#E07BFF', tracer:[1.6, 0.5, 1.5], glow:'#FF6AE6',
     classes:{
@@ -1080,6 +1086,7 @@ const FACTIONS = {
       tank:{ name:'Жук-рогач', role:'Танк', desc:'Навесные слизевые бомбы. Толстый панцирь.', q:['Хитиновый панцирь', 'почти без урона 4 секунды'], e:['Рогатый таран', 'рывок рогами, сбивает врагов'] },
       scout:{ name:'Оса', role:'Разведчик', desc:'Жаломёт вблизи. Быстрая и вёрткая.', q:['Рывок', 'мгновенный рывок, неуязвимость'], e:['Осиное гнездо', 'граната-гнездо'] },
       sniper:{ name:'Богомол', role:'Снайпер', desc:'Шипомёт дальнего боя. ПКМ — прицел, в голову ×2.', q:['Скачок', 'прыжок назад и маскировка'], e:['Липкая ловушка', 'держит и ранит врага'] },
+      sentry:{ name:'Гнилушка', acc:'Гнилушку', role:'Часовой', desc:'', q:['', ''], e:['', ''] },
       medic:{ name:'Светлячок', role:'Лекарь', desc:'Искромёт бьёт очередями. Лечит своих.', q:['Тёплый свет', 'лечит себя и союзников рядом'], e:['Фонарик', 'фонарь лечит всех рядом'] } } }
 };
 const NAMES = {
@@ -1152,6 +1159,8 @@ function buildGun(arch, fac, mat, glow){
   } else if(arch === 'scout'){
     cylZ(g, mat, 0, 0, 0.1, 0.08, 0.45, true); cylZ(g, darkM, 0, 0.03, 0.45, 0.035, 0.4); cylZ(g, darkM, 0, -0.04, 0.42, 0.03, 0.34);
     mk(g, BOX, glow, 0, -0.14, 0.05, 0.05, 0.16, 0.08); mz = 0.67;
+  } else if(arch === 'sentry'){
+    cylZ(g, mat, 0, 0, 0.16, 0.09, 0.5, true); cylZ(g, darkM, 0, 0, 0.45, 0.05, 0.2); mk(g, SPH, glow, 0, 0, 0.55, 0.06); mz = 0.58;
   } else if(arch === 'medic'){
     cylZ(g, mat, 0, 0, 0.12, 0.09, 0.5, true); cylZ(g, darkM, 0, 0.02, 0.45, 0.045, 0.35); mk(g, SPH, glow, 0, 0.09, 0.08, 0.1); mk(g, BOX, darkM, 0, -0.12, 0.02, 0.06, 0.16, 0.09); mz = 0.66;
   } else {
@@ -1304,6 +1313,21 @@ function buildModel(fac, arch, hat){
     M.wings = [];
     for(const s of [-1, 1]) for(let k = 0; k < 2; k++){ const w = new THREE.Mesh(wg, wm); w.position.set(s * 0.12, 1.3, -0.08 - k * 0.12); w.scale.set(s * (1 - k * 0.25), 1, 1 - k * 0.2); body.add(w); M.wings.push(w); }
     M.hover = 0.35; gunMat = mat('#2A2A2A'); pivotY = 1.0; pivotX = -0.3;
+  } else if(key === 'guard_sentry'){
+    const leafM = mat('#3F9A3A', { roughness:0.6, side:THREE.DoubleSide }), stem = mat('#4E8A34', { roughness:0.7 });
+    mk(body, CYL, stem, 0, 0.32, 0, 0.07, 0.62, 0.07);
+    for(let i = 0; i < 7; i++){ const a = i / 7 * TAU, y = 0.18 + (i % 3) * 0.17, l = mk(body, SPH, leafM, Math.cos(a) * 0.24, y, Math.sin(a) * 0.24, 0.26, 0.03, 0.1); l.rotation.set(0, -a, 0.35); }
+    mk(body, SPH, mat('#5DB548', { roughness:0.55 }), 0, 0.66, 0, 0.27, 0.25, 0.3, true);
+    for(let i = 0; i < 8; i++){ const a = i / 8 * TAU, sp = mk(body, CONE, mat('#CFE8A0'), Math.cos(a) * 0.24, 0.72, Math.sin(a) * 0.22, 0.025, 0.12, 0.025); sp.rotation.set(Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2); }
+    eyes(body, 0.72, 0.25, 0.09, 0.06, 0.4);
+    gunMat = mat('#3E7A30'); pivotY = 0.6; pivotX = 0; pivotZ = 0.12;
+  } else if(key === 'rot_sentry'){
+    const stemM = mat('#CFC2B4', { roughness:0.7 }), capM = mat('#7A3A8C', { roughness:0.4 }), spot = mat('#C67BFF', { emissive:'#B04CFF', emissiveIntensity:1.3 });
+    mk(body, lathe('rotst', [[0, 0], [0.18, 0.02], [0.14, 0.4], [0.2, 0.56], [0, 0.6]]), stemM, 0, 0, 0, 1, 1, 1, true);
+    mk(body, DOME, capM, 0, 0.56, 0, 0.44, 0.32, 0.44, true); mk(body, DISC, mat('#3A2236'), 0, 0.56, 0, 0.43);
+    capSpots(body, 6, 0.56, 0.44, 0.32, spot, 0.05, 0.08);
+    eyes(body, 0.42, 0.17, 0.07, 0.05, 0.45);
+    gunMat = mat('#4A2E5A'); pivotY = 0.4; pivotX = 0; pivotZ = 0.12;
   } else if(key === 'guard_medic'){
     const puff = mat('#F3EDE0', { roughness:0.85 }), wart = mat('#DCD0B8', { roughness:0.9 });
     mk(body, lathe('puffst', [[0, 0.14], [0.3, 0.17], [0.34, 0.42], [0.27, 0.6], [0, 0.64]]), puff, 0, 0, 0, 1, 1, 1, true);
@@ -1355,10 +1379,12 @@ function buildModel(fac, arch, hat){
   const pivot = new THREE.Group(); pivot.position.set(pivotX, pivotY, pivotZ); body.add(pivot);
   const gun = buildGun(arch, fac, gunMat, glow); gun.g.position.set(0, -0.05, 0.1); pivot.add(gun.g);
   const handM = mats[0];
-  mk(pivot, SPH, handM, 0.04, -0.12, 0.12, 0.1);
-  limb(pivot, handM, 0, 0.02, -0.04, 0.04, -0.1, 0.1, 0.055);
-  mk(pivot, SPH, handM, 0.3, -0.08, 0.42, 0.09);
-  if(arch !== 'scout' || fac !== 'rot') limb(pivot, handM, 0.62, 0, 0.0, 0.32, -0.08, 0.42, 0.05);
+  if(arch !== 'sentry'){
+    mk(pivot, SPH, handM, 0.04, -0.12, 0.12, 0.1);
+    limb(pivot, handM, 0, 0.02, -0.04, 0.04, -0.1, 0.1, 0.055);
+    mk(pivot, SPH, handM, 0.3, -0.08, 0.42, 0.09);
+    if(arch !== 'scout' || fac !== 'rot') limb(pivot, handM, 0.62, 0, 0.0, 0.32, -0.08, 0.42, 0.05);
+  }
   M.pivot = pivot; M.muzzle = gun.muzzle; M.mz = { px:pivotX, py:pivotY, pz:pivotZ, dy:-0.03, d:0.1 + gun.muzzle.position.z };
   if(arch === 'tank'){
     const sm = new THREE.MeshBasicMaterial({ color:new THREE.Color(F.color).multiplyScalar(0.55), transparent:true, opacity:0.22, blending:THREE.AdditiveBlending, depthWrite:false });
@@ -1485,6 +1511,13 @@ function collide(f, A){
 function stepFighter(f, dt){
   if(f.remote){ puppetStep(f, dt); return; }
   const A = ARCH[f.arch], W = A.w, inp = f.inp;
+  if(f.sentry){
+    if(!f.alive){ f.deadT = (f.deadT || 0) + dt; if(f.deadT > 2.2) removeFighter(f); return; }
+    f.prot = Math.max(0, f.prot - dt); f.hurtT += dt; f.yaw = inp.yaw; f.pitch = clamp(inp.pitch, -1, 1);
+    f.fireT = Math.max(f.fireT - dt, -dt);
+    if(inp.fire && f.fireT <= 0 && !match.frozen){ fireWeapon(f); f.ammo = 9999; f.fireT += 1 / W.rate; }
+    return;
+  }
   if(!f.alive){ f.respawnT -= dt; if(f.respawnT <= 0 && match.live && !match.over) respawn(f); return; }
   f.cdQ = Math.max(0, f.cdQ - dt); f.cdE = Math.max(0, f.cdE - dt);
   f.shieldT = Math.max(0, f.shieldT - dt); f.invisT = Math.max(0, f.invisT - dt); f.slowT = Math.max(0, f.slowT - dt); f.rootT = Math.max(0, f.rootT - dt); f.prot = Math.max(0, f.prot - dt);
@@ -1496,6 +1529,7 @@ function stepFighter(f, dt){
   if(inp.q){ inp.q = false; useAbility(f, 'q'); }
   if(inp.e){ inp.e = false; useAbility(f, 'e'); }
   if(inp.reload){ inp.reload = false; startReload(f); }
+  if(inp.plant){ inp.plant = false; tryPlant(f); }
   let mx = inp.f * fx + inp.s * rx, mz = inp.f * fz + inp.s * rz;
   const ml = Math.hypot(mx, mz); if(ml > 1){ mx /= ml; mz /= ml; }
   const wet = waterDepth(f.x, f.z) > 0.3 && f.y < waterY(f.x) + 0.1;
@@ -1676,21 +1710,23 @@ function killFighter(t, src, o){
   t.shieldT = t.invisT = t.dashT = t.ramT = t.slowT = t.rootT = 0; t.reloadT = 0; t.slam = false;
   const prevStreak = t.streak; t.streak = 0;
   const killer = src && src !== t ? src : (t.lastAtt && match.t - t.lastAttT < 5 ? t.lastAtt : null);
+  const credit = killer && killer.sentry ? (killer.master && fighters.includes(killer.master) ? killer.master : null) : killer;
   let revenge = false;
   const assists = [];
-  if(killer){
-    if(!killer.remote){
-      killer.kills++; killer.streak++; killer.best = Math.max(killer.best, killer.streak); killer.score += 100 + (o.head ? 25 : 0);
-      if(o.head) killer.heads++;
-      revenge = killer.lastKiller === t; if(revenge) killer.lastKiller = null;
+  if(t.sentry){ if(credit && !credit.remote) credit.score += 50; }
+  else if(killer){
+    if(credit && !credit.remote){
+      credit.kills++; credit.streak++; credit.best = Math.max(credit.best, credit.streak); credit.score += 100 + (o.head ? 25 : 0);
+      if(o.head) credit.heads++;
+      revenge = credit.lastKiller === t; if(revenge) credit.lastKiller = null;
     }
     if(match.mode === 'tdm' && (!NET.on || NET.role === 'host') && (killer.team === 'guard' || killer.team === 'rot')) match.scores[killer.team]++;
     for(const [g, tm] of t.dmgBy) if(g !== killer && match.t - tm < 8 && isEnemy(g, t) && fighters.includes(g)){ if(g.remote){ if(g.nid) assists.push(g.nid); } else { g.assists++; g.score += 50; if(g === me) onAssist(t); } }
   }
   if(NET.on) netKill(t, killer, o, assists);
-  t.lastKiller = killer; t.dmgBy.clear();
-  const first = !match.firstBlood && !!killer; if(first) match.firstBlood = true;
-  onKill(t, killer, o, { first, revenge, ended:prevStreak >= 3 ? prevStreak : 0 });
+  t.lastKiller = credit || killer; t.dmgBy.clear();
+  const first = !match.firstBlood && !!killer && !t.sentry; if(first) match.firstBlood = true;
+  onKill(t, killer, o, { first, revenge, ended:prevStreak >= 3 ? prevStreak : 0, credit });
   checkWin();
 }
 function checkWin(){
@@ -1926,20 +1962,21 @@ function botHurt(f, src){
 function homeOf(f){ return teamMode() ? { x:0, z:f.team === 'guard' ? 40 : -40 } : { x:f.x * 0.5, z:f.z * 0.5 }; }
 function botPerceive(f, D){
   const B = f.bot, A = ARCH[f.arch], ex = f.x, ey = f.y + A.eye, ez = f.z, sy = Math.sin(f.yaw), cy = Math.cos(f.yaw);
-  const range = f.arch === 'sniper' ? 120 : 78;
+  const range = f.sentry ? 50 : f.arch === 'sniper' ? 120 : 78;
   let best = null, bs = 1e9;
   for(const g of fighters){
     if(!g.alive || !isEnemy(f, g) || g.invisT > 0) continue;
     const dx = g.x - f.x, dz = g.z - f.z, d = Math.hypot(dx, dz);
     if(d > range) continue;
     const front = (-sy * dx - cy * dz) / (d || 1);
-    if(front < -0.15 && d > 10 && match.t - g.firedT > 1.2 && B.hunt !== g && B.target !== g) continue;
+    if(!f.sentry && front < -0.15 && d > 10 && match.t - g.firedT > 1.2 && B.hunt !== g && B.target !== g) continue;
     if(!losClear(ex, ey, ez, g.x, g.y + g.M.hover + ARCH[g.arch].body[0] + 0.3, g.z)) continue;
     let s = d;
     if(g === B.target) s -= 10;
     if(g === B.hunt) s -= 8;
     s -= (1 - g.hp / g.max) * 12;
     if(g.isPlayer && match.diff === 'easy') s += 8;
+    if(g.sentry) s += 10;
     if(s < bs){ bs = s; best = g; }
   }
   if(best && best !== B.target) B.fireDelay = D.react * rand(0.8, 1.4);
@@ -2022,6 +2059,7 @@ function botMedic(f, fighting){
   else if(f.cdE <= 0 && (near >= 2 || (fighting && near >= 1) || hurt > 1)) f.inp.e = true;
 }
 function botThink(f, dt){
+  if(f.sentry) return sentryThink(f, dt);
   const B = f.bot, D = DIFF[match.diff], A = ARCH[f.arch], W = A.w, inp = f.inp;
   inp.jump = false; inp.q = inp.e = false; inp.reload = false;
   if(!f.alive) return;
@@ -2073,6 +2111,7 @@ function botThink(f, dt){
     const cp = Math.cos(inp.pitch); inp.tx = ex - Math.sin(inp.yaw) * cp * 50; inp.ty = ey + Math.sin(inp.pitch) * 50; inp.tz = ez - Math.cos(inp.yaw) * cp * 50;
     if(f.ammo < W.mag * 0.6 && f.reloadT <= 0) inp.reload = true;
     if(f.arch === 'medic' && B.abilT <= 0){ B.abilT = rand(0.5, 1.2); botMedic(f, false); }
+    if((f.plantCd || 0) <= 0 && Math.random() < dt * 0.8 && canPlant(f)) inp.plant = true;
     if(B.jumpT <= 0){ B.jumpT = rand(3, 7); if(Math.random() < D.jump) inp.jump = true; }
   }
   const mag = Math.min(1, Math.hypot(wantX, wantZ));
@@ -2141,6 +2180,7 @@ const SFX = {
   lose(){ if(!AC || muted) return; const t = AC.currentTime; [523, 466, 392, 311].forEach((f, i) => tn(master, t + i * 0.18, 'triangle', f, f * 0.98, 0.18, 0.6)); },
   streak(){ if(!AC || muted) return; const t = AC.currentTime; [784, 988, 1175].forEach((f, i) => tn(master, t + i * 0.07, 'square', f, f, 0.06, 0.2)); },
   heal(){ if(!AC || muted || !ok('heal', 160)) return; const t = AC.currentTime; tn(master, t, 'sine', 660, 990, 0.08, 0.18); tn(master, t + 0.06, 'sine', 990, 1320, 0.06, 0.2); },
+  plant(x, y, z){ const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'lowpass', 600, 1, 0.25, 0.3); [392, 523, 659].forEach((f, i) => tn(o, t + i * 0.07, 'triangle', f, f, 0.12, 0.25)); },
   snap(x, y, z){ const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'highpass', 2500, 1, 0.35, 0.08); tn(o, t, 'square', 180, 90, 0.12, 0.12); }
 };
 function ambience(){
@@ -2173,6 +2213,7 @@ addEventListener('keydown', e => {
   if(e.code === 'KeyQ') me.inp.q = true;
   if(e.code === 'KeyE') me.inp.e = true;
   if(e.code === 'KeyR') me.inp.reload = true;
+  if(e.code === 'KeyF') me.inp.plant = true;
 });
 addEventListener('keyup', e => { keys[e.code] = false; if(e.code === 'Tab') showBoard(false); });
 addEventListener('blur', () => { for(const k in keys) keys[k] = false; mouse.l = mouse.r = false; showBoard(false); });
@@ -2262,6 +2303,7 @@ if(TOUCH){
   hold('t-q', () => { if(me && me.alive) me.inp.q = true; });
   hold('t-e', () => { if(me && me.alive) me.inp.e = true; });
   hold('t-aim', () => { touch.scope = !touch.scope; $('t-aim').style.borderColor = touch.scope ? 'var(--amber)' : ''; });
+  hold('t-plant', () => { if(me && me.alive) me.inp.plant = true; });
 }
 
 /* ================= camera & aim ================= */
@@ -2385,7 +2427,9 @@ function onKill(t, killer, o, info){
   SFX.death(t.x, t.y, t.z);
   feedAdd(killer, t, o.kind, o.head);
   if(info.first && killer) announce('Первая кровь!', esc(killer.name) + ' открывает счёт', 2);
-  if(killer === me){
+  if(info.credit === me && killer !== me && !t.sentry) killNotice('<em>+' + (100 + (o.head ? 25 : 0)) + '</em> Твоя ' + esc(killer.name) + ' сразила ' + esc(t.name));
+  if(t.sentry && info.credit === me){ hitMarker('kill'); SFX.kill(); killNotice('<em>+50</em> Уничтожена ' + esc(t.name)); }
+  else if(killer === me){
     hitMarker('kill'); SFX.kill();
     let txt = '<em>+' + (100 + (o.head ? 25 : 0)) + '</em> Сразил ' + esc(t.name);
     if(o.head) txt += ' · <em>в голову!</em>';
@@ -2543,6 +2587,9 @@ function updateHud(dt){
     txt(el.querySelector('.s'), cd > 0 ? String(Math.ceil(cd)) : '');
     el.classList.toggle('ready', cd <= 0 && me.alive);
   }
+  const pp = $('plantp'), cp = me.alive && !me.sentry && !!nearPot(me);
+  if(cp){ const ready = canPlant(me); html(pp, ready ? (TOUCH ? '' : '<b>F</b> ') + 'посадить ' + FACTIONS[me.fac].classes.sentry.acc : hasSentry(me) ? 'Твоя ' + FACTIONS[me.fac].classes.sentry.name + ' уже растёт' : 'Горшок через ' + Math.ceil(me.plantCd) + ' с'); }
+  pp.hidden = !cp; if(TOUCH) $('t-plant').hidden = !(cp && canPlant(me));
   if(TOUCH){ for(const k of ['q', 'e']){ const cd = k === 'q' ? me.cdQ : me.cdE; html($('t-' + k), cd > 0 ? '<small>' + Math.ceil(cd) + '</small>' : k.toUpperCase()); } }
   const scoped = me.alive && me.inp.scope && me.arch === 'sniper' && zoom > 0.6;
   $('scope').hidden = !scoped;
@@ -2588,7 +2635,7 @@ function updateHud(dt){
 function showDead(){
   const k = me.lastKiller;
   $('d-label').textContent = k ? 'Тебя сразил' : 'Ты пал в бою';
-  $('d-who').textContent = k ? k.name + ' · ' + clsOf(k.fac, k.arch).name : '';
+  $('d-who').textContent = k ? (k.sentry ? k.name + (k.master ? ' (' + k.master.name + ')' : '') : k.name + ' · ' + clsOf(k.fac, k.arch).name) : '';
   renderSwap(); $('dead').hidden = false;
 }
 function renderSwap(){
@@ -2599,7 +2646,7 @@ $('swap').addEventListener('click', e => { const b = e.target.closest('[data-a]'
 function boardHTML(){
   const row = f => '<tr class="' + (f === me ? 'me' : '') + (f.alive ? '' : ' dead') + '"><td><span class="dot" style="background:' + (teamMode() ? FACTIONS[f.team].color : f === me ? '#FFC94D' : '#ccc') + '"></span>' + esc(f.name) + (f.human ? ' <small style="color:var(--amber)">игрок</small>' : '') + ' <small style="color:var(--muted)">' + clsOf(f.fac, f.arch).name + '</small></td><td>' + f.kills + '</td><td>' + f.deaths + '</td><td>' + f.assists + '</td><td>' + f.score + '</td></tr>';
   const head = '<tr><th>Боец</th><th>Убийства</th><th>Смерти</th><th>Помощь</th><th>Очки</th></tr>';
-  const sorted = list => list.slice().sort((a, b) => b.score - a.score || b.kills - a.kills);
+  const sorted = list => list.filter(f => !f.sentry).sort((a, b) => b.score - a.score || b.kills - a.kills);
   if(teamMode()) return ['guard', 'rot'].map(t => '<div class="tblh" style="color:' + FACTIONS[t].color + '">' + FACTIONS[t].name + ' · ' + match.scores[t] + '</div><table>' + head + sorted(fighters.filter(f => f.team === t)).map(row).join('') + '</table>').join('');
   return '<div class="tblh">Каждый сам за себя</div><table>' + head + sorted(fighters).map(row).join('') + '</table>';
 }
@@ -2798,8 +2845,8 @@ function netPack(){
   if(NET.role === 'host'){
     const w = match.winner;
     o.m = { ep:NET.epoch, md:match.mode, df:match.diff, t:r2(match.t), sg:match.scores.guard, sr:match.scores.rot, li:match.limit, du:match.dur, st:state === 'end' || match.over ? 'end' : state === 'countdown' ? 'cd' : 'play', w:w == null ? 0 : typeof w === 'string' ? w : w.nid || 0, cp:CAPS.map(c => r2(c.prog)), co:CAPS.map(c => c.owner ? c.owner[0] : '0').join(''), td:skyName };
-    o.bots = fighters.filter(f => f.bot && f !== me && !f.remote && f.nid).map(f => [f.nid, ...packF(f), f.name]);
   }
+  o.bots = fighters.filter(f => f.bot && f !== me && !f.remote && f.nid).map(f => [f.nid, ...packF(f), f.name]);
   o.ev = NET.events.map(x => x.e);
   while(o.ev.length && JSON.stringify(o).length > 3300) o.ev.shift();
   return o;
@@ -2841,9 +2888,9 @@ function netReceive(peer, pr, now){
   if(pr.r === 'h' && NET.role === 'client' && pr.m && typeof pr.m === 'object') netMatchIn(pr.m);
   if(!me || NET.waiting) return;
   if(Array.isArray(pr.me)) netPuppet('p' + peer, pr.me, info.nick, now, peer, true);
-  if(pr.r === 'h' && NET.role === 'client' && Array.isArray(pr.bots)){
+  if(Array.isArray(pr.bots) && (pr.r !== 'h' || NET.role === 'client')){
     const keep = new Set();
-    for(const b of pr.bots.slice(0, 16)){ if(!Array.isArray(b) || !/^b\d{1,6}$/.test(String(b[0]))) continue; keep.add(String(b[0])); netPuppet(String(b[0]), b.slice(1, 19), cleanNick(b[19]) || 'Бот', now, peer, false); }
+    for(const b of pr.bots.slice(0, 24)){ if(!Array.isArray(b) || !/^(b\d{1,6}|s[\w-]{1,48})$/.test(String(b[0]))) continue; keep.add(String(b[0])); netPuppet(String(b[0]), b.slice(1, 19), cleanNick(b[19]) || 'Бот', now, peer, false); }
     for(const [nid, f] of NET.remote) if(f.owner === peer && !f.human && !keep.has(nid)) removeFighter(f);
   }
   if(Array.isArray(pr.ev)) for(const e of pr.ev){ if(!Array.isArray(e)) continue; const s = num(e[0]); if(s > info.seq){ info.seq = s; try{ netEvent(peer, e); }catch(err){} } }
@@ -2866,7 +2913,7 @@ function netPuppet(nid, a, name, now, owner, human){
   if(f && (f.fac !== fac || f.arch !== arch || f.hat !== hat)){ removeFighter(f); f = null; }
   if(!f){
     f = makeFighter({ name, team, fac, arch, hat }); f.remote = true; f.nid = nid; f.owner = owner; f.human = human; f.buf = []; f.lifeSeen = -1;
-    NET.remote.set(nid, f); setOutline(f); makeTag(f);
+    NET.remote.set(nid, f); setOutline(f); makeTag(f); f.sentry = arch === 'sentry';
   }
   if(f.team !== team){ f.team = team; setOutline(f); f.tag.className = 'tag' + (isEnemy(me, f) ? ' foe' : ''); }
   if(f.name !== name){ f.name = name; f.tag.firstChild.textContent = name; }
@@ -2936,14 +2983,16 @@ function netEvent(peer, e){
     const k = byNid(e[3]), head = !!e[5], kind = KIND_LABEL[e[4]] ? e[4] : 'auto';
     v.alive = false; v.hp = 0; v.deathT = 0;
     let revenge = false;
-    if(k && !k.remote){
-      k.kills++; k.streak++; k.best = Math.max(k.best, k.streak); k.score += 100 + (head ? 25 : 0); if(head) k.heads++;
-      revenge = k.lastKiller === v; if(revenge) k.lastKiller = null;
+    const c = k && k.sentry ? (k.master && fighters.includes(k.master) ? k.master : null) : k;
+    if(v.sentry){ if(c && !c.remote) c.score += 50; }
+    else if(c && !c.remote){
+      c.kills++; c.streak++; c.best = Math.max(c.best, c.streak); c.score += 100 + (head ? 25 : 0); if(head) c.heads++;
+      revenge = c.lastKiller === v; if(revenge) c.lastKiller = null;
     }
-    if(NET.role === 'host' && match.mode === 'tdm' && k && (k.team === 'guard' || k.team === 'rot')) match.scores[k.team]++;
+    if(NET.role === 'host' && match.mode === 'tdm' && k && !v.sentry && (k.team === 'guard' || k.team === 'rot')) match.scores[k.team]++;
     if(Array.isArray(e[6])) for(const a of e[6].slice(0, 12)){ const g = byNid(a); if(g && !g.remote && g !== k){ g.assists++; g.score += 50; if(g === me) onAssist(v); } }
-    const first = !match.firstBlood && !!k; if(first) match.firstBlood = true;
-    onKill(v, k, { kind, head }, { first, revenge, ended:0 });
+    const first = !match.firstBlood && !!k && !v.sentry; if(first) match.firstBlood = true;
+    onKill(v, k, { kind, head }, { first, revenge, ended:0, credit:c });
     if(NET.role === 'host') checkWin();
   } else if(!from || !from.remote) return;
   else if(type === 'z') addZone(from, cl(e[3], -MAP_X, MAP_X), cl(e[4], -MAP_Z, MAP_Z));
@@ -2960,11 +3009,11 @@ function netKill(t, killer, o, assists){ netEv('k', t.nid, killer ? killer.nid |
 // ---- host: keep teams full with bots as people come and go ----
 function netBalance(dt){
   NET.balT -= dt; if(NET.balT > 0 || !me || state === 'end') return; NET.balT = 1;
-  const real = f => f === me || f.bot || (f.remote && f.human);
+  const real = f => f === me || (f.bot && !f.sentry) || (f.remote && f.human);
   const groups = teamMode() ? [['guard', 6], ['rot', 6]] : [[null, 8]];
   for(const [team, cap] of groups){
     const all = fighters.filter(f => real(f) && (team === null || f.team === team));
-    const bots = all.filter(f => f.bot && f !== me);
+    const bots = all.filter(f => f.bot && f !== me && !f.sentry);
     if(all.length > cap && bots.length) removeFighter(bots.find(b => !b.alive) || bots[bots.length - 1]);
     else if(all.length < cap){
       const fac = team || pick(['guard', 'rot']), used = new Set(fighters.map(f => f.name)), free = NAMES[fac].filter(n => !used.has(n)), name = pick(free.length ? free : NAMES[fac]);
@@ -3028,7 +3077,7 @@ function updateCaps(dt){
   for(const c of CAPS){
     let g = 0, r = 0;
     for(const f of fighters){
-      if(!f.alive || (f.team !== 'guard' && f.team !== 'rot')) continue;
+      if(!f.alive || f.sentry || (f.team !== 'guard' && f.team !== 'rot')) continue;
       if(Math.hypot(f.x - c.x, f.z - c.z) < CAP_R && Math.abs(f.y - c.y) < 4){ if(f.team === 'guard') g++; else r++; }
     }
     c.g = g; c.r = r; c.contested = g > 0 && r > 0;
@@ -3084,6 +3133,70 @@ function updateCapBadges(){
     el.style.setProperty('--p', (Math.abs(c.prog) * 100).toFixed(0));
     el.classList.toggle('hot', c.contested);
   }
+}
+
+/* ================= flower pots and sentries ================= */
+const POTS = [[-7, 37], [8, 36], [-30, 18], [-12, 4]].flatMap(([x, z]) => [[x, z], [-x, -z]]).map(([x, z]) => ({ x, z, y:groundH(x, z) - 0.05, busy:false }));
+{
+  const potG = lathe('bigpot', [[0, 0], [0.5, 0], [0.6, 0.48], [0.68, 0.56], [0.6, 0.64], [0, 0.64]], 22);
+  const potMat = stdM('#C46C3C', { roughness:0.85 }), soilMat = stdM('#4A3020', { roughness:1 });
+  for(const p of POTS){
+    const G = new THREE.Group(); G.position.set(p.x, p.y, p.z); scene.add(G);
+    const pot = new THREE.Mesh(potG, potMat); pot.castShadow = pot.receiveShadow = true; G.add(pot);
+    const soil = new THREE.Mesh(new THREE.CircleGeometry(0.56, 20), soilMat); soil.rotation.x = -Math.PI / 2; soil.position.y = 0.6; G.add(soil);
+    p.ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.02, 36), new THREE.MeshBasicMaterial({ color:new THREE.Color(1.5, 1.25, 0.45), transparent:true, opacity:0.3, depthWrite:false, side:THREE.DoubleSide }));
+    p.ring.rotation.x = -Math.PI / 2; p.ring.position.y = 0.08; G.add(p.ring);
+    addObs(p.x, p.z, 0.6, 0.64, p.y);
+  }
+}
+let SENT = 0;
+function nearPot(f){ let best = null, bd = 2.6; for(const p of POTS){ if(p.busy) continue; const d = Math.hypot(p.x - f.x, p.z - f.z); if(d < bd){ bd = d; best = p; } } return best; }
+const hasSentry = f => !!(f.sentryRef && f.sentryRef.alive && fighters.includes(f.sentryRef));
+function canPlant(f){ return f.alive && !f.sentry && (f.plantCd || 0) <= 0 && !hasSentry(f) && !match.frozen && !match.over && !!nearPot(f); }
+function tryPlant(f){
+  if(!canPlant(f)) return false;
+  const pot = nearPot(f);
+  const s = makeFighter({ name:FACTIONS[f.fac].classes.sentry.name, team:f.team, fac:f.fac, arch:'sentry' });
+  s.sentry = true; s.master = f; s.bot = newBot();
+  if(NET.on) s.nid = 's' + String(f.nid || 'x').slice(0, 24) + '-' + (++SENT);
+  s.x = pot.x; s.z = pot.z; s.y = pot.y + 0.62; s.yaw = s.inp.yaw = f.yaw; s.alive = true; s.hp = s.max = ARCH.sentry.hp; s.ammo = 9999; s.life = 1; s.prot = 0.4;
+  s.M.g.visible = true; s.M.g.position.set(s.x, s.y, s.z);
+  setOutline(s); if(me) makeTag(s);
+  pot.busy = true; f.sentryRef = s; f.plantCd = 25;
+  emit('soft', s.x, s.y + 0.4, s.z, 22, { spd:3, up:1.4, size:0.25, size1:0.05, life:0.8, col:f.fac === 'guard' ? [0.4, 0.8, 0.3] : [0.6, 0.35, 0.7], g:-6 });
+  SFX.plant(s.x, s.y, s.z);
+  if(f === me) killNotice('Посажена <em>' + s.name + '</em>: она стреляет сама');
+  return true;
+}
+function sentryThink(f, dt){
+  const B = f.bot, D = DIFF[match.diff], inp = f.inp, W = ARCH.sentry.w;
+  inp.f = inp.s = 0; inp.jump = inp.q = inp.e = inp.sprint = false;
+  if(!f.alive) return;
+  B.reactT -= dt; B.errT -= dt; B.fireDelay -= dt;
+  if(B.reactT <= 0){ B.reactT = 0.3; botPerceive(f, D); }
+  const T = B.target && B.target.alive && B.target.invisT <= 0 ? B.target : null;
+  const ex = f.x, ey = f.y + ARCH.sentry.eye, ez = f.z;
+  if(!T){ inp.fire = false; inp.yaw = f.yaw + dt * 0.5; inp.pitch = f.pitch * 0.9; inp.tx = ex - Math.sin(inp.yaw) * 30; inp.ty = ey; inp.tz = ez - Math.cos(inp.yaw) * 30; return; }
+  const TA = ARCH[T.arch], d = Math.hypot(T.x - f.x, T.z - f.z), lead = D.lead * d / W.speed;
+  if(B.errT <= 0){ B.errT = rand(0.4, 0.8); B.ex = tri() * D.err * 1.4; B.ey = tri() * D.err; }
+  const px = T.x + (T.vx + T.kx) * lead, py = T.y + T.M.hover + TA.body[0], pz = T.z + (T.vz + T.kz) * lead;
+  const ax = px - ex, ay = py - ey, az = pz - ez, hd = Math.hypot(ax, az);
+  const yawT = Math.atan2(-ax, -az) + B.ex, pitT = Math.atan2(ay, hd) + B.ey, mt = 5 * dt;
+  inp.yaw = f.yaw + clamp(angDiff(f.yaw, yawT), -mt, mt); inp.pitch = f.pitch + clamp(pitT - f.pitch, -mt, mt);
+  const dist3 = Math.hypot(ax, ay, az), cp = Math.cos(inp.pitch);
+  inp.tx = ex - Math.sin(inp.yaw) * cp * dist3; inp.ty = ey + Math.sin(inp.pitch) * dist3; inp.tz = ez - Math.cos(inp.yaw) * cp * dist3;
+  B.losT -= dt; if(B.losT <= 0){ B.losT = 0.25; B.los = losClear(ex, ey, ez, T.x, py, T.z); }
+  inp.fire = B.los && B.fireDelay <= 0 && d < W.range && Math.abs(angDiff(inp.yaw, yawT - B.ex)) < 0.1 + Math.atan2(TA.body[1], d);
+}
+function updatePots(dt){
+  for(const p of POTS){
+    p.busy = false;
+    for(const f of fighters) if(f.sentry && f.alive && Math.abs(f.x - p.x) < 0.7 && Math.abs(f.z - p.z) < 0.7){ p.busy = true; break; }
+    p.ring.visible = !p.busy;
+    const near = me && me.alive && !p.busy && Math.hypot(me.x - p.x, me.z - p.z) < 2.6;
+    p.ring.material.opacity = 0.22 + Math.sin(time * 3 + p.x) * 0.08 + (near ? 0.45 : 0);
+  }
+  for(const f of fighters) if(f.plantCd > 0) f.plantCd -= dt;
 }
 
 /* ================= post-processing ================= */
@@ -3335,7 +3448,7 @@ function tick(dt){
   if(state === 'play') match.t += dt;
   for(const f of fighters) if(f.bot) botThink(f, dt);
   for(const f of fighters) stepFighter(f, dt);
-  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateStations(dt); updateCaps(dt);
+  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateStations(dt); updateCaps(dt); updatePots(dt);
   for(const f of fighters) animFighter(f, dt);
   if(state === 'countdown') countdown(dt);
   if(cmsgT > 0){ cmsgT -= dt; if(cmsgT <= 0) $('cmsg').style.opacity = 0; }
