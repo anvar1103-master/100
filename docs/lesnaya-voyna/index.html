@@ -330,6 +330,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
     </div>
     <div class="row">
       <label class="set">Мышь <input type="range" id="sens" min="0.4" max="2.5" step="0.05"></label>
+      <label class="set">Сезон <select id="season"><option value="rand">Случайно</option><option value="summer">Лето</option><option value="autumn">Осень</option><option value="winter">Зима</option></select></label>
       <label class="set">Время <select id="tod"><option value="rand">Случайно</option><option value="day">День</option><option value="dusk">Закат</option><option value="night">Ночь</option></select></label>
       <label class="set"><input type="checkbox" id="music"> Музыка</label>
       <label class="set">Графика <select id="qual"><option value="high">Красивая</option><option value="low">Быстрая</option></select></label>
@@ -369,7 +370,7 @@ const store = {
   set(k, v){ try{ localStorage.setItem('lv_' + k, JSON.stringify(v)); }catch(e){} }
 };
 const settings = { sens:store.get('sens', 1), quality:store.get('q', TOUCH ? 'low' : 'high') };
-const menuSel = { mode:store.get('mode', 'tdm'), fac:store.get('fac', 'guard'), arch:store.get('arch', 'soldier'), diff:store.get('diff', 'normal'), tod:store.get('tod', 'rand') };
+const menuSel = { mode:store.get('mode', 'tdm'), fac:store.get('fac', 'guard'), arch:store.get('arch', 'soldier'), diff:store.get('diff', 'normal'), tod:store.get('tod', 'rand'), season:store.get('season', 'rand') };
 let state = 'load', me = null, time = 0, muted = false;
 const view = { yaw:0, pitch:0 };
 const V1 = new THREE.Vector3(), V2 = new THREE.Vector3(), V3 = new THREE.Vector3();
@@ -473,6 +474,7 @@ birchTex.wrapS = birchTex.wrapT = THREE.RepeatWrapping;
 
 /* ================= terrain ================= */
 const MAP_X = 40, MAP_Z = 52;
+const VEG = {};
 function STREAM(x){ return Math.sin(x * 0.07) * 6 + Math.sin(x * 0.16) * 1.2; }
 function baseH(x, z){ return Math.sin(x * 0.07) * Math.sin(z * 0.06) * 0.8 + Math.cos(x * 0.021 + z * 0.033) * 1.1 + Math.cos(z * 0.045 - x * 0.012) * 0.45; }
 function groundH(x, z){
@@ -524,6 +526,7 @@ function pathD(x, z){
   g.computeVertexNormals();
   const ground = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map:groundTex, vertexColors:true, roughness:0.97, envMapIntensity:0.6 }));
   ground.receiveShadow = true; scene.add(ground);
+  VEG.ground = ground; VEG.groundCol = col.slice();
 }
 // stream water strip
 const waterMat = new THREE.MeshStandardMaterial({ color:'#2C7F88', roughness:0.06, metalness:0.05, transparent:true, opacity:0.8, normalMap:waterN, normalScale:new THREE.Vector2(0.35, 0.35), envMapIntensity:1.2 });
@@ -659,10 +662,10 @@ const LOGS = [[-23, 20, -15, 22, 0.62], [25, 37, 32, 31, 0.58], [12, 40, 20, 41.
 both(s => { for(const [a, b, c, d, r] of LOGS) addLog(a * s, b * s, c * s, d * s, r); });
 const bridge = addLog(-2.2, -9.5, 2.2, 9.5, 0.78);
 // hedges in front of each spawn
-const hedgeM = windify(stdM('#3F8A3A', { roughness:0.85, flatShading:true }), 0.03);
+const hedgeM = windify(stdM('#ffffff', { roughness:0.85, flatShading:true }), 0.03);
 const bushG = new THREE.IcosahedronGeometry(1, 1);
 const bushIM = new THREE.InstancedMesh(bushG, hedgeM, 700); let bushN = 0;
-function bush(x, z, r, col){ if(bushN >= 700) return; place(bushIM, bushN, x, groundH(x, z) + r * 0.45, z, 0, rand(0, 6), 0, r, r * 0.8, r); bushIM.setColorAt(bushN++, _c.set(col || '#4E9A40').offsetHSL(rand(-0.03, 0.03), rand(-0.05, 0.05), rand(-0.08, 0.06))); }
+function bush(x, z, r, col){ if(bushN >= 700) return; place(bushIM, bushN, x, groundH(x, z) + r * 0.45, z, 0, rand(0, 6), 0, r, r * 0.8, r); bushIM.setColorAt(bushN++, _c.set(col || '#4E9A40').offsetHSL(rand(-0.03, 0.03), rand(-0.05, 0.05), rand(-0.08, 0.06)).multiplyScalar(0.62)); }
 both(s => { for(let x = -6.5; x <= 6.5; x += 1.3){ const z = 32.5 * s + Math.sin(x) * 0.3; bush(x, z, rand(0.85, 1.05), '#3E8E3C'); bush(x + 0.6, z + rand(-0.3, 0.3), rand(0.6, 0.8), '#5AA548'); addObs(x, z, 0.8, 1.25); } });
 
 /* ================= bases ================= */
@@ -817,7 +820,7 @@ const grassIM = new THREE.InstancedMesh(grassClump(), windify(new THREE.MeshStan
     place(grassIM, i, x, groundH(x, z) - 0.04, z, 0, rand(0, TAU), 0, s, s * rand(0.8, 1.2), s);
     grassIM.setColorAt(i++, _c.set(rb < 24 ? '#8C9A5A' : '#86C04E').offsetHSL(rand(-0.04, 0.03), rand(-0.1, 0.06), rand(-0.1, 0.07)));
   }
-  grassIM.count = i; grassIM.userData.full = i; grassIM.receiveShadow = true; scene.add(grassIM);
+  grassIM.count = i; grassIM.userData.full = i; grassIM.receiveShadow = true; scene.add(grassIM); VEG.grass = grassIM;
 }
 const fernIM = new THREE.InstancedMesh(FROND, windify(new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.85, side:THREE.DoubleSide }), 0.09), 360 * 8);
 {
@@ -829,7 +832,7 @@ const fernIM = new THREE.InstancedMesh(FROND, windify(new THREE.MeshStandardMate
   };
   for(const o of obstacles.slice()) if(o.h > 20) for(let k = 0; k < 3; k++){ const a = rand(0, TAU), d = o.r + rand(0.8, 2.5); spot(o.x + Math.cos(a) * d, o.z + Math.sin(a) * d, rand(0.8, 1.3)); }
   for(let k = 0; k < 1200 && i < 360 * 8 - 10; k++){ const x = rand(-MAP_X - 8, MAP_X + 8), z = rand(-MAP_Z - 8, MAP_Z + 8); const sd = Math.abs(z - STREAM(x)); if(Math.random() < (sd < 11 ? 0.5 : 0.18)) spot(x, z, rand(0.7, 1.25)); }
-  fernIM.count = i; fernIM.castShadow = true; fernIM.receiveShadow = true; scene.add(fernIM);
+  fernIM.count = i; fernIM.castShadow = true; fernIM.receiveShadow = true; scene.add(fernIM); VEG.fern = fernIM;
 }
 {
   // flowers in patches
@@ -841,7 +844,7 @@ const fernIM = new THREE.InstancedMesh(FROND, windify(new THREE.MeshStandardMate
     const cx = rand(-MAP_X, MAP_X), cz = rand(-MAP_Z, MAP_Z), col = pick(cols), n = 6 + Math.floor(rand(0, 10));
     for(let k = 0; k < n && i < 1100; k++){ const x = cx + rand(-2, 2), z = cz + rand(-2, 2); if(waterDepth(x, z) > -0.1 || !freeAt(x, z, 0.2)) continue; place(fl, i, x, groundH(x, z) + rand(0.3, 0.6), z, 0, rand(0, 6), 0, rand(0.8, 1.3)); fl.setColorAt(i++, _c.set(col)); }
   }
-  fl.count = i; scene.add(fl);
+  fl.count = i; scene.add(fl); VEG.flowers = fl;
   // reeds & cattails along the stream
   const stalk = new THREE.CylinderGeometry(0.025, 0.04, 1, 4); stalk.translate(0, 0.5, 0);
   const head = new THREE.CapsuleGeometry(0.07, 0.3, 3, 6);
@@ -858,7 +861,7 @@ const fernIM = new THREE.InstancedMesh(FROND, windify(new THREE.MeshStandardMate
   const lg = new THREE.CircleGeometry(0.5, 14, 0.35, TAU - 0.7); lg.rotateX(-Math.PI / 2);
   const lp = new THREE.InstancedMesh(lg, stdM('#5BA044', { roughness:0.5 }), 80); let l = 0;
   for(let k = 0; k < 600 && l < 80; k++){ const x = rand(-MAP_X - 10, MAP_X + 10), z = STREAM(x) + rand(-3.5, 3.5); if(waterDepth(x, z) < 0.25) continue; place(lp, l++, x, waterY(x) + 0.02, z, 0, rand(0, 6), 0, rand(0.7, 1.4)); }
-  lp.count = l; scene.add(lp);
+  lp.count = l; scene.add(lp); VEG.lily = lp;
   // little forest mushrooms, the rot ones glow
   const ms = new THREE.CylinderGeometry(0.05, 0.07, 0.3, 6); ms.translate(0, 0.15, 0);
   const mc = new THREE.SphereGeometry(0.16, 10, 6, 0, TAU, 0, Math.PI / 2); mc.scale(1, 0.7, 1); mc.translate(0, 0.28, 0);
@@ -875,6 +878,7 @@ const fernIM = new THREE.InstancedMesh(FROND, windify(new THREE.MeshStandardMate
       else if(ci < 260){ place(caps, ci, mx, y, mz, 0, 0, 0, s); caps.setColorAt(ci++, _c.set(pick(['#C8562A', '#E8A33C', '#B5452E', '#F2DDB0', '#8A5A33']))); }
     }
   }
+  VEG.mcaps = caps;
   stems.count = si; caps.count = ci; gcaps.count = gi; stems.castShadow = caps.castShadow = true; scene.add(stems, caps, gcaps);
 }
 // a few bushes scattered around the edges
@@ -884,6 +888,8 @@ for(let k = 0; k < 400 && bushN < 640; k++){
   for(let n = 0; n < 3; n++) bush(x + rand(-0.9, 0.9), z + rand(-0.9, 0.9), rand(0.6, 1.2));
 }
 bushIM.count = bushN;
+VEG.bush = bushIM; VEG.cones = conesIM; VEG.blobs = blobsIM;
+for(const k of ['grass', 'fern', 'flowers', 'mcaps', 'bush', 'cones', 'blobs']) if(VEG[k].instanceColor) VEG[k].userData.base = VEG[k].instanceColor.array.slice();
 
 /* ================= static merging (fewer draw calls) ================= */
 // (called once below, after the static world is built)
@@ -1019,7 +1025,45 @@ const SKIES = {
   dusk:{ name:'Закат', top:'#33407E', hor:'#FFAD72', fog:'#C99F8A', fogD:0.0105, sunC:'#FFB070', sunI:2.6, dir:[-0.72, 0.2, 0.66], hs:'#FFC9A8', hg:'#4A4232', hi:0.5, exp:1.08, disc:'#FFB060', cloud:'#FFC7A0', stars:0.12, shaft:'#FFC890', shaftK:1.7, mote:[1.7, 1.1, 0.6], moteS:0.17, gnd:'#4A4030' },
   night:{ name:'Ночь', top:'#060D24', hor:'#22355A', fog:'#1C2A40', fogD:0.0125, sunC:'#A8BEFF', sunI:1.05, dir:[0.35, 0.72, -0.6], hs:'#7090D0', hg:'#18221A', hi:0.65, exp:1.32, disc:'#DCE6FF', cloud:'#33435E', stars:1, shaft:'#A8C0FF', shaftK:0, mote:[0.9, 1.8, 0.45], moteS:0.3, gnd:'#141C16' }
 };
-let skyName = 'day';
+let skyName = 'day', season = 'summer';
+const SEASONS = { summer:'Лето', autumn:'Осень', winter:'Зима' };
+function setGrassCount(){ const g = VEG.grass; g.count = Math.floor(g.userData.full * (settings.quality === 'high' ? 1 : 0.45) * (season === 'winter' ? 0.35 : 1)); }
+function applySeason(s){
+  season = SEASONS[s] ? s : 'summer';
+  const C = new THREE.Color(), T = new THREE.Color(), SNOW = new THREE.Color('#EEF4F8');
+  const AUT = ['#E8A33C', '#C8562A', '#D9C24A', '#B5452E', '#E07A2A'].map(h => new THREE.Color(h));
+  const recolor = (im, fn) => { const base = im.userData.base; if(!base) return; const arr = im.instanceColor.array; for(let i = 0; i < arr.length / 3; i++){ C.setRGB(base[i * 3], base[i * 3 + 1], base[i * 3 + 2]); fn(C, i); arr[i * 3] = C.r; arr[i * 3 + 1] = C.g; arr[i * 3 + 2] = C.b; } im.instanceColor.needsUpdate = true; };
+  const id = () => {};
+  if(season === 'autumn'){
+    recolor(VEG.blobs, (c, i) => c.lerp(AUT[i % AUT.length], 0.85)); recolor(VEG.cones, c => c.multiplyScalar(0.85));
+    recolor(VEG.grass, c => c.lerp(T.set('#B9A050'), 0.55)); recolor(VEG.fern, (c, i) => c.lerp(T.set(i % 3 ? '#B8863A' : '#9A5A2A'), 0.65));
+    recolor(VEG.bush, (c, i) => c.lerp(AUT[(i * 7) % AUT.length], 0.6)); recolor(VEG.flowers, id); recolor(VEG.mcaps, id);
+  } else if(season === 'winter'){
+    recolor(VEG.blobs, c => c.lerp(SNOW, 0.72)); recolor(VEG.cones, (c, i) => c.lerp(SNOW, 0.42 + (i % 4) * 0.08));
+    recolor(VEG.grass, c => c.lerp(T.set('#C8D4CC'), 0.62)); recolor(VEG.fern, c => c.lerp(T.set('#8A7A62'), 0.6));
+    recolor(VEG.bush, c => c.lerp(SNOW, 0.6)); recolor(VEG.flowers, id); recolor(VEG.mcaps, id);
+  } else for(const k of ['blobs', 'cones', 'grass', 'fern', 'bush', 'flowers', 'mcaps']) recolor(VEG[k], id);
+  VEG.flowers.visible = VEG.lily.visible = season !== 'winter';
+  setGrassCount();
+  const col = VEG.ground.geometry.attributes.color, pos = VEG.ground.geometry.attributes.position, base = VEG.groundCol;
+  for(let i = 0; i < col.count; i++){
+    C.setRGB(base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
+    if(season === 'autumn') C.lerp(T.set('#A88E50'), 0.35);
+    else if(season === 'winter'){ const x = pos.getX(i), z = pos.getZ(i), wet = Math.abs(z - STREAM(x)) < 8 && pos.getY(i) < waterY(x) + 0.05; C.lerp(wet ? T.set('#8FB4C4') : SNOW, wet ? 0.7 : pathD(x, z) < 1.6 ? 0.55 : 0.86); }
+    col.setXYZ(i, C.r, C.g, C.b);
+  }
+  col.needsUpdate = true;
+  mossM.color.set(season === 'winter' ? '#F2F6FA' : season === 'autumn' ? '#9A9A48' : '#79A548');
+  if(season === 'winter'){ waterMat.color.set('#B4D8E6'); waterMat.opacity = 0.94; waterMat.roughness = 0.14; waterMat.normalScale.set(0.06, 0.06); }
+  else { waterMat.color.set('#2C7F88'); waterMat.opacity = 0.8; waterMat.roughness = 0.06; waterMat.normalScale.set(0.35, 0.35); }
+  leaves.visible = season !== 'winter';
+  for(let i = 0; i < leafS.length; i++) leaves.setColorAt(i, T.set(pick(season === 'autumn' ? ['#E8A33C', '#C8562A', '#D9C24A', '#B5452E'] : ['#E8A33C', '#C8562A', '#D9C24A', '#8DBE48'])));
+  leaves.instanceColor.needsUpdate = true;
+  if(season === 'winter'){ motes.material.color.setRGB(1.25, 1.3, 1.4); motes.material.size = 0.11; motes.material.blending = THREE.NormalBlending; }
+  else { motes.material.blending = THREE.AdditiveBlending; const S = SKIES[skyName]; motes.material.color.setRGB(S.mote[0], S.mote[1], S.mote[2]); motes.material.size = S.moteS; }
+  if(season === 'winter'){ scene.fog.color.lerp(T.set('#DCE6EE'), skyName === 'night' ? 0.1 : 0.35); scene.background.copy(scene.fog.color); }
+  miniBg = null;
+}
 function applySky(n){
   const S = SKIES[n] || SKIES.day; skyName = SKIES[n] ? n : 'day';
   skyU.top.value.set(S.top); skyU.hor.value.set(S.hor); skyU.disc.value.set(S.disc); skyU.cloud.value.set(S.cloud); skyU.stars.value = S.stars;
@@ -1037,7 +1081,10 @@ function updateWorld(dt){
   for(const s of shafts) s.material.opacity = (0.02 + Math.sin(time * 0.5 + s.userData.ph) * 0.01) * (s.userData.k === undefined ? 1 : s.userData.k);
   const gl = 2.2 + Math.sin(time * 1.6) * 0.5; baseFx.guardMat.emissiveIntensity = gl; baseFx.gills.emissiveIntensity = 0.3 + Math.sin(time * 1.6) * 0.08;
   baseFx.rotMat.emissiveIntensity = 1.1 + Math.sin(time * 2.3) * 0.35; baseFx.rotLight.intensity = 55 + Math.sin(time * 2.3) * 12;
-  for(let i = 0; i < moteN; i++){ const m = moteSeed[i]; motePos[i * 3] = m.x + Math.sin(time * m.s + m.p) * 1.4; motePos[i * 3 + 1] = groundH(m.x, m.z) + m.y + Math.sin(time * m.s * 1.3 + m.p) * 0.5; motePos[i * 3 + 2] = m.z + Math.cos(time * m.s * 0.8 + m.p) * 1.4; }
+  if(season === 'winter'){
+    const cx = camera.position.x, cy = camera.position.y, cz = camera.position.z;
+    for(let i = 0; i < moteN; i++){ const m = moteSeed[i], ox = ((m.x * 0.6 + 30 + Math.sin(time * 0.3 + m.p) * 2) % 30 + 30) % 30 - 15, oz = ((m.z * 0.6 + 30) % 30 + 30) % 30 - 15; motePos[i * 3] = cx + ox * 1.6; motePos[i * 3 + 1] = cy - 6 + ((m.y * 3 - time * (0.9 + m.s) + 1000) % 14); motePos[i * 3 + 2] = cz + oz * 1.6 + Math.cos(time * 0.4 + m.p) * 0.6; }
+  } else for(let i = 0; i < moteN; i++){ const m = moteSeed[i]; motePos[i * 3] = m.x + Math.sin(time * m.s + m.p) * 1.4; motePos[i * 3 + 1] = groundH(m.x, m.z) + m.y + Math.sin(time * m.s * 1.3 + m.p) * 0.5; motePos[i * 3 + 2] = m.z + Math.cos(time * m.s * 0.8 + m.p) * 1.4; }
   moteGeo.attributes.position.needsUpdate = true;
   const cx = camera.position.x, cz = camera.position.z;
   for(let i = 0; i < leafS.length; i++){
@@ -2554,12 +2601,12 @@ function buildMiniBg(){
   const c = document.createElement('canvas'), W = 240, H = 312; c.width = W; c.height = H;
   const g = c.getContext('2d');
   const mx = x => (x + MAP_X) / (2 * MAP_X) * W, my = z => (z + MAP_Z) / (2 * MAP_Z) * H, sc = W / (2 * MAP_X);
-  g.fillStyle = '#3C6B34'; g.fillRect(0, 0, W, H);
+  g.fillStyle = season === 'winter' ? '#9EADB8' : season === 'autumn' ? '#6E6434' : '#3C6B34'; g.fillRect(0, 0, W, H);
   const gr = g.createRadialGradient(W / 2, my(48), 4, W / 2, my(48), 70); gr.addColorStop(0, 'rgba(140,230,150,.45)'); gr.addColorStop(1, 'rgba(140,230,150,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
   const gr2 = g.createRadialGradient(W / 2, my(-48), 4, W / 2, my(-48), 70); gr2.addColorStop(0, 'rgba(200,120,240,.45)'); gr2.addColorStop(1, 'rgba(200,120,240,0)'); g.fillStyle = gr2; g.fillRect(0, 0, W, H);
   g.strokeStyle = 'rgba(214,180,120,.55)'; g.lineWidth = 3.2; g.lineCap = 'round';
   for(const s of LANES){ g.beginPath(); g.moveTo(mx(s[0]), my(s[1])); g.lineTo(mx(s[2]), my(s[3])); g.stroke(); }
-  g.strokeStyle = 'rgba(90,180,220,.85)'; g.lineWidth = 11 * sc; g.beginPath();
+  g.strokeStyle = season === 'winter' ? 'rgba(220,240,250,.95)' : 'rgba(90,180,220,.85)'; g.lineWidth = 11 * sc; g.beginPath();
   for(let x = -MAP_X; x <= MAP_X; x += 1){ const y = my(STREAM(x)); if(x === -MAP_X) g.moveTo(mx(x), y); else g.lineTo(mx(x), y); } g.stroke();
   g.fillStyle = 'rgba(20,32,18,.75)';
   for(const o of obstacles){ if(o.h < 0.8) continue; g.beginPath(); g.arc(mx(o.x), my(o.z), Math.max(1.5, o.r * sc), 0, TAU); g.fill(); }
@@ -2853,7 +2900,7 @@ function clientStart(m){
   NET.waiting = false; NET.epoch = num(m.ep);
   clearMatch();
   const mode = m.md === 'ffa' ? 'ffa' : m.md === 'cap' ? 'cap' : 'tdm';
-  capReset(); applySky(SKIES[m.td] ? m.td : 'day');
+  capReset(); applySky(SKIES[m.td] ? m.td : 'day'); applySeason(SEASONS[m.ss] ? m.ss : 'summer');
   Object.assign(match, { mode, diff:DIFF[m.df] ? m.df : 'normal', limit:cl(m.li, 1, 999), dur:cl(m.du, 30, 3600), t:num(m.t), scores:{ guard:num(m.sg) | 0, rot:num(m.sr) | 0 }, over:false, winner:null, firstBlood:true, attract:false, live:true, frozen:false });
   me = makeFighter({ name:'Ты', team:mode !== 'ffa' ? menuSel.fac : 'p' + NET.myPeer, fac:menuSel.fac, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(menuSel.fac, menuSel.arch)] || null });
   me.nid = 'p' + NET.myPeer; setOutline(me); respawn(me); me.prot = 1.5;
@@ -2885,7 +2932,7 @@ function netPack(){
   if(me) o.me = packF(me);
   if(NET.role === 'host'){
     const w = match.winner;
-    o.m = { ep:NET.epoch, md:match.mode, df:match.diff, t:r2(match.t), sg:match.scores.guard, sr:match.scores.rot, li:match.limit, du:match.dur, st:state === 'end' || match.over ? 'end' : state === 'countdown' ? 'cd' : 'play', w:w == null ? 0 : typeof w === 'string' ? w : w.nid || 0, cp:CAPS.map(c => r2(c.prog)), co:CAPS.map(c => c.owner ? c.owner[0] : '0').join(''), td:skyName };
+    o.m = { ep:NET.epoch, md:match.mode, df:match.diff, t:r2(match.t), sg:match.scores.guard, sr:match.scores.rot, li:match.limit, du:match.dur, st:state === 'end' || match.over ? 'end' : state === 'countdown' ? 'cd' : 'play', w:w == null ? 0 : typeof w === 'string' ? w : w.nid || 0, cp:CAPS.map(c => r2(c.prog)), co:CAPS.map(c => c.owner ? c.owner[0] : '0').join(''), td:skyName, ss:season };
   }
   o.bots = fighters.filter(f => f.bot && f !== me && !f.remote && f.nid).map(f => [f.nid, ...packF(f), f.name]);
   o.ev = NET.events.map(x => x.e);
@@ -3002,6 +3049,7 @@ function netMatchIn(m){
     for(const k of ['kills', 'deaths', 'assists', 'score', 'streak', 'best', 'heads', 'shotsF', 'shotsH', 'dmgDone']) me[k] = 0;
     state = 'play'; endT = 0; $('end').hidden = true; $('hud').hidden = false; $('dead').hidden = true; respawn(me);
     if(SKIES[m.td] && m.td !== skyName) applySky(m.td);
+    if(SEASONS[m.ss] && m.ss !== season) applySeason(m.ss);
     announce('Новый бой!', 'хозяин начал снова', 2); requestLock(); updatePause();
     return;
   }
@@ -3270,7 +3318,7 @@ function resize(){
 }
 function applyQuality(){
   const hi = settings.quality === 'high';
-  grassIM.count = hi ? grassIM.userData.full : Math.floor(grassIM.userData.full * 0.45);
+  setGrassCount();
   PR = Math.min(hi ? 2 : 1.25, devicePixelRatio || 1); renderer.setPixelRatio(PR);
   const sz = hi ? 2048 : 1024;
   if(sun.shadow.mapSize.x !== sz){ sun.shadow.mapSize.set(sz, sz); if(sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map = null; } }
@@ -3287,7 +3335,7 @@ function renderMenu(){
   const C = clsOf(menuSel.fac, menuSel.arch), A = ARCH[menuSel.arch], W = A.w;
   const dps = Math.round(W.dmg * W.rate * (W.burst || 1) + (W.splashDmg || 0) * W.rate * 0.5);
   $('cldetail').innerHTML = icon(menuSel.fac, menuSel.arch) + '<span class="role">' + C.role + '</span><b>' + C.name + '</b><p>' + C.desc + '</p><div class="stats"><span>Здоровье <i>' + A.hp + '</i></span><span>Скорость <i>' + A.speed + '</i></span><span>Урон в секунду <i>~' + dps + '</i></span><span>Обойма <i>' + W.mag + '</i></span></div><ul style="grid-column:2"><li><b>Q · ' + C.q[0] + '</b> — ' + C.q[1] + '</li><li><b>E · ' + C.e[0] + '</b> — ' + C.e[1] + '</li></ul>' + profHTML();
-  $('sens').value = settings.sens; $('qual').value = settings.quality; $('tod').value = menuSel.tod; $('music').checked = MUS.on;
+  $('sens').value = settings.sens; $('qual').value = settings.quality; $('tod').value = menuSel.tod; $('season').value = menuSel.season; $('music').checked = MUS.on;
 }
 function profHTML(){
   const key = clsKey(menuSel.fac, menuSel.arch), L = lvlOf(PROF.xp[key]), tot = totalLevel(), cur = PROF.hat[key] || '';
@@ -3299,6 +3347,8 @@ for(const [id, key] of [['m-mode', 'mode'], ['m-fac', 'fac'], ['m-diff', 'diff']
 $('classes').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if(!b) return; menuSel.arch = b.dataset.a; store.set('arch', b.dataset.a); renderMenu(); });
 $('classes').addEventListener('dblclick', e => { if(e.target.closest('[data-a]')) startMatch(); });
 $('sens').addEventListener('input', e => { settings.sens = +e.target.value; store.set('sens', settings.sens); });
+$('season').addEventListener('change', e => { menuSel.season = e.target.value; store.set('season', menuSel.season); });
+const pickSeason = () => SEASONS[menuSel.season] ? menuSel.season : pick(['summer', 'summer', 'autumn', 'winter']);
 $('music').addEventListener('change', e => { audio(); setMusic(e.target.checked); });
 $('tod').addEventListener('change', e => { menuSel.tod = e.target.value; store.set('tod', menuSel.tod); });
 const pickSky = () => { if(SKIES[menuSel.tod]) return menuSel.tod; const r = Math.random(); return r < 0.45 ? 'day' : r < 0.75 ? 'dusk' : 'night'; };
@@ -3381,7 +3431,7 @@ function clearMatch(){
 }
 function startAttract(){
   clearMatch();
-  capReset(); applySky(pick(['day', 'day', 'dusk', 'night']));
+  capReset(); applySky(pick(['day', 'day', 'dusk', 'night'])); applySeason(pick(['summer', 'summer', 'autumn', 'winter']));
   Object.assign(match, { mode:Math.random() < 0.5 ? 'cap' : 'tdm', diff:'normal', limit:1e9, dur:1e9, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:true, attract:true, live:true, frozen:false });
   for(const fac of ['guard', 'rot']) for(const a of ARCHS){ const f = makeFighter({ name:pick(NAMES[fac]), team:fac, fac, arch:a, hat:botHat() }); f.bot = newBot(); }
   for(const f of fighters){ setOutline(f); respawn(f); f.prot = 0; }
@@ -3399,7 +3449,7 @@ function startMatch(){
   clearMatch();
   Object.assign(match, { mode:menuSel.mode, diff:menuSel.diff, limit:menuSel.mode === 'tdm' ? 50 : menuSel.mode === 'cap' ? 150 : 20, dur:480, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:false, attract:false, live:false, frozen:true });
   const pf = menuSel.fac;
-  capReset(); applySky(pickSky());
+  capReset(); applySky(pickSky()); applySeason(pickSeason());
   me = makeFighter({ name:'Ты', team:teamMode() ? pf : 'p0', fac:pf, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(pf, menuSel.arch)] || null });
   const used = new Set(), nameFor = fac => { const l = NAMES[fac].filter(n => !used.has(n)), n = pick(l.length ? l : NAMES[fac]); used.add(n); return n; };
   if(teamMode()){
