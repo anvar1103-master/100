@@ -97,6 +97,12 @@ button{cursor:pointer}
 .ab.ready{border-color:var(--amber);box-shadow:0 0 14px rgba(255,201,77,.35)}
 .ammo{min-width:92px;padding:8px 14px;border-radius:16px;background:var(--glass);border:1px solid var(--line);text-align:right;font:400 38px/1 var(--font-display);font-variant-numeric:tabular-nums}
 .ammo small{font-size:18px;color:var(--muted)}
+.gren{position:relative;display:flex;align-items:center;gap:5px;padding:10px 12px;border-radius:16px;background:var(--glass);border:1px solid var(--line)}
+.gren .k{font:800 11px/1 var(--font-body);color:var(--muted);margin-right:2px}
+.gren i{width:14px;height:18px;border-radius:50% 50% 45% 45%;background:var(--amber);box-shadow:inset -3px -3px 0 rgba(0,0,0,.25)}
+.gren i.off{background:rgba(255,255,255,.12);box-shadow:none}
+.gren b{position:absolute;left:0;bottom:0;height:3px;border-radius:2px;background:var(--amber);opacity:.7}
+@media (pointer:coarse){.gren{display:none}}
 .ammo.low{color:var(--foe)}
 .tags{position:fixed;inset:0;overflow:hidden}
 .tag{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;gap:2px;font:900 12px/1 var(--font-body);white-space:nowrap;will-change:transform;--tc:var(--ally)}
@@ -276,13 +282,14 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
       <div class="ab" id="ab-q"><span class="k">Q</span><span class="n"></span><div class="cd"></div><span class="s"></span></div>
       <div class="ab" id="ab-e"><span class="k">E</span><span class="n"></span><div class="cd"></div><span class="s"></span></div>
     </div>
+    <div class="gren" id="gren" title="Гранаты (G)"><span class="k">G</span><i></i><i></i><b></b></div>
     <div class="ammo" id="ammo">30<small>/30</small></div>
   </div>
   <div class="tc" id="tc" hidden>
     <div class="stick" id="stick"><i></i></div>
     <div class="tbtns">
       <button class="tb" id="t-q">Q</button><button class="tb" id="t-e">E</button><button class="tb fire" id="t-fire">Огонь</button>
-      <button class="tb" id="t-jump">Прыг</button><button class="tb" id="t-aim">Прицел</button><button class="tb" id="t-plant" hidden>Сажать</button>
+      <button class="tb" id="t-jump">Прыг</button><button class="tb" id="t-aim">Прицел</button><button class="tb" id="t-gren">Грана&shy;та</button><button class="tb" id="t-plant" hidden>Сажать</button>
     </div>
     <button class="tb pz" id="t-pause" aria-label="Пауза">II</button>
   </div>
@@ -341,7 +348,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
       <label class="set"><input type="checkbox" id="music"> Музыка</label>
       <label class="set">Графика <select id="qual"><option value="high">Красивая</option><option value="low">Быстрая</option></select></label>
     </div>
-    <p class="keys" id="keys"><span><b>WASD</b> бег</span><span><b>Мышь</b> прицел</span><span><b>ЛКМ</b> огонь</span><span><b>ПКМ</b> прицеливание</span><span><b>Q / E</b> умения</span><span><b>R</b> перезарядка</span><span><b>F</b> посадить в горшок</span><span><b>Пробел</b> прыжок</span><span><b>Shift</b> спринт</span><span><b>Tab</b> счёт</span><span><b>M</b> звук</span></p>
+    <p class="keys" id="keys"><span><b>WASD</b> бег</span><span><b>Мышь</b> прицел</span><span><b>ЛКМ</b> огонь</span><span><b>ПКМ</b> прицеливание</span><span><b>Q / E</b> умения</span><span><b>R</b> перезарядка</span><span><b>G</b> граната</span><span><b>F</b> посадить в горшок</span><span><b>Пробел</b> прыжок</span><span><b>Shift</b> спринт</span><span><b>Tab</b> счёт</span><span><b>M</b> звук</span></p>
   </div>
 </div>
 
@@ -495,6 +502,20 @@ const plankTex = canvasTex(256, 256, (g, w, h) => {
   g.fillStyle = 'rgba(40,28,18,.5)'; for(let y = 0; y < h; y += 64) g.fillRect(0, y, w, 3);
 });
 plankTex.wrapS = plankTex.wrapT = THREE.RepeatWrapping;
+// old mossy masonry for ruins and dry-stone walls
+const stoneTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#6E6A60'; g.fillRect(0, 0, w, h);
+  let y = 0;
+  while(y < h){
+    const rh = rand(22, 40); let x = -rand(0, 30);
+    while(x < w){ const rw = rand(34, 70), v = rand(150, 205); g.fillStyle = 'rgb(' + v + ',' + (v - 4) + ',' + (v - 14) + ')'; g.beginPath(); g.roundRect ? g.roundRect(x + 2, y + 2, rw - 4, rh - 4, 5) : g.rect(x + 2, y + 2, rw - 4, rh - 4); g.fill();
+      for(let i = 0; i < 6; i++){ g.fillStyle = 'rgba(60,55,45,' + rand(0.05, 0.18) + ')'; g.fillRect(x + rand(4, rw - 8), y + rand(4, rh - 8), rand(2, 9), rand(2, 6)); }
+      x += rw; }
+    y += rh;
+  }
+  for(let i = 0; i < 26; i++){ g.fillStyle = 'rgba(90,130,60,' + rand(0.18, 0.4) + ')'; g.beginPath(); g.arc(rand(0, w), rand(0, h), rand(4, 16), 0, TAU); g.fill(); }
+});
+stoneTex.wrapS = stoneTex.wrapT = THREE.RepeatWrapping;
 
 /* ================= map state ================= */
 // every map supplies its terrain and water functions; the season decides whether water is liquid or ice you can walk on
@@ -607,7 +628,17 @@ function segWorld(ax, ay, az, bx, by, bz){
   }
   return best <= 1 ? best : -1;
 }
-function losClear(ax, ay, az, bx, by, bz){ return segWorld(ax, ay, az, bx, by, bz) < 0; }
+// soft cover: thickets you can walk and shoot through, but nobody sees through them (unless standing inside)
+const SOFT = [];
+function softBlocks(ax, ay, az, bx, by, bz){
+  for(const c of SOFT){
+    const dx = ax - c.x, dz = az - c.z; if(dx * dx + dz * dz < c.r * c.r) continue;
+    const t = segCyl(ax, az, bx, bz, c.x, c.z, c.r); if(t < 0) continue;
+    const y = ay + (by - ay) * t; if(y < c.top && y > c.base) return true;
+  }
+  return false;
+}
+function losClear(ax, ay, az, bx, by, bz){ return segWorld(ax, ay, az, bx, by, bz) < 0 && !smokeBlocks(ax, ay, az, bx, by, bz) && !softBlocks(ax, ay, az, bx, by, bz); }
 
 /* ================= wind & helpers ================= */
 const windU = { value:0 };
@@ -705,6 +736,7 @@ const mossTex = canvasTex(64, 128, (g, w, h) => {
 });
 const mossHangM = keep(windify(new THREE.MeshStandardMaterial({ map:mossTex, color:'#B5C49A', alphaTest:0.45, side:THREE.DoubleSide, roughness:1 }), 0.09, true));
 const strandG = keep(new THREE.PlaneGeometry(0.42, 1)); strandG.translate(0, -0.5, 0);
+const blockG = keep(new THREE.BoxGeometry(1, 1, 1)), stoneM = keep(new THREE.MeshStandardMaterial({ color:'#C9C4B6', map:stoneTex, roughness:0.95 }));
 const groundMat = keep(new THREE.MeshStandardMaterial({ map:groundTex, vertexColors:true, roughness:0.97, envMapIntensity:0.6 }));
 // water: per-vertex alpha fades it out towards the shore
 const waterMat = keep(new THREE.MeshStandardMaterial({ color:'#2C7F88', roughness:0.06, metalness:0.05, transparent:true, vertexColors:true, normalMap:waterN, normalScale:new THREE.Vector2(0.35, 0.35), envMapIntensity:1.2 }));
@@ -728,7 +760,9 @@ function kitBegin(){
   K = {
     trunk:IM(trunkG, trunkM, 520), birch:IM(trunkG, birchM, 150), cone:IM(coneG, crownM, 1900), blob:IM(blobG, crownM, 2700),
     dead:IM(trunkG, deadM, 170), branch:IM(branchG, deadM, 1000), moss:IM(strandG, mossHangM, 1500, false),
-    bush:IM(bushG, hedgeM, 760), plank:IM(plankG, plankM, 1400), post:IM(postG, plankM, 900),
+    bush:IM(bushG, hedgeM, 2400), plank:IM(plankG, plankM, 1400), post:IM(postG, plankM, 900),
+    brick:IM(blockG, stoneM, 700), mossTop:IM(blockG, mossM, 700), rubble:IM(rockG, rockM, 500), pal:IM(trunkG, trunkM, 900), palTip:IM(coneG, trunkM, 900),
+    tall:IM(grassG, grassM, 6000, false),
     warm:IM(lampG, warmLampM, 80, false), cold:IM(lampG, coldLampM, 80, false), shelf:IM(shelfG, shelfM, 200),
     lily:IM(bigPadG, bigPadM, 160), petal:IM(lilyFlG, petalM, 700, false),
     stump:IM(stumpG, [logM, logEndM, logM], 140), root:IM(rootG, logM, 700), logs:IM(pileLogG, [logM, logEndM, logEndM], 260)
@@ -752,7 +786,7 @@ function addLog(x1, z1, x2, z2, r){
   const m = new THREE.Mesh(g, [logM, logEndM, logEndM]); m.position.set((x1 + x2) / 2, cy, (z1 + z2) / 2); m.rotation.y = -ang;
   m.castShadow = m.receiveShadow = true; world.add(m);
   for(let i = 0; i < 4; i++){ const t = rand(0.15, 0.85), lx = lerp(x1, x2, t), lz = lerp(z1, z2, t); const mm = new THREE.Mesh(rockG, mossM); mm.scale.set(r * 0.7, r * 0.25, r * 0.7); mm.position.set(lx, cy + r * 0.85, lz); world.add(mm); }
-  for(let t = 0; t <= len; t += r * 1.1){ const px = x1 + Math.cos(ang) * t, pz = z1 + Math.sin(ang) * t, b = groundH(px, pz) - 0.1; addObs(px, pz, r * 0.95, cy + r - b, b); }
+  for(let t = 0; t <= len; t += r * 1.1){ const px = x1 + Math.cos(ang) * t, pz = z1 + Math.sin(ang) * t, b = groundH(px, pz) - 0.1; addObs(px, pz, r * 0.95, cy + r - b, b).walk = 1; }
   return { x:(x1 + x2) / 2, z:(z1 + z2) / 2, y:cy + r };
 }
 // a log leaning from (x1,y1,z1) up to (x2,y2,z2): a ramp you can walk up
@@ -1246,6 +1280,74 @@ function coverChips(n, near){
   im.count = i; im.receiveShadow = true; world.add(im);
 }
 
+/* ================= world kit: cover and lanes ================= */
+// a stretch of old wall; broken (0..1) knocks pieces down to jump-over height
+function stoneWall(x1, z1, x2, z2, h, broken, thick){
+  thick = thick || 0.7;
+  const dx = x2 - x1, dz = z2 - z1, L = Math.hypot(dx, dz), ux = dx / L, uz = dz / L, th = Math.atan2(-uz, ux);
+  const n = Math.max(1, Math.ceil(L / 1.3)), l = L / n;
+  for(let i = 0; i < n; i++){
+    const t = (i + 0.5) * l, cx = x1 + ux * t, cz = z1 + uz * t, y0 = terrainH(cx, cz) - 0.3;
+    const hi = (broken && RNG() < broken ? rand(0.85, 1.15) : h * rand(0.9, 1.05)) + 0.3;
+    put(K.brick, cx, y0 + hi / 2, cz, rand(-0.02, 0.02), th + rand(-0.025, 0.025), rand(-0.02, 0.02), l * 1.03, hi, thick);
+    if(RNG() < 0.65) put(K.mossTop, cx + rand(-0.1, 0.1), y0 + hi + 0.03, cz + rand(-0.1, 0.1), 0, th, 0, l * rand(0.6, 1.05), 0.1, thick * 1.12);
+    if(RNG() < 0.5){ const s = rand(0.25, 0.5), side = RNG() < 0.5 ? -1 : 1; put(K.rubble, cx - uz * side * (thick * 0.6 + s * 0.5), y0 + 0.3 + s * 0.3, cz + ux * side * (thick * 0.6 + s * 0.5), rand(0, 3), rand(0, 6), 0, s); }
+    for(let k = 0, m = Math.max(1, Math.round(l / 0.6)); k < m; k++){ const tt = t - l / 2 + (k + 0.5) * l / m; addObs(x1 + ux * tt, z1 + uz * tt, thick / 2 + 0.14, hi + 0.05, y0); }
+  }
+}
+// a roofless ruined chapel: doorways, a collapsed side you can hop over, a fallen column inside
+function ruin(x, z, rot, w, d){
+  w = w || 10; d = d || 7;
+  const c = Math.cos(rot), s = Math.sin(rot), P = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
+  const seg = (a, b, h, br) => { const [x1, z1] = P(a[0], a[1]), [x2, z2] = P(b[0], b[1]); stoneWall(x1, z1, x2, z2, h, br); };
+  const W = w / 2, D = d / 2;
+  seg([-W, D], [-1.3, D], 2.7, 0.15); seg([1.3, D], [W, D], 2.5, 0.2);
+  seg([-W, -D], [W - 3.2, -D], 2.6, 0.35);
+  seg([-W, -D + 0.4], [-W, -0.6], 2.6, 0); seg([-W, 1.6], [-W, D - 0.4], 1.0, 1);
+  seg([W, -D + 0.4], [W, 0.4], 2.3, 0.3);
+  for(const [lx, lz] of [[-W, D], [W, D], [-W, -D], [W, -D]]){ const [px, pz] = P(lx, lz), y0 = terrainH(px, pz) - 0.3, hh = rand(3, 3.8); put(K.brick, px, y0 + hh / 2, pz, 0, rot + 0.785, 0, 1.05, hh, 1.05); put(K.mossTop, px, y0 + hh + 0.04, pz, 0, rot + 0.785, 0, 1.12, 0.1, 1.12); addObs(px, pz, 0.72, hh, y0); }
+  const [cx1, cz1] = P(-1.5, -0.8), [cx2, cz2] = P(2.2, 1.0), y0 = Math.max(terrainH(cx1, cz1), terrainH(cx2, cz2));
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.45, Math.hypot(cx2 - cx1, cz2 - cz1), 10), stoneM); col.rotation.z = Math.PI / 2; col.rotation.y = Math.atan2(-(cz2 - cz1), cx2 - cx1); col.position.set((cx1 + cx2) / 2, y0 + 0.35, (cz1 + cz2) / 2); col.castShadow = col.receiveShadow = true; world.add(col);
+  for(let t = 0; t <= 1; t += 0.25){ const px = lerp(cx1, cx2, t), pz = lerp(cz1, cz2, t); addObs(px, pz, 0.5, 0.9, y0 - 0.1); }
+}
+// a standing stone
+function menhir(x, z, h){ const y0 = terrainH(x, z) - 0.4, ry = rand(0, TAU); put(K.brick, x, y0 + h / 2, z, rand(-0.05, 0.05), ry, rand(-0.06, 0.06), rand(1.1, 1.5), h, rand(0.8, 1.0)); put(K.mossTop, x, y0 + h + 0.02, z, 0, ry, 0, 1.2, 0.1, 0.9); addObs(x, z, 0.82, h, y0); }
+// a tall clipped hedge along a polyline
+function hedgeWall(pts, h){
+  h = h || 2.5;
+  for(let i = 0; i < pts.length - 1; i++){
+    const [x1, z1] = pts[i], [x2, z2] = pts[i + 1], L = Math.hypot(x2 - x1, z2 - z1);
+    for(let t = 0; t <= L; t += 0.8){
+      const x = x1 + (x2 - x1) * t / L, z = z1 + (z2 - z1) * t / L, y0 = terrainH(x, z);
+      for(let k = 0; k < 3; k++){ const r = rand(0.75, 1.0); put(K.bush, x + rand(-0.15, 0.15), y0 + 0.5 + k * (h - 0.7) / 2, z + rand(-0.15, 0.15), 0, rand(0, 6), 0, r, r * 0.95, r, _c.set(k === 2 ? '#4E9A40' : '#3A8238').offsetHSL(rand(-0.02, 0.02), 0, rand(-0.05, 0.05)).multiplyScalar(0.62)); }
+      addObs(x, z, 0.8, h, y0 - 0.15);
+    }
+  }
+}
+// a fence of sharpened stakes
+function palisade(pts, h){
+  h = h || 2.6;
+  for(let i = 0; i < pts.length - 1; i++){
+    const [x1, z1] = pts[i], [x2, z2] = pts[i + 1], L = Math.hypot(x2 - x1, z2 - z1);
+    for(let t = 0; t <= L; t += 0.42){
+      const x = x1 + (x2 - x1) * t / L, z = z1 + (z2 - z1) * t / L, y0 = terrainH(x, z) - 0.3, hh = h + rand(-0.25, 0.3), tx = rand(-0.05, 0.05), tz = rand(-0.05, 0.05);
+      put(K.pal, x, y0, z, tx, rand(0, 6), tz, 0.2, hh, 0.2); put(K.palTip, x + tz * hh, y0 + hh, z - tx * hh, tx, rand(0, 6), tz, 0.2, 0.42, 0.2);
+    }
+    for(let t = 0; t <= L; t += 0.5){ const x = x1 + (x2 - x1) * t / L, z = z1 + (z2 - z1) * t / L, y0 = terrainH(x, z) - 0.3; addObs(x, z, 0.32, h + 0.25, y0); }
+  }
+}
+// tall grass, reeds or ferns: walk and shoot through it, but nobody sees you inside
+function thicket(x, z, r, kind){
+  const y0 = terrainH(x, z), n = Math.round(r * r * 18);
+  for(let i = 0; i < n; i++){
+    const a = rand(0, TAU), d = Math.sqrt(RNG()) * r, px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d;
+    if(!freeAt(px, pz, 0.15)) continue;
+    const s = rand(1.1, 1.5), hy = rand(2.4, 3.3) * (1 - d / r * 0.25);
+    put(K.tall, px, Math.min(terrainH(px, pz), groundH(px, pz)) - 0.05, pz, 0, rand(0, TAU), 0, s, hy, s, _c.set(kind === 'reed' ? '#8FA85A' : kind === 'dry' ? '#B6B26A' : '#6FA848').offsetHSL(rand(-0.03, 0.03), rand(-0.08, 0.05), rand(-0.08, 0.06)));
+  }
+  SOFT.push({ x, z, r:r * 0.85, base:y0 - 1, top:y0 + 1.85 });
+}
+
 /* ================= maps ================= */
 // each map: terrain h(x,z) (point-symmetric so both sides are fair), water w(x,z), ground colours, and a build() that places everything
 const GUARD_SPAWNS = [[-8, 41], [-4.8, 42], [-1.6, 41], [1.6, 42], [4.8, 41], [8, 42], [-11, 44], [11, 44]];
@@ -1297,6 +1399,15 @@ const MAPS = {
       mushroomHouse(-11, 27, '#B9542B'); mushroomHouse(13, 24, '#C98A2E'); stumpHouse(11, -27); stumpHouse(-13, -24);
       for(const [x, z, k, sc] of [[-24, 16, 'oak', 1], [33, 22, 'pine', 1], [-13, 44, 'oak', 0.9], [35, 43, 'birch', 1], [-35, 33, 'pine', 0.9], [24, 47, 'oak', 0.95], [8, 27, 'birch', 0.9], [-37, -12, 'birch', 0.85]]) both(s => tree(x * s, z * s, k, sc, true));
       boundaryForest(300, ['pine', 'pine', 'pine', 'pine', 'pine', 'pine', 'pine', 'pine', 'pine', 'oak', 'oak', 'oak', 'oak', 'oak', 'oak', 'birch', 'birch', 'birch', 'birch', 'birch']);
+      // cover: a ruined chapel on each flank, a broken wall across the middle path, hedges and tall grass
+      both(s => {
+        const S = (x, z) => [x * s, z * s], R = a => a + (s < 0 ? Math.PI : 0);
+        ruin(...S(-15, 13), R(0.3), 10, 7);
+        stoneWall(...S(-7.5, 19.6), ...S(-2.9, 18.8), 2.4, 0.15); stoneWall(...S(2.9, 18.2), ...S(7.6, 17.0), 2.4, 0.3);
+        stoneWall(...S(8, 12.8), ...S(14.5, 13.8), 2.2, 0.45);
+        hedgeWall([S(24, 11.5), S(25.5, 16), S(31, 18.5)]); hedgeWall([S(-31, 30), S(-26, 32.5)]); hedgeWall([S(-35, 21), S(-33, 15.5)]);
+        thicket(...S(-8, 8.5), 3.2); thicket(...S(19, 18), 3.2); thicket(...S(-23, 8), 3); thicket(...S(-36, 37), 3);
+      });
       coverGrass({}); coverFerns({ p:(x, z) => Math.abs(z - STREAM(x)) < 11 ? 0.5 : 0.18 }); coverFlowers({});
       coverReeds(420); coverLilies(80); coverMushrooms((x, z) => z < -14); coverBushes(140);
     }
@@ -1337,6 +1448,14 @@ const MAPS = {
       mushroomHouse(-14, 36.5, '#9C4A30'); mushroomHouse(14.5, 34, '#B8822E'); stumpHouse(14, -36.5); stumpHouse(-14.5, -34);
       for(const [x, z, k, sc] of [[-27, 31, 'dead', 1], [18, 41, 'dead', 0.9], [-5, 15, 'dead', 0.8], [29, 13, 'swampoak', 0.9], [-38, 24, 'dead', 1.1], [12, 20, 'snag', 1], [33, 46, 'dead', 1], [-18, 13, 'snag', 0.9], [6, 30, 'dead', 0.75], [-31, 46, 'swampoak', 1]]) both(s => tree(x * s, z * s, k, sc, true));
       boundaryForest(260, ['dead', 'dead', 'dead', 'pine', 'pine', 'swampoak', 'swampoak', 'snag']);
+      // cover: chapel ruins around the middle glade, a palisade guarding A, reed beds to hide in
+      both(s => {
+        const S = (x, z) => [x * s, z * s];
+        stoneWall(...S(-6.9, 1.8), ...S(-6.2, 5.2), 2.5, 0.2); stoneWall(...S(-3.4, 6.7), ...S(1.4, 7.1), 2.4, 0.35); stoneWall(...S(4.2, 5.9), ...S(6.6, 3.3), 2.5, 0.2);
+        palisade([S(-13.6, 22.5), S(-14.3, 20.4), S(-15.5, 18.5)]);
+        ruin(...S(23.5, 22.5), 0.6 + (s < 0 ? Math.PI : 0), 7.5, 5.5); stoneWall(...S(-36.5, 5.5), ...S(-32, 4.2), 2.4, 0.3);
+        for(const [x, z, r] of [[-29, 15, 3.2], [9.5, 21.5, 3], [17, 15, 3], [-10, 11.5, 2.8], [30, 27, 3]]) thicket(...S(x, z), r, 'reed');
+      });
       coverDuckweed(80); coverLilies(150); coverReeds(1100);
       coverGrass({ col:() => '#6E9A48', size:1.1, skip:() => RNG() < 0.25 }); coverFerns({ p:() => 0.3 }); coverFlowers({ patches:35, cols:['#FFFFFF', '#FFE14D', '#C69CFF', '#E07BFF'] });
       coverMushrooms(() => RNG() < 0.7, 0.75); coverBushes(90, 0);
@@ -1378,7 +1497,15 @@ const MAPS = {
         bouncePad(...S(-15, 8.5), terrainH(0, 0) + 1, 0, 0);
       });
       for(let i = 0; i < 40; i++){ const a = i / 40 * TAU + rand(-0.05, 0.05), r = 8.2 + rand(-0.35, 0.35); fairy(r * Math.cos(a), r * Math.sin(a)); }
-      for(const [x, z, r, h] of [[-22, 31, 1.8, 1.7], [-27, 24, 1.3, 1.1], [19, 12, 1.6, 1.4], [-34, 4, 1.7, 1.5], [6, 10, 1.2, 1.0], [-6, 31, 1.3, 1.2], [36, 18, 1.5, 1.3], [-18, 40, 1.4, 1.2]]) both(s => addRock(x * s, z * s, r, h));
+      for(const [x, z, r, h] of [[-22, 31, 1.8, 1.7], [-27, 24, 1.3, 1.1], [-34, 4, 1.7, 1.5], [-6, 31, 1.3, 1.2], [36, 18, 1.5, 1.3], [-18, 40, 1.4, 1.2]]) both(s => addRock(x * s, z * s, r, h));
+      // cover: a ring of standing stones round the middle hill, dry-stone walls on the flanks, tall grass
+      both(s => {
+        const S = (x, z) => [x * s, z * s];
+        for(const a of [18, 54, 90, 126, 162]){ const t = a * Math.PI / 180; menhir(...S(Math.cos(t) * 12.5, Math.sin(t) * 12.5), rand(2.5, 3.5)); }
+        ruin(...S(-24, 27), 0.4 + (s < 0 ? Math.PI : 0), 15, 13);
+        stoneWall(...S(-30, 19), ...S(-25, 16.5), 1.9, 0.4); stoneWall(...S(13, 16), ...S(19, 14.5), 2.2, 0.3); stoneWall(...S(-14, 40), ...S(-20, 37), 1.8, 0.5);
+        thicket(...S(-18, 12), 3); thicket(...S(26, 22), 3); thicket(...S(-30, 33), 2.8); thicket(...S(20, 4), 3);
+      });
       both(s => hedgeRow(32.5 * s));
       guardBase(0, BASE_Z); rotBase(0, -BASE_Z);
       mushroomHouse(-13, 36, '#B9542B'); mushroomHouse(15, 37, '#C98A2E'); stumpHouse(13, -36); stumpHouse(-15, -37);
@@ -1429,6 +1556,12 @@ const MAPS = {
       mushroomHouse(-12, 40, '#B9542B'); mushroomHouse(12, 41, '#C98A2E'); stumpHouse(12, -40); stumpHouse(-12, -41);
       for(const [x, z, k, sc] of [[-35, 30, 'pine', 1.05], [33, 8, 'pine', 0.95], [-6, 20, 'birch', 0.45], [19, 28, 'birch', 0.5], [-29, 6, 'birch', 0.5], [30, 33, 'birch', 0.42], [-17, 30, 'birch', 0.4], [5, 15, 'birch', 0.38]]) both(s => tree(x * s, z * s, k, sc, true));
       boundaryForest(320, ['pine', 'pine', 'pine', 'pine', 'birch', 'birch', 'oak']);
+      // cover: stake fences breaking up the middle and the sawmill yard, dry tall grass
+      both(s => {
+        const S = (x, z) => [x * s, z * s];
+        palisade([S(-9.5, 6), S(-4.5, 8.5)]); logPile(...S(-2.6, 2.6), 0.8, 3.6, 2); palisade([S(5, 15.5), S(10.5, 13.5)]); palisade([S(15, 31), S(18, 27)]); palisade([S(-16, 24), S(-12, 27.5)]);
+        thicket(...S(-6, 22), 3, 'dry'); thicket(...S(14.5, 1.5), 2.8, 'dry'); thicket(...S(-31, 1.5), 2.5, 'dry'); thicket(...S(30, 13), 2.8, 'dry');
+      });
       coverGrass({ col:(x, z) => Math.sin(x * 0.07) * Math.sin(z * 0.06) > 0.2 ? '#A8B85A' : '#8EBE52', skip:(x, z) => Math.abs(Math.abs(x) - 22) < 3.4 && Math.abs(z) < 13.5 }); coverFerns({ p:() => 0.1 }); coverFlowers({ patches:50, cols:['#FFFFFF', '#FFE14D', '#FF8FB1', '#C69CFF'] });
       coverFireweed(70); coverReeds(160); coverLilies(24); coverMushrooms((x, z) => z < -14, 0.8); coverBushes(110);
       const spots = [[0, 0, 12], [22, 0, 6], [-22, 0, 6], [23, 38, 5], [-23, -38, 5], [8, 20, 5], [-8, -20, 5], [-7, 29, 4], [7, -29, 4]];
@@ -1460,6 +1593,63 @@ const NAV = [];
 function computeNav(){
   NAV.length = 0;
   for(let x = -MAP_X + 4; x <= MAP_X - 4; x += 6) for(let z = -MAP_Z + 6; z <= MAP_Z - 6; z += 6) if(freeAt(x, z, 1.8) && waterDepth(x, z) < 0.3) NAV.push({ x, z });
+  buildNavGraph();
+}
+/* ---- walking graph for bots: a 3 m grid around walls, preferring dry ground and walkways ---- */
+const NG = 3, NODES = [], NODE_AT = new Map();
+const nkey = (ix, iz) => ix * 1000 + iz;
+// a wall you cannot hop over (walkways, caps and low stuff don't count)
+function navSolid(x, z, pad){ const g = groundH(x, z); return nearObs(x, z, pad, o => !o.mini && !o.walk && o.base < g + 1.9 && o.base + o.h > g + 1.35); }
+function buildNavGraph(){
+  NODES.length = 0; NODE_AT.clear();
+  const nx = Math.floor(MAP_X * 2 / NG), nz = Math.floor(MAP_Z * 2 / NG);
+  for(let ix = 0; ix <= nx; ix++) for(let iz = 0; iz <= nz; iz++){
+    const x = -MAP_X + 1.5 + ix * NG, z = -MAP_Z + 1.5 + iz * NG;
+    if(Math.abs(x) > MAP_X - 1 || Math.abs(z) > MAP_Z - 1 || navSolid(x, z, 0.55)) continue;
+    NODE_AT.set(nkey(ix, iz), NODES.length); NODES.push({ x, z, ix, iz, nb:[] });
+  }
+  const wet = (x, z) => waterDepth(x, z) > 0.3 && !nearObs(x, z, 0.3, o => !!o.mini);
+  for(let ai = 0; ai < NODES.length; ai++) for(const [dx, dz] of [[1, 0], [0, 1], [1, 1], [1, -1]]){
+    const a = NODES[ai];
+    const bi = NODE_AT.get(nkey(a.ix + dx, a.iz + dz)); if(bi === undefined) continue;
+    const b = NODES[bi], L = Math.hypot(b.x - a.x, b.z - a.z), n = Math.ceil(L / 0.6);
+    let ok = true; for(let k = 1; k < n && ok; k++){ const t = k / n; if(navSolid(lerp(a.x, b.x, t), lerp(a.z, b.z, t), 0.45)) ok = false; }
+    if(!ok) continue;
+    const c = L * (wet((a.x + b.x) / 2, (a.z + b.z) / 2) ? 1.8 : 1);
+    a.nb.push(bi, c); b.nb.push(ai, c);
+  }
+}
+function nearestNode(x, z){
+  const ix = Math.round((x + MAP_X - 1.5) / NG), iz = Math.round((z + MAP_Z - 1.5) / NG);
+  let best = -1, bd = 1e9;
+  for(let r = 0; r <= 3 && best < 0; r++) for(let i = -r; i <= r; i++) for(let j = -r; j <= r; j++){
+    if(Math.max(Math.abs(i), Math.abs(j)) !== r) continue;
+    const k = NODE_AT.get(nkey(ix + i, iz + j)); if(k === undefined) continue;
+    const n = NODES[k], d = (n.x - x) ** 2 + (n.z - z) ** 2; if(d < bd){ bd = d; best = k; }
+  }
+  return best;
+}
+// A* over the grid; returns waypoints [[x,z],...] ending at the goal, or null
+function findPath(ax, az, bx, bz){
+  const s = nearestNode(ax, az), t = nearestNode(bx, bz);
+  if(s < 0 || t < 0) return null;
+  if(s === t) return [[bx, bz]];
+  const N = NODES.length, g = new Float32Array(N).fill(Infinity), from = new Int32Array(N).fill(-1), done = new Uint8Array(N);
+  const heap = [], T = NODES[t], h = i => Math.hypot(NODES[i].x - T.x, NODES[i].z - T.z);
+  const push = (i, f) => { heap.push([f, i]); let k = heap.length - 1; while(k > 0){ const p = (k - 1) >> 1; if(heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if(heap.length){ heap[0] = last; let k = 0; for(;;){ const l = k * 2 + 1, r = l + 1; let m = k; if(l < heap.length && heap[l][0] < heap[m][0]) m = l; if(r < heap.length && heap[r][0] < heap[m][0]) m = r; if(m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
+  g[s] = 0; push(s, h(s));
+  let steps = 0;
+  while(heap.length && steps++ < 4000){
+    const [, i] = pop(); if(done[i]) continue; done[i] = 1;
+    if(i === t) break;
+    const nb = NODES[i].nb;
+    for(let k = 0; k < nb.length; k += 2){ const j = nb[k], c = g[i] + nb[k + 1]; if(c < g[j]){ g[j] = c; from[j] = i; push(j, c + h(j)); } }
+  }
+  if(from[t] < 0) return null;
+  const out = [[bx, bz]];
+  for(let i = from[t]; i >= 0 && i !== s; i = from[i]) out.push([NODES[i].x, NODES[i].z]);
+  return out.reverse();
 }
 function freeSpot(x, z, pad){
   if(freeAt(x, z, pad)) return [x, z];
@@ -1483,7 +1673,7 @@ function disposeWorld(){
 function buildWorld(id){
   const def = MAPS[id] || MAPS.stream;
   disposeWorld();
-  clearObs(); PADS.length = 0; for(const k in VEG) delete VEG[k]; K = null;
+  clearObs(); PADS.length = 0; SOFT.length = 0; for(const k in VEG) delete VEG[k]; K = null;
   MAP = def; MAP.id = MAPS[id] ? id : 'stream'; MAP_X = 40; MAP_Z = 52; BASE_Z = 50;
   terrainH = def.h; rawWater = def.w || (() => NOWATER); groundH = terrainH; waterAt = rawWater;
   LANES = def.lanes || [];
@@ -1494,7 +1684,7 @@ function buildWorld(id){
     buildTerrain(); lap();
     def.build(); lap();
     buildPots(def.pots);
-    VEG.bush = K.bush; VEG.cones = K.cone; VEG.blobs = K.blob; VEG.lilyBig = K.lily;
+    VEG.bush = K.bush; VEG.cones = K.cone; VEG.blobs = K.blob; VEG.lilyBig = K.lily; VEG.tall = K.tall;
     for(const k in VEG){ const v = VEG[k]; if(v && v.isInstancedMesh && v.instanceColor) v.userData.base = v.instanceColor.array.slice(); }
     mergeWorld(world); lap();
     buildSpawns(def); computeNav(); buildCaps(def.caps); lap();
@@ -1608,15 +1798,15 @@ function applySeason(s){
   const id = () => {};
   if(season === 'autumn'){
     recolor(VEG.blobs, (c, i) => c.lerp(AUT[i % AUT.length], 0.85)); recolor(VEG.cones, c => c.multiplyScalar(0.85));
-    recolor(VEG.grass, c => c.lerp(T.set('#B9A050'), 0.55)); recolor(VEG.fern, (c, i) => c.lerp(T.set(i % 3 ? '#B8863A' : '#9A5A2A'), 0.65));
+    recolor(VEG.grass, c => c.lerp(T.set('#B9A050'), 0.55)); recolor(VEG.tall, c => c.lerp(T.set('#C2A256'), 0.6)); recolor(VEG.fern, (c, i) => c.lerp(T.set(i % 3 ? '#B8863A' : '#9A5A2A'), 0.65));
     recolor(VEG.bush, (c, i) => c.lerp(AUT[(i * 7) % AUT.length], 0.6)); recolor(VEG.flowers, id); recolor(VEG.mcaps, id);
     recolor(VEG.lilyBig, c => c.lerp(T.set('#8A8A3A'), 0.45)); recolor(VEG.weed, c => c.lerp(T.set('#A8A040'), 0.5)); recolor(VEG.fire, c => c.lerp(T.set('#B07A6A'), 0.5));
   } else if(winter){
     recolor(VEG.blobs, c => c.lerp(SNOW, 0.72)); recolor(VEG.cones, (c, i) => c.lerp(SNOW, 0.42 + (i % 4) * 0.08));
-    recolor(VEG.grass, c => c.lerp(T.set('#C8D4CC'), 0.62)); recolor(VEG.fern, c => c.lerp(T.set('#8A7A62'), 0.6));
+    recolor(VEG.grass, c => c.lerp(T.set('#C8D4CC'), 0.62)); recolor(VEG.tall, c => c.lerp(T.set('#B8AE8E'), 0.55)); recolor(VEG.fern, c => c.lerp(T.set('#8A7A62'), 0.6));
     recolor(VEG.bush, c => c.lerp(SNOW, 0.6)); recolor(VEG.flowers, id); recolor(VEG.mcaps, id);
     recolor(VEG.lilyBig, c => c.lerp(SNOW, 0.55)); recolor(VEG.weed, id); recolor(VEG.fire, c => c.lerp(T.set('#8A6A5A'), 0.7));
-  } else for(const k of ['blobs', 'cones', 'grass', 'fern', 'bush', 'flowers', 'mcaps', 'lilyBig', 'weed', 'fire']) recolor(VEG[k], id);
+  } else for(const k of ['blobs', 'cones', 'grass', 'tall', 'fern', 'bush', 'flowers', 'mcaps', 'lilyBig', 'weed', 'fire']) recolor(VEG[k], id);
   for(const k of ['flowers', 'lily', 'weed']) if(VEG[k]) VEG[k].visible = !winter;
   setGrassCount();
   const col = VEG.ground.geometry.attributes.color, pos = VEG.ground.geometry.attributes.position, base = VEG.groundCol;
@@ -1692,37 +1882,39 @@ function updateWorld(dt){
 
 /* ================= fighter data ================= */
 const ARCH = {
-  soldier:{ hp:200, speed:7, rad:0.5, eye:1.55, h:2.0, body:[0.8, 0.56], head:[1.6, 0.64], headY:1.3, camD:4.3, camS:1.15,
-    w:{ kind:'auto', dmg:11, rate:7, mag:30, reload:1.6, speed:125, spread:0.012, bloom:0.05, headMul:1.5, range:95 }, cdQ:12, cdE:9 },
-  tank:{ hp:300, speed:6.1, rad:0.66, eye:1.8, h:2.3, body:[0.95, 0.72], head:[1.85, 0.72], headY:1.5, camD:5.0, camS:1.5,
+  soldier:{ hp:190, speed:7, rad:0.5, eye:1.55, h:2.0, body:[0.8, 0.56], head:[1.6, 0.64], headY:1.3, camD:4.3, camS:1.15,
+    w:{ kind:'auto', dmg:10, rate:7, mag:30, reload:1.7, speed:125, spread:0.014, bloom:0.055, headMul:1.5, range:95 }, cdQ:12, cdE:9 },
+  tank:{ hp:305, speed:6.1, rad:0.66, eye:1.8, h:2.3, body:[0.95, 0.72], head:[1.85, 0.72], headY:1.5, camD:5.0, camS:1.5,
     w:{ kind:'lob', dmg:36, splash:2.8, splashDmg:30, rate:1.55, mag:6, reload:2.0, speed:58, grav:12, spread:0.004, bloom:0, headMul:1.25, range:110 }, cdQ:14, cdE:8 },
-  scout:{ hp:150, speed:8.6, rad:0.45, eye:1.4, h:1.8, body:[0.75, 0.5], head:[1.45, 0.55], headY:1.18, camD:4.1, camS:1.1,
-    w:{ kind:'rapid', dmg:8, rate:12, mag:45, reload:1.3, speed:145, spread:0.026, bloom:0.03, headMul:1.5, falloff:[16, 0.55], range:75 }, cdQ:5, cdE:10 },
+  scout:{ hp:165, speed:8.9, rad:0.45, eye:1.4, h:1.8, body:[0.75, 0.5], head:[1.45, 0.55], headY:1.18, camD:4.1, camS:1.1,
+    w:{ kind:'shot', pellets:8, dmg:13, rate:1.45, mag:6, reload:1.8, speed:150, spread:0.07, bloom:0, headMul:1.3, falloff:[7, 0.25, 13], range:34, botRange:15 }, cdQ:5, cdE:12 },
   sniper:{ hp:140, speed:6.8, rad:0.45, eye:1.62, h:2.05, body:[0.8, 0.5], head:[1.62, 0.46], headY:1.35, camD:4.3, camS:1.1,
-    w:{ kind:'snipe', dmg:55, rate:0.75, mag:5, reload:2.1, speed:400, spread:0.03, scoped:0.0012, bloom:0, headMul:2.2, range:220 }, cdQ:10, cdE:12 }
+    w:{ kind:'snipe', dmg:50, rate:0.75, mag:5, reload:2.1, speed:400, spread:0.03, scoped:0.0012, bloom:0, headMul:2.2, range:220 }, cdQ:10, cdE:12 }
 };
-ARCH.medic = { hp:160, speed:7.2, rad:0.5, eye:1.5, h:1.95, body:[0.85, 0.6], head:[1.5, 0.52], headY:1.25, camD:4.2, camS:1.1,
-  w:{ kind:'burst', dmg:9, rate:2.3, burst:3, mag:24, reload:1.5, speed:120, spread:0.013, bloom:0.03, headMul:1.5, range:85 }, cdQ:11, cdE:16 };
+ARCH.medic = { hp:180, speed:7.3, rad:0.5, eye:1.5, h:1.95, body:[0.85, 0.6], head:[1.5, 0.52], headY:1.25, camD:4.2, camS:1.1,
+  w:{ kind:'burst', dmg:11, rate:2.3, burst:3, mag:24, reload:1.5, speed:120, spread:0.013, bloom:0.03, headMul:1.5, range:85 }, cdQ:11, cdE:16 };
 ARCH.sentry = { hp:150, speed:0, rad:0.55, eye:1.15, h:1.45, body:[0.8, 0.5], head:[1.24, 0.34], headY:1.1, camD:4, camS:1,
   w:{ kind:'auto', dmg:7, rate:4, mag:9999, reload:1, speed:110, spread:0.02, bloom:0, headMul:1.2, range:50 }, cdQ:999, cdE:999 };
 const ARCHS = ['soldier', 'tank', 'scout', 'sniper', 'medic'];
+// every fighter carries two grenades (G); they come back one at a time
+const GREN = { max:2, regen:14, dmg:60, r:4.2, name:{ guard:'Шишка-граната', rot:'Гнилое яйцо' } };
 const FACTIONS = {
   guard:{ name:'Лесная стража', short:'Стража', color:'#7BE38F', tracer:[0.9, 1.6, 0.45], glow:'#D8FF6A',
     classes:{
       soldier:{ name:'Мухомор', role:'Боец', desc:'Споромёт-автомат. Надёжен на любой дистанции.', q:['Ядовитое облако', 'облако яда в точке прицела'], e:['Споровый прыжок', 'взлёт и удар о землю'] },
       tank:{ name:'Боровик', role:'Танк', desc:'Жёлудемёт бьёт навесом и взрывается. Очень крепкий.', q:['Шляпочный щит', 'почти без урона 4 секунды'], e:['Таран', 'рывок плечом, сбивает врагов'] },
-      scout:{ name:'Лисичка', role:'Разведчик', desc:'Скорострельные иглы вблизи. Быстрая и вёрткая.', q:['Рывок', 'мгновенный рывок, неуязвимость'], e:['Огненный гриб', 'граната с огненными спорами'] },
+      scout:{ name:'Лисичка', role:'Разведчик', desc:'Колючий дробовик: вблизи разносит любого. Быстрая и вёрткая.', q:['Рывок', 'мгновенный рывок, неуязвимость'], e:['Споровая завеса', 'облако спор: враги тебя не видят'] },
       sniper:{ name:'Папоротник', role:'Снайпер', desc:'Тростниковая винтовка. ПКМ — прицел, в голову ×2.', q:['Скачок', 'прыжок назад и маскировка'], e:['Колючий капкан', 'держит и ранит врага'] },
       sentry:{ name:'Крапива', acc:'Крапиву', role:'Часовой', desc:'', q:['', ''], e:['', ''] },
-      medic:{ name:'Дождевик', role:'Лекарь', desc:'Споровый пистолет бьёт очередями. Лечит своих.', q:['Целебные споры', 'лечит себя и союзников рядом'], e:['Целебная грибница', 'грибница лечит всех рядом'] } } },
+      medic:{ name:'Дождевик', role:'Лекарь', desc:'Споровый пистолет бьёт очередями. Свои рядом с ним понемногу лечатся.', q:['Целебные споры', 'лечит себя и союзников рядом'], e:['Целебная грибница', 'грибница лечит всех рядом'] } } },
   rot:{ name:'Гнилое войско', short:'Гниль', color:'#E07BFF', tracer:[1.6, 0.5, 1.5], glow:'#FF6AE6',
     classes:{
       soldier:{ name:'Слизень', role:'Боец', desc:'Слиземёт-автомат. Надёжен на любой дистанции.', q:['Кислотная лужа', 'лужа кислоты в точке прицела'], e:['Слизне-прыжок', 'взлёт и шлепок о землю'] },
       tank:{ name:'Жук-рогач', role:'Танк', desc:'Навесные слизевые бомбы. Толстый панцирь.', q:['Хитиновый панцирь', 'почти без урона 4 секунды'], e:['Рогатый таран', 'рывок рогами, сбивает врагов'] },
-      scout:{ name:'Оса', role:'Разведчик', desc:'Жаломёт вблизи. Быстрая и вёрткая.', q:['Рывок', 'мгновенный рывок, неуязвимость'], e:['Осиное гнездо', 'граната-гнездо'] },
+      scout:{ name:'Оса', role:'Разведчик', desc:'Жальный дробовик: вблизи разносит любого. Быстрая и вёрткая.', q:['Рывок', 'мгновенный рывок, неуязвимость'], e:['Рой мошкары', 'туча мошкары закрывает обзор'] },
       sniper:{ name:'Богомол', role:'Снайпер', desc:'Шипомёт дальнего боя. ПКМ — прицел, в голову ×2.', q:['Скачок', 'прыжок назад и маскировка'], e:['Липкая ловушка', 'держит и ранит врага'] },
       sentry:{ name:'Гнилушка', acc:'Гнилушку', role:'Часовой', desc:'', q:['', ''], e:['', ''] },
-      medic:{ name:'Светлячок', role:'Лекарь', desc:'Искромёт бьёт очередями. Лечит своих.', q:['Тёплый свет', 'лечит себя и союзников рядом'], e:['Фонарик', 'фонарь лечит всех рядом'] } } }
+      medic:{ name:'Светлячок', role:'Лекарь', desc:'Искромёт бьёт очередями. Свои рядом с ним понемногу лечатся.', q:['Тёплый свет', 'лечит себя и союзников рядом'], e:['Фонарик', 'фонарь лечит всех рядом'] } } }
 };
 const NAMES = {
   guard:['Груздь', 'Опёнок', 'Сморчок', 'Рыжик', 'Маслёнок', 'Волнушка', 'Строчок', 'Белянка', 'Подосиновик', 'Ежовик', 'Дубовик', 'Говорушка', 'Вешенка', 'Шампиньон'],
@@ -1793,8 +1985,8 @@ function buildGun(arch, fac, mat, glow){
     cylZ(g, mat, 0, 0, 0.2, 0.2, 0.75, true); cylZ(g, darkM, 0, 0, 0.6, 0.23, 0.1); mk(g, SPH, glow, 0, 0, 0.62, 0.15, 0.15, 0.06);
     const hop = mk(g, SPH, mat, 0, 0.22, -0.05, 0.16, 0.2, 0.16, true); hop.rotation.x = 0.3; mz = 0.72;
   } else if(arch === 'scout'){
-    cylZ(g, mat, 0, 0, 0.1, 0.08, 0.45, true); cylZ(g, darkM, 0, 0.03, 0.45, 0.035, 0.4); cylZ(g, darkM, 0, -0.04, 0.42, 0.03, 0.34);
-    mk(g, BOX, glow, 0, -0.14, 0.05, 0.05, 0.16, 0.08); mz = 0.67;
+    cylZ(g, mat, 0, 0, 0.08, 0.09, 0.42, true); cylZ(g, darkM, -0.045, 0.02, 0.46, 0.045, 0.5); cylZ(g, darkM, 0.045, 0.02, 0.46, 0.045, 0.5);
+    mk(g, BOX, glow, 0, -0.03, 0.27, 0.15, 0.05, 0.12); mk(g, BOX, mat, 0, -0.14, 0.0, 0.06, 0.18, 0.1); mz = 0.72;
   } else if(arch === 'sentry'){
     cylZ(g, mat, 0, 0, 0.16, 0.09, 0.5, true); cylZ(g, darkM, 0, 0, 0.45, 0.05, 0.2); mk(g, SPH, glow, 0, 0, 0.55, 0.06); mz = 0.58;
   } else if(arch === 'medic'){
@@ -2054,7 +2246,8 @@ function animFighter(f, dt){
     return;
   }
   const sp = Math.hypot(f.vx, f.vz), mv = Math.min(1, sp / 4), ph = f.walk * 2.4;
-  g.visible = !(f.invisT > 0 && me && isEnemy(me, f)) && (f === me || state === 'menu' || camera.position.distanceToSquared(V3.set(f.x, f.y + 1, f.z)) > 4.4);
+  // looking through the scope the camera sits inside your own head: hide yourself so fronds and eyes don't cover the view
+  g.visible = !(f.invisT > 0 && me && isEnemy(me, f)) && (f === me ? !(f.arch === 'sniper' && zoom > 0.35 && state !== 'menu') : state === 'menu' || camera.position.distanceToSquared(V3.set(f.x, f.y + 1, f.z)) > 4.4);
   g.position.set(f.x, f.y + M.hover + (M.hover ? Math.sin(time * 5 + f.id) * 0.06 : 0), f.z);
   g.rotation.set(0, f.yaw + Math.PI, 0);
   M.body.position.y = Math.abs(Math.sin(ph)) * 0.07 * mv + Math.sin(time * 2.2 + f.id) * 0.012;
@@ -2097,7 +2290,7 @@ function makeFighter(o){
     hp:A.hp, max:A.hp, alive:false, respawnT:0.2 + Math.random() * 0.4, deathT:0, ammo:A.w.mag, reloadT:0, fireT:0,
     cdQ:0, cdE:0, shieldT:0, invisT:0, dashT:0, dashX:0, dashZ:0, ramT:0, ramHit:null, slowT:0, rootT:0, prot:0, hurtT:99, spreadAcc:0, slam:false,
     kills:0, deaths:0, assists:0, score:0, streak:0, best:0, heads:0, shotsF:0, shotsH:0, dmgDone:0, dmgBy:new Map(), lastKiller:null, lastAtt:null, lastAttT:-9,
-    walk:0, flash:0, flashOn:false, recoil:0, firedT:-9, inp:newInput(), bot:null, M:null, tag:null, nid:null, remote:false, owner:null, human:false, life:0, hat:o.hat || null };
+    walk:0, flash:0, flashOn:false, recoil:0, firedT:-9, inp:newInput(), bot:null, M:null, tag:null, nid:null, remote:false, owner:null, human:false, life:0, hat:o.hat || null, gren:GREN.max, grenT:0 };
   f.M = buildModel(f.fac, f.arch, f.hat); f.M.g.visible = false; scene.add(f.M.g);
   fighters.push(f);
   return f;
@@ -2120,7 +2313,7 @@ function respawn(f){
   f.vx = f.vy = f.vz = f.kx = f.kz = 0; f.yaw = sp.yaw; f.pitch = 0; f.ground = true;
   f.hp = f.max = A.hp; f.ammo = A.w.mag; f.reloadT = 0; f.fireT = 0.3; f.cdQ = f.cdE = 0;
   f.shieldT = f.invisT = f.dashT = f.ramT = f.slowT = f.rootT = 0; f.prot = 2.5; f.hurtT = 99; f.slam = false; f.spreadAcc = 0;
-  f.alive = true; f.deathT = 0; f.dmgBy.clear(); f.inp = newInput(f.yaw); f.life++;
+  f.alive = true; f.deathT = 0; f.dmgBy.clear(); f.inp = newInput(f.yaw); f.life++; f.gren = GREN.max; f.grenT = 0;
   f.M.g.visible = true; f.M.g.rotation.set(0, f.yaw + Math.PI, 0); f.M.g.position.set(f.x, f.y, f.z);
   if(f.bot) botReset(f);
   if(f === me) onMeSpawn();
@@ -2164,6 +2357,8 @@ function stepFighter(f, dt){
   f.shieldT = Math.max(0, f.shieldT - dt); f.invisT = Math.max(0, f.invisT - dt); f.slowT = Math.max(0, f.slowT - dt); f.rootT = Math.max(0, f.rootT - dt); f.prot = Math.max(0, f.prot - dt);
   f.hurtT += dt; f.spreadAcc = Math.max(0, f.spreadAcc - dt * 2.4);
   if(f.hurtT > 5 && f.hp < f.max) f.hp = Math.min(f.max, f.hp + 16 * dt);
+  // a medic quietly patches up everyone around
+  if(f.arch === 'medic' && !match.frozen){ f.auraT = (f.auraT || 0) + dt; if(f.auraT >= 1){ f.auraT = 0; for(const g of fighters) if(g.alive && !g.sentry && !isEnemy(f, g) && g.hp < g.max && Math.hypot(g.x - f.x, g.z - f.z) < 7 && Math.abs(g.y - f.y) < 3) heal(g, g === f ? 3 : 8, f, true); } }
   f.yaw = inp.yaw; f.pitch = clamp(inp.pitch, -1.25, 1.2);
   const sy = Math.sin(f.yaw), cy = Math.cos(f.yaw), fx = -sy, fz = -cy, rx = cy, rz = -sy;
   if(match.frozen){ inp.fire = inp.q = inp.e = inp.jump = false; inp.f = inp.s = 0; }
@@ -2171,6 +2366,8 @@ function stepFighter(f, dt){
   if(inp.e){ inp.e = false; useAbility(f, 'e'); }
   if(inp.reload){ inp.reload = false; startReload(f); }
   if(inp.plant){ inp.plant = false; tryPlant(f); }
+  if(f.gren < GREN.max){ f.grenT += dt; if(f.grenT >= GREN.regen){ f.gren++; f.grenT = 0; } }
+  if(inp.gren){ inp.gren = false; if(f.gren > 0 && !match.frozen && f.dashT <= 0){ f.gren--; f.prot = 0; throwGrenade(f); fxGrenadeThrow(f); } }
   let mx = inp.f * fx + inp.s * rx, mz = inp.f * fz + inp.s * rz;
   const ml = Math.hypot(mx, mz); if(ml > 1){ mx /= ml; mz /= ml; }
   const wa = waterAt(f.x, f.z), wet = wa - groundH(f.x, f.z) > 0.3 && f.y < wa + 0.1;
@@ -2227,10 +2424,16 @@ function fireWeapon(f){
   const moving = Math.hypot(f.vx, f.vz) > 1.5;
   sp *= (1 + f.spreadAcc) * (f.ground ? 1 : 1.6) * (moving ? (W.kind === 'snipe' ? 1.8 : 1.25) : 1);
   f.spreadAcc = Math.min(1.5, f.spreadAcc + (W.bloom || 0));
-  DIR.x += tri() * sp; DIR.y += tri() * sp; DIR.z += tri() * sp; DIR.normalize();
-  if(W.kind === 'snipe') hitscan(f, MZ, DIR, W); else spawnShot(f, MZ, DIR, W);
+  if(W.pellets){
+    const bx = DIR.x, by = DIR.y, bz = DIR.z;
+    for(let i = 0; i < W.pellets; i++){ DIR.set(bx + tri() * sp, by + tri() * sp, bz + tri() * sp).normalize(); spawnShot(f, MZ, DIR, W); }
+    DIR.set(bx, by, bz);
+  } else {
+    DIR.x += tri() * sp; DIR.y += tri() * sp; DIR.z += tri() * sp; DIR.normalize();
+    if(W.kind === 'snipe') hitscan(f, MZ, DIR, W); else spawnShot(f, MZ, DIR, W);
+  }
   if(NET.on && W.kind === 'lob') netEv('l', f.nid, r2(MZ.x), r2(MZ.y), r2(MZ.z), r3(DIR.x), r3(DIR.y), r3(DIR.z));
-  f.recoil = Math.min(1, f.recoil + (W.kind === 'snipe' ? 1 : W.kind === 'lob' ? 0.8 : 0.3));
+  f.recoil = Math.min(1, f.recoil + (W.kind === 'snipe' || W.kind === 'shot' ? 1 : W.kind === 'lob' ? 0.8 : 0.3));
   fxShot(f, W, MZ, DIR);
   if(f.ammo <= 0) startReload(f);
 }
@@ -2253,10 +2456,10 @@ function traceSeg(owner, ax, ay, az, bx, by, bz){
 function applyHit(owner, h, px, py, pz, W, dist){
   if(h.f){
     let dmg = W.dmg;
-    if(W.falloff && dist > W.falloff[0]) dmg *= Math.max(W.falloff[1], 1 - (dist - W.falloff[0]) / 40);
+    if(W.falloff && dist > W.falloff[0]) dmg *= Math.max(W.falloff[1], 1 - (dist - W.falloff[0]) / (W.falloff[2] || 40));
     if(h.head) dmg *= W.headMul;
-    owner.shotsH++;
-    damage(h.f, dmg, owner, { head:h.head, kind:W.kind, x:owner.x, z:owner.z, kb:W.kind === 'lob' ? 3 : W.kind === 'snipe' ? 3 : 0.45 });
+    owner.shotsH += 1 / (W.pellets || 1);
+    damage(h.f, dmg, owner, { head:h.head, kind:W.kind, x:owner.x, z:owner.z, kb:W.kind === 'lob' ? 3 : W.kind === 'snipe' ? 3 : W.pellets ? 0.6 : 0.45 });
   }
   if(W.splash) explode(px, py, pz, W.splash, W.splashDmg, owner, 'lob', h.f);
   fxImpact(px, py, pz, h.f, W, owner, h.head);
@@ -2281,7 +2484,7 @@ function tracerMesh(f, kind){
   let m = tracerPool.pop();
   if(!m){ m = new THREE.Mesh(TRACER_G, new THREE.MeshBasicMaterial({ transparent:true, blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false })); m.frustumCulled = false; }
   m.material.color.setRGB(c[0], c[1], c[2]); m.material.opacity = 1;
-  m.userData.r = kind === 'rapid' ? 0.026 : kind === 'snipe' ? 0.05 : 0.034; m.userData.len = kind === 'rapid' ? 2.4 : 3.4;
+  m.userData.r = kind === 'rapid' || kind === 'shot' ? 0.024 : kind === 'snipe' ? 0.05 : 0.034; m.userData.len = kind === 'rapid' ? 2.4 : kind === 'shot' ? 1.5 : 3.4;
   m.scale.set(0.001, 0.001, 0.001); scene.add(m); return m;
 }
 function freeTracer(m, kind){ scene.remove(m); (kind === 'lob' ? shellPool : tracerPool).push(m); }
@@ -2411,7 +2614,7 @@ function useAbility(f, k){
     let dx = f.inp.f * fx + f.inp.s * cy, dz = f.inp.f * fz - f.inp.s * sy; const L = Math.hypot(dx, dz);
     if(L < 0.2){ dx = fx; dz = fz; } else { dx /= L; dz /= L; }
     f.dashT = 0.22; f.dashX = dx; f.dashZ = dz;
-  } else if(key === 'scoute') throwGrenade(f);
+  } else if(key === 'scoute') throwGrenade(f, null, true);
   else if(key === 'sniperq'){ if(f.rootT > 0) return false; blink(f, -fx, -fz); }
   else if(key === 'snipere') placeTrap(f);
   else if(key === 'medicq') healBurst(f);
@@ -2507,19 +2710,22 @@ function updateTraps(dt){
   }
 }
 const GREN_G = new THREE.IcosahedronGeometry(0.24, 1);
-function throwGrenade(f, st){
+// grenades for everyone (and the scout's smoke pod, which bursts into a cloud instead)
+function throwGrenade(f, st, smoke){
   let s = st;
   if(!s){
     muzzleOf(f, MZ);
     let dx = f.inp.tx - MZ.x, dy = f.inp.ty - MZ.y, dz = f.inp.tz - MZ.z; const L = Math.hypot(dx, dy, dz) || 1;
     dx /= L; dy /= L; dz /= L;
     s = [MZ.x, MZ.y, MZ.z, dx * 21 + f.vx * 0.5, dy * 21 + 5, dz * 21 + f.vz * 0.5];
-    if(NET.on && f.nid) netEv('g', f.nid, ...s.map(r2));
+    if(NET.on && f.nid) netEv('g', f.nid, ...s.map(r2), smoke ? 1 : 0);
   }
   const c = FACTIONS[f.fac].tracer;
-  const m = new THREE.Mesh(GREN_G, new THREE.MeshStandardMaterial({ color:f.fac === 'guard' ? '#FF7A2A' : '#8A7A6A', emissive:new THREE.Color(c[0], c[1], c[2]), emissiveIntensity:0.6, roughness:0.5, flatShading:true }));
+  const col = smoke ? (f.fac === 'guard' ? '#D9D2B0' : '#6A5A4A') : f.fac === 'guard' ? '#7A5230' : '#C9C08A';
+  const m = new THREE.Mesh(GREN_G, new THREE.MeshStandardMaterial({ color:col, emissive:new THREE.Color(c[0], c[1], c[2]), emissiveIntensity:smoke ? 0.25 : 0.6, roughness:0.5, flatShading:true }));
+  if(!smoke) m.scale.set(0.9, 1.25, 0.9);
   m.position.set(s[0], s[1], s[2]); m.castShadow = true; scene.add(m);
-  grenades.push({ owner:f, x:s[0], y:s[1], z:s[2], vx:s[3], vy:s[4], vz:s[5], t:1.5, m });
+  grenades.push({ owner:f, x:s[0], y:s[1], z:s[2], vx:s[3], vy:s[4], vz:s[5], t:smoke ? 1.1 : 1.5, m, smoke:!!smoke });
 }
 function updateGrenades(dt){
   for(let i = grenades.length - 1; i >= 0; i--){
@@ -2534,21 +2740,47 @@ function updateGrenades(dt){
         nx = o.x + ux * (o.r + 0.21); nz = o.z + uz * (o.r + 0.21);
       }
     }
-    const gh = groundH(nx, nz) + 0.2;
-    if(ny < gh){ ny = gh; g.vy = Math.abs(g.vy) * 0.42; g.vx *= 0.7; g.vz *= 0.7; if(g.vy < 1.2) g.vy = 0; }
+    const gh = Math.max(groundH(nx, nz), waterAt(nx, nz)) + 0.2;
+    if(ny < gh){ ny = gh; g.vy = Math.abs(g.vy) * 0.42; g.vx *= 0.7; g.vz *= 0.7; if(g.vy < 1.2) g.vy = 0; if(g.smoke && g.t > 0.15) g.t = 0.15; }
     g.x = clamp(nx, -MAP_X - 4, MAP_X + 4); g.y = ny; g.z = clamp(nz, -MAP_Z - 4, MAP_Z + 4);
     let hit = false;
-    if(!g.owner.remote) for(const f of fighters) if(f.alive && isEnemy(g.owner, f) && Math.hypot(f.x - g.x, f.y + 1 - g.y, f.z - g.z) < 1.15){ hit = true; break; }
+    if(!g.smoke && !g.owner.remote) for(const f of fighters) if(f.alive && isEnemy(g.owner, f) && Math.hypot(f.x - g.x, f.y + 1 - g.y, f.z - g.z) < 1.15){ hit = true; break; }
     g.m.position.set(g.x, g.y, g.z); g.m.rotation.x += dt * 9; g.m.rotation.z += dt * 5;
     if(Math.random() < 0.6){ const c = FACTIONS[g.owner.fac].tracer; emit('glow', g.x, g.y, g.z, 1, { spd:0.4, size:0.3, size1:0.02, life:0.3, col:[Math.min(1, c[0]), Math.min(1, c[1]), Math.min(1, c[2])], g:0 }); }
-    if(g.t <= 0 || hit){ explode(g.x, g.y + 0.3, g.z, 4.5, 65, g.owner, 'grenade'); scene.remove(g.m); g.m.material.dispose(); grenades.splice(i, 1); }
+    if(g.t <= 0 || hit){
+      if(g.smoke) addSmoke(g.owner, g.x, g.y, g.z); else explode(g.x, g.y + 0.3, g.z, GREN.r, GREN.dmg, g.owner, 'grenade');
+      scene.remove(g.m); g.m.material.dispose(); grenades.splice(i, 1);
+    }
   }
 }
-function heal(t, amt, src){
+// smoke clouds hide whoever is inside or behind them (bots lose sight, name tags vanish)
+let smokes = [];
+const SMOKE_R = 4.4;
+function addSmoke(f, x, y, z){
+  smokes.push({ x, y:y + 1.3, z, r:SMOKE_R, t:8, owner:f });
+  SFX.smoke(x, y, z);
+  const c = f.fac === 'guard' ? [0.82, 0.84, 0.7] : [0.45, 0.4, 0.36];
+  emit('soft', x, y + 1, z, 110, { spd:6, up:0.8, size:3.2, size1:4.6, life:1.9, lmin:1.2, col:c, g:0.3, drag:2.5, r:1.2 });
+}
+function updateSmokes(dt){
+  for(let i = smokes.length - 1; i >= 0; i--){
+    const s = smokes[i]; s.t -= dt;
+    if(s.t <= 0){ smokes.splice(i, 1); continue; }
+    const k = Math.min(1, s.t / 1.5), c = s.owner.fac === 'guard' ? [0.8, 0.82, 0.68] : [0.44, 0.39, 0.35];
+    const n = dt * 85 * k; let m = Math.floor(n) + (Math.random() < n % 1 ? 1 : 0);
+    while(m-- > 0){ const a = rand(0, TAU), rr = Math.sqrt(Math.random()) * s.r * 0.85, yy = rand(-1.1, 1.8); emit('soft', s.x + Math.cos(a) * rr, s.y + yy, s.z + Math.sin(a) * rr, 1, { spd:0.5, up:0.4, size:3.4, size1:4.8, life:1.9, lmin:1.4, col:c, g:0.12, drag:2 }); }
+  }
+}
+// does the segment pass through a smoke cloud?
+function smokeBlocks(ax, ay, az, bx, by, bz){
+  for(const s of smokes) if(segSphere(ax, ay, az, bx, by, bz, s.x, s.y, s.z, s.r * 0.92) >= 0) return true;
+  return false;
+}
+function heal(t, amt, src, quiet){
   if(!t.alive || amt <= 0 || match.over) return 0;
-  if(t.remote){ if(NET.on) netEv('hl', t.nid, Math.round(amt)); onHeal(t, Math.round(amt), src); if(src && !src.remote) src.score += Math.round(amt / 5); return amt; }
+  if(t.remote){ if(NET.on) netEv('hl', t.nid, Math.round(amt)); onHeal(t, Math.round(amt), src, quiet); if(src && !src.remote) src.score += Math.round(amt / 5); return amt; }
   const before = t.hp; t.hp = Math.min(t.max, t.hp + amt); const got = t.hp - before;
-  if(got > 0){ onHeal(t, Math.round(got), src); if(src && src !== t && !src.remote) src.score += Math.round(got / 5); }
+  if(got > 0){ onHeal(t, Math.round(got), src, quiet); if(src && src !== t && !src.remote) src.score += Math.round(got / 5); }
   return got;
 }
 function healBurst(f){
@@ -2588,7 +2820,7 @@ function clearCombat(){
   for(const z of zones){ scene.remove(z.m); z.m.geometry.dispose(); z.m.material.dispose(); }
   for(const t of traps) scene.remove(t.mesh);
   for(const g of grenades){ scene.remove(g.m); g.m.material.dispose(); }
-  shots = []; beams = []; zones = []; traps = []; grenades = [];
+  shots = []; beams = []; zones = []; traps = []; grenades = []; smokes = [];
 }
 
 /* ================= bots ================= */
@@ -2654,6 +2886,20 @@ function capGoal(f){
   const c = B.capPt, a = rand(0, TAU), r = f.arch === 'sniper' ? CAP_R + rand(6, 14) : rand(0, CAP_R * 0.7);
   return { x:clamp(c.x + Math.cos(a) * r, -MAP_X + 2, MAP_X - 2), z:clamp(c.z + Math.sin(a) * r, -MAP_Z + 2, MAP_Z - 2) };
 }
+// next point to walk to on the way to (gx,gz): follows the nav graph around walls, replanning when needed
+function botWaypoint(f, gx, gz, chase){
+  const B = f.bot;
+  const key = Math.round(gx / 3) + ',' + Math.round(gz / 3);
+  B.repT = (B.repT || 0) - 1;
+  if(!B.path || B.pathKey !== key || (chase && B.repT <= 0)){
+    B.path = findPath(f.x, f.z, gx, gz); B.pathKey = key; B.pi = 0; B.repT = 45;
+    if(!B.path) return [gx, gz];
+  }
+  while(B.pi < B.path.length - 1 && Math.hypot(B.path[B.pi][0] - f.x, B.path[B.pi][1] - f.z) < 1.7) B.pi++;
+  const w = B.path[B.pi];
+  if(Math.hypot(w[0] - f.x, w[1] - f.z) > 9){ B.path = null; return [gx, gz]; }
+  return w;
+}
 function botSteer(f, dx, dz, A){
   let L = Math.hypot(dx, dz); if(L < 0.01) return [0, 0];
   dx /= L; dz /= L;
@@ -2689,7 +2935,7 @@ function botAbilities(f, T, d, D){
     if(f.cdQ <= 0 && f.hurtT < 0.6 && f.hp < f.max * 0.7) inp.q = true;
     else if(f.cdE <= 0 && d < 10 && Math.abs(angDiff(f.yaw, Math.atan2(-(T.x - f.x), -(T.z - f.z)))) < 0.25) inp.e = true;
   } else if(f.arch === 'scout'){
-    if(f.cdE <= 0 && d > 5 && d < 20) inp.e = true;
+    if(f.cdE <= 0 && (f.hp < f.max * 0.5 || (T.arch === 'sniper' && d > 14) || (d > 10 && d < 30 && Math.random() < 0.3))) inp.e = true;
     else if(f.cdQ <= 0 && (f.hp < f.max * 0.45 || d > 13)) inp.q = true;
   } else if(f.arch === 'sniper'){
     if(f.cdQ <= 0 && d < 9) inp.q = true;
@@ -2731,7 +2977,7 @@ function botThink(f, dt){
     inp.tx = ex - Math.sin(inp.yaw) * cp * dist3; inp.ty = ey + Math.sin(inp.pitch) * dist3; inp.tz = ez - Math.cos(inp.yaw) * cp * dist3;
     const errYaw = Math.abs(angDiff(inp.yaw, yawT - B.ex)), errPit = Math.abs(inp.pitch - (pitT - B.ey)), tol = D.cone + Math.atan2(TA.body[1], d);
     B.losT -= dt; if(B.losT <= 0){ B.losT = 0.2; B.los = losClear(ex, ey, ez, T.x, T.y + T.M.hover + TA.body[0] + 0.2, T.z); }
-    const inRange = d < (W.kind === 'rapid' ? 34 : W.range * 0.85);
+    const inRange = d < (W.botRange || (W.kind === 'rapid' ? 34 : W.range * 0.85));
     let fire = B.los && inRange && B.fireDelay <= 0 && errYaw < tol && errPit < tol * 1.2;
     if(W.kind === 'auto' || W.kind === 'rapid'){ if(f.spreadAcc > 0.9 * D.burst) B.burstT = rand(0.15, 0.4); if(B.burstT > 0){ B.burstT -= dt; fire = false; } }
     inp.fire = fire;
@@ -2740,16 +2986,23 @@ function botThink(f, dt){
     let radial = d > band[1] ? 1 : d < band[0] ? -1 : 0;
     if(B.retreat) radial = -1;
     if(!B.los) radial = 1;
+    let chase = null;
+    if(!B.los && d > 4){ const [cx, cz] = botWaypoint(f, T.x, T.z, true), cl = Math.hypot(cx - f.x, cz - f.z) || 1; chase = [(cx - f.x) / cl, (cz - f.z) / cl]; }
     if(B.strafeT <= 0){ B.strafeT = rand(0.5, 1.6); B.strafeDir = Math.random() < 0.5 ? -1 : 1; if(Math.random() < D.jump * 0.5 && f.arch !== 'sniper') inp.jump = true; }
     const ux = dx / d, uz = dz / d, strafe = inp.scope ? 0.35 : 0.85;
     wantX = ux * radial - uz * B.strafeDir * strafe; wantZ = uz * radial + ux * B.strafeDir * strafe;
+    if(chase){ wantX = chase[0] - uz * B.strafeDir * 0.25; wantZ = chase[1] + ux * B.strafeDir * 0.25; }
     if(B.retreat){ const h = homeOf(f), hl = Math.hypot(h.x - f.x, h.z - f.z) || 1; wantX += (h.x - f.x) / hl * 0.7; wantZ += (h.z - f.z) / hl * 0.7; }
     else if(match.mode === 'cap' && B.capPt && f.arch !== 'sniper'){ const cx = B.capPt.x - f.x, cz = B.capPt.z - f.z, cd = Math.hypot(cx, cz); if(cd > CAP_R * 0.75 && cd < CAP_R + 14){ wantX += cx / cd * 0.9; wantZ += cz / cd * 0.9; } }
     if(B.abilT <= 0){ B.abilT = rand(0.4, 1.0); botAbilities(f, T, d, D); }
+    // grenades: lob one over cover at a target a few metres away, aiming a little high
+    B.grenT = (B.grenT || rand(1, 3)) - dt;
+    if(B.grenT <= 0){ B.grenT = rand(1.8, 4.5); if(f.gren > 0 && d > 6 && d < 21 && (B.los || match.t - B.lastSeenT < 2.5) && Math.random() < D.abil * 0.55){ inp.gren = true; inp.ty += d * 0.18; } }
   } else {
     inp.fire = false; inp.scope = false;
-    if(!B.goal || B.goalT <= 0 || Math.hypot(B.goal.x - f.x, B.goal.z - f.z) < 2.5){ B.goal = botGoal(f); B.goalT = rand(8, 16); }
-    const dx = B.goal.x - f.x, dz = B.goal.z - f.z, d = Math.hypot(dx, dz) || 1;
+    if(!B.goal || B.goalT <= 0 || Math.hypot(B.goal.x - f.x, B.goal.z - f.z) < 2.5){ B.goal = botGoal(f); B.goalT = rand(8, 16); B.path = null; }
+    const [wx, wz] = botWaypoint(f, B.goal.x, B.goal.z);
+    const dx = wx - f.x, dz = wz - f.z, d = Math.hypot(dx, dz) || 1;
     wantX = dx / d; wantZ = dz / d;
     const yawT = Math.atan2(-wantX, -wantZ) + Math.sin(match.t * 0.8 + f.id) * 0.35, mt = D.turn * 0.6 * dt;
     inp.yaw = f.yaw + clamp(angDiff(f.yaw, yawT), -mt, mt); inp.pitch = f.pitch * (1 - Math.min(1, dt * 3));
@@ -2765,7 +3018,7 @@ function botThink(f, dt){
   inp.f = (-sx * fy - sz * fc) * mag; inp.s = (sx * fc - sz * fy) * mag;
   inp.sprint = (!T && B.goal && Math.hypot(B.goal.x - f.x, B.goal.z - f.z) > 8) || (B.retreat && !inp.fire);
   B.stuckT += dt;
-  if(B.stuckT > 1){ const moved = Math.hypot(f.x - B.lx, f.z - B.lz); if(mag > 0.3 && moved < 0.7){ inp.jump = true; B.strafeDir *= -1; B.goal = null; } B.stuckT = 0; B.lx = f.x; B.lz = f.z; }
+  if(B.stuckT > 1){ const moved = Math.hypot(f.x - B.lx, f.z - B.lz); if(mag > 0.3 && moved < 0.7){ inp.jump = true; B.strafeDir *= -1; B.goal = null; B.path = null; } B.stuckT = 0; B.lx = f.x; B.lz = f.z; }
 }
 
 /* ================= audio ================= */
@@ -2803,6 +3056,7 @@ const SFX = {
     if(kind === 'auto'){ nz(o, t, 'bandpass', 1500, 1.1, 0.3 * v, 0.09, 500); tn(o, t, 'triangle', 430, 160, 0.15 * v, 0.08); }
     else if(kind === 'burst'){ nz(o, t, 'bandpass', 2000, 1.3, 0.26 * v, 0.07, 700); tn(o, t, 'sine', 640, 300, 0.12 * v, 0.07); }
     else if(kind === 'rapid'){ nz(o, t, 'bandpass', 2700, 2, 0.2 * v, 0.05); tn(o, t, 'square', 900, 480, 0.04 * v, 0.04); }
+    else if(kind === 'shot'){ nz(o, t, 'lowpass', 2600, 0.7, 0.6 * v, 0.16, 300); nz(o, t, 'highpass', 3000, 0.8, 0.25 * v, 0.05); tn(o, t, 'sine', 120, 45, 0.4 * v, 0.14); nz(o, t + 0.32, 'bandpass', 1800, 4, 0.12 * v, 0.04); nz(o, t + 0.42, 'bandpass', 1300, 4, 0.12 * v, 0.05); }
     else if(kind === 'lob'){ nz(o, t, 'lowpass', 700, 0.8, 0.5 * v, 0.22, 120); tn(o, t, 'sine', 150, 55, 0.5 * v, 0.2); }
     else { nz(o, t, 'highpass', 1800, 0.7, 0.45 * v, 0.06); nz(o, t + 0.01, 'lowpass', 900, 0.7, 0.4 * v, 0.55, 180); tn(o, t, 'sawtooth', 240, 60, 0.16 * v, 0.25); }
   },
@@ -2826,6 +3080,8 @@ const SFX = {
   streak(){ if(!AC || muted) return; const t = AC.currentTime; [784, 988, 1175].forEach((f, i) => tn(master, t + i * 0.07, 'square', f, f, 0.06, 0.2)); },
   heal(){ if(!AC || muted || !ok('heal', 160)) return; const t = AC.currentTime; tn(master, t, 'sine', 660, 990, 0.08, 0.18); tn(master, t + 0.06, 'sine', 990, 1320, 0.06, 0.2); },
   plant(x, y, z){ const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'lowpass', 600, 1, 0.25, 0.3); [392, 523, 659].forEach((f, i) => tn(o, t + i * 0.07, 'triangle', f, f, 0.12, 0.25)); },
+  smoke(x, y, z){ const o = spot(x, y, z); if(!o) return; nz(o, AC.currentTime, 'lowpass', 900, 0.7, 0.5, 0.9, 250); nz(o, AC.currentTime, 'highpass', 2500, 0.7, 0.12, 0.4); },
+  toss(f){ const o = spot(f === me ? undefined : f.x, f.y, f.z); if(!o) return; nz(o, AC.currentTime, 'bandpass', 1100, 1.2, 0.25, 0.18, 2400); },
   snap(x, y, z){ const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'highpass', 2500, 1, 0.35, 0.08); tn(o, t, 'square', 180, 90, 0.12, 0.12); },
   boing(f){ const o = spot(f === me ? undefined : f.x, f.y, f.z); if(!o) return; const t = AC.currentTime; tn(o, t, 'sine', 140, 520, 0.3, 0.32); tn(o, t + 0.02, 'triangle', 280, 900, 0.1, 0.26); nz(o, t, 'lowpass', 500, 1, 0.18, 0.12); }
 };
@@ -2911,6 +3167,7 @@ addEventListener('keydown', e => {
   if(e.code === 'KeyE') me.inp.e = true;
   if(e.code === 'KeyR') me.inp.reload = true;
   if(e.code === 'KeyF') me.inp.plant = true;
+  if(e.code === 'KeyG') me.inp.gren = true;
 });
 addEventListener('keyup', e => { keys[e.code] = false; if(e.code === 'Tab') showBoard(false); });
 addEventListener('blur', () => { for(const k in keys) keys[k] = false; mouse.l = mouse.r = false; showBoard(false); });
@@ -3001,6 +3258,7 @@ if(TOUCH){
   hold('t-e', () => { if(me && me.alive) me.inp.e = true; });
   hold('t-aim', () => { touch.scope = !touch.scope; $('t-aim').style.borderColor = touch.scope ? 'var(--amber)' : ''; });
   hold('t-plant', () => { if(me && me.alive) me.inp.plant = true; });
+  hold('t-gren', () => { if(me && me.alive) me.inp.gren = true; });
 }
 
 /* ================= camera & aim ================= */
@@ -3067,9 +3325,14 @@ const flashL = new THREE.PointLight('#FFE6A0', 0, 9, 2); scene.add(flashL); let 
 function fxShot(f, W, m, d){
   const c = fcol(f);
   if(f === me){ flashL.position.copy(m); flashL.color.setRGB(c[0], c[1], c[2]); flashL.intensity = W.kind === 'lob' || W.kind === 'snipe' ? 9 : 5; flashT = 0.05; }
-  emit('glow', m.x, m.y, m.z, W.kind === 'rapid' ? 2 : 4, { dir:d, spd:W.kind === 'lob' ? 4 : 7, spread:0.6, size:W.kind === 'lob' ? 0.7 : 0.4, size1:0.05, life:0.09, lmin:0.05, col:c, g:0 });
+  emit('glow', m.x, m.y, m.z, W.kind === 'rapid' ? 2 : W.pellets ? 8 : 4, { dir:d, spd:W.kind === 'lob' ? 4 : 7, spread:W.pellets ? 1.2 : 0.6, size:W.kind === 'lob' || W.pellets ? 0.7 : 0.4, size1:0.05, life:0.09, lmin:0.05, col:c, g:0 });
+  if(W.pellets) emit('soft', m.x, m.y, m.z, 4, { dir:d, spd:3, spread:0.6, size:0.4, size1:1.1, life:0.4, col:[0.8, 0.78, 0.7], g:0.4 });
   SFX.shot(f, W.kind);
-  if(f === me){ kickP += W.kind === 'snipe' ? 0.03 : W.kind === 'lob' ? 0.022 : W.kind === 'rapid' ? 0.0025 : 0.005; camShake = Math.max(camShake, W.kind === 'lob' || W.kind === 'snipe' ? 0.25 : 0.06); }
+  if(f === me){ kickP += W.kind === 'snipe' ? 0.03 : W.kind === 'lob' || W.pellets ? 0.024 : W.kind === 'rapid' ? 0.0025 : 0.005; camShake = Math.max(camShake, W.kind === 'lob' || W.kind === 'snipe' || W.pellets ? 0.25 : 0.06); }
+}
+function fxGrenadeThrow(f){
+  SFX.toss(f);
+  if(f === me) killNotice(GREN.name[f.fac] + ' летит! Осталось: <em>' + f.gren + '</em>');
 }
 function fxImpact(x, y, z, hitF, W, owner, head){
   if(hitF){ emit('soft', x, y, z, head ? 12 : 6, { spd:4, up:1, size:0.22, size1:0.05, life:0.45, col:gooCol(hitF), g:-9 }); if(head) emit('glow', x, y, z, 6, { spd:3, size:0.4, size1:0.05, life:0.25, col:[1, 0.85, 0.3], g:0 }); }
@@ -3119,7 +3382,7 @@ function onDamage(t, amt, src, o){
     camShake = Math.max(camShake, Math.min(0.35, amt / 80));
   }
 }
-const KIND_LABEL = { burst:'очередь', auto:'очередь', rapid:'иглы', lob:'бомба', snipe:'выстрел', zone:'отрава', slam:'прыжок', grenade:'граната', ram:'таран', trap:'ловушка' };
+const KIND_LABEL = { burst:'очередь', auto:'очередь', rapid:'иглы', shot:'дробь', lob:'бомба', snipe:'выстрел', zone:'отрава', slam:'прыжок', grenade:'граната', ram:'таран', trap:'ловушка' };
 function onKill(t, killer, o, info){
   emit('soft', t.x, t.y + 1, t.z, 34, { spd:5, up:1.2, size:0.35, size1:0.08, life:0.9, col:gooCol(t), g:-8, r:0.4 });
   emit('glow', t.x, t.y + 1.2, t.z, 16, { spd:3, up:1.5, size:0.5, size1:0.05, life:0.8, col:fcol(t), g:-1, r:0.4 });
@@ -3140,8 +3403,8 @@ function onKill(t, killer, o, info){
   if(info.ended && killer === me) killNotice('<em>+50</em> Прервал серию ' + esc(t.name));
   if(t === me){ deathView.yaw = view.yaw; deathView.pitch = -0.35; me.deathTimer = 0; updatePause(); }
 }
-function onHeal(t, amt, src){
-  if(src === me || t === me){ healNumber(t, amt); SFX.heal(); }
+function onHeal(t, amt, src, quiet){
+  if(src === me || t === me){ healNumber(t, amt); if(!quiet) SFX.heal(); }
   if(Math.random() < 0.5) emit('glow', t.x, t.y + 1.2, t.z, 3, { spd:1, up:2, upMin:1, size:0.35, size1:0.05, life:0.8, col:[0.5, 1, 0.55], g:0.5, r:0.4 });
 }
 function onAssist(t){ me.score += 0; killNotice('<em>+50</em> Помощь: ' + esc(t.name)); }
@@ -3297,6 +3560,8 @@ function updateHud(dt){
   $('hp-bar').style.width = (Math.max(0, me.hp) / me.max * 100).toFixed(1) + '%';
   $('me-box').classList.toggle('low', me.alive && me.hp < me.max * 0.3);
   const am = $('ammo'); html(am, (me.reloadT > 0 ? '…' : me.ammo) + '<small>/' + W.mag + '</small>'); am.classList.toggle('low', me.ammo <= W.mag * 0.2);
+  const gr = $('gren'), gi = gr.querySelectorAll('i'); for(let i = 0; i < gi.length; i++) gi[i].classList.toggle('off', i >= me.gren); gr.lastElementChild.style.width = (me.gren < GREN.max ? me.grenT / GREN.regen * 100 : 0).toFixed(0) + '%';
+  if(TOUCH) html($('t-gren'), me.gren > 0 ? 'Грана&shy;та<small>' + me.gren + '</small>' : '<small>' + Math.ceil(GREN.regen - me.grenT) + '</small>');
   for(const k of ['q', 'e']){
     const el = $('ab-' + k), cd = k === 'q' ? me.cdQ : me.cdE, max = k === 'q' ? A.cdQ : A.cdE;
     el.querySelector('.cd').style.height = (cd / max * 100).toFixed(1) + '%';
@@ -3661,13 +3926,14 @@ function puppetStep(f, dt){
   const sp = Math.hypot(f.vx, f.vz); f.inp.f = sp > 0.6 ? 1 : 0; f.walk += sp * dt;
   f.inp.fire = !!(fl & 4);
   const W = ARCH[f.arch].w;
-  if(f.inp.fire){ f.firedT = match.t; if(W.kind === 'auto' || W.kind === 'rapid' || W.kind === 'burst'){ f.fireT -= dt; if(f.fireT <= 0){ f.fireT += 1 / (W.rate * (W.burst || 1)); visualShot(f, W); } } } else f.fireT = 0;
+  if(f.inp.fire){ f.firedT = match.t; if(W.kind === 'auto' || W.kind === 'rapid' || W.kind === 'burst' || W.pellets){ f.fireT -= dt; if(f.fireT <= 0){ f.fireT += 1 / (W.rate * (W.burst || 1)); visualShot(f, W); } } } else f.fireT = 0;
 }
 function visualShot(f, W){
   muzzleOf(f, MZ);
   const cp = Math.cos(f.pitch); DIR.set(-Math.sin(f.yaw) * cp, Math.sin(f.pitch), -Math.cos(f.yaw) * cp);
-  const sp = W.spread * 1.4; DIR.x += tri() * sp; DIR.y += tri() * sp; DIR.z += tri() * sp; DIR.normalize();
-  spawnShot(f, MZ, DIR, W, true); fxShot(f, W, MZ, DIR);
+  const sp = W.spread * 1.4, bx = DIR.x, by = DIR.y, bz = DIR.z;
+  for(let i = 0, n = W.pellets || 1; i < n; i++){ DIR.set(bx + tri() * sp, by + tri() * sp, bz + tri() * sp).normalize(); spawnShot(f, MZ, DIR, W, true); }
+  DIR.set(bx, by, bz); fxShot(f, W, MZ, DIR);
 }
 function netMatchIn(m){
   if(NET.waiting){ if(m.st !== 'end') clientStart(m); return; }
@@ -3718,7 +3984,7 @@ function netEvent(peer, e){
   } else if(!from || !from.remote) return;
   else if(type === 'z') addZone(from, cl(e[3], -MAP_X, MAP_X), cl(e[4], -MAP_Z, MAP_Z));
   else if(type === 't') placeTrap(from, cl(e[3], -MAP_X, MAP_X), cl(e[4], -MAP_Z, MAP_Z), String(e[5]).slice(0, 40));
-  else if(type === 'g') throwGrenade(from, [cl(e[3], -70, 70), cl(e[4], -30, 60), cl(e[5], -80, 80), cl(e[6], -60, 60), cl(e[7], -60, 60), cl(e[8], -60, 60)]);
+  else if(type === 'g') throwGrenade(from, [cl(e[3], -70, 70), cl(e[4], -30, 60), cl(e[5], -80, 80), cl(e[6], -60, 60), cl(e[7], -60, 60), cl(e[8], -60, 60)], e[9] === 1);
   else if(type === 'l'){ MZ.set(cl(e[3], -70, 70), cl(e[4], -30, 60), cl(e[5], -80, 80)); DIR.set(num(e[6]), num(e[7]), num(e[8])); if(DIR.lengthSq() < 1e-6) return; DIR.normalize(); const W = ARCH[from.arch].w; spawnShot(from, MZ, DIR, W, true); fxShot(from, W, MZ, DIR); }
   else if(type === 'b'){ const W = ARCH.sniper.w, ax = num(e[3]), ay = num(e[4]), az = num(e[5]), bx = num(e[6]), by = num(e[7]), bz = num(e[8]); fxBeam(from, ax, ay, az, bx, by, bz); fxShot(from, W, MZ.set(ax, ay, az), DIR.set(bx - ax, by - ay, bz - az).normalize()); fxImpact(bx, by, bz, null, W, from, false); }
   else if(type === 'a') fxAbility(from, e[3] === 'e' ? 'e' : 'q');
@@ -3975,7 +4241,7 @@ function renderMenu(){
   const md = MAPS[menuSel.map]; $('m-mapd').innerHTML = md ? '<b>' + md.name + '.</b> ' + md.desc : 'Каждый бой — случайная из четырёх локаций.';
   $('classes').innerHTML = ARCHS.map(a => { const C = clsOf(menuSel.fac, a); return '<button class="tile' + (a === menuSel.arch ? ' sel' : '') + '" data-a="' + a + '" aria-pressed="' + (a === menuSel.arch) + '">' + icon(menuSel.fac, a) + '<b>' + C.name + '</b><small>' + C.role + '</small></button>'; }).join('');
   const C = clsOf(menuSel.fac, menuSel.arch), A = ARCH[menuSel.arch], W = A.w;
-  const dps = Math.round(W.dmg * W.rate * (W.burst || 1) + (W.splashDmg || 0) * W.rate * 0.5);
+  const dps = Math.round(W.dmg * W.rate * (W.burst || 1) * (W.pellets || 1) + (W.splashDmg || 0) * W.rate * 0.5);
   $('cldetail').innerHTML = icon(menuSel.fac, menuSel.arch) + '<span class="role">' + C.role + '</span><b>' + C.name + '</b><p>' + C.desc + '</p><div class="stats"><span>Здоровье <i>' + A.hp + '</i></span><span>Скорость <i>' + A.speed + '</i></span><span>Урон в секунду <i>~' + dps + '</i></span><span>Обойма <i>' + W.mag + '</i></span></div><ul style="grid-column:2"><li><b>Q · ' + C.q[0] + '</b> — ' + C.q[1] + '</li><li><b>E · ' + C.e[0] + '</b> — ' + C.e[1] + '</li></ul>' + profHTML();
   $('sens').value = settings.sens; $('qual').value = settings.quality; $('tod').value = menuSel.tod; $('season').value = menuSel.season; $('music').checked = MUS.on;
 }
@@ -4200,7 +4466,7 @@ function tick(dt){
   if(state === 'play') match.t += dt;
   for(const f of fighters) if(f.bot) botThink(f, dt);
   for(const f of fighters) stepFighter(f, dt);
-  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateStations(dt); updateCaps(dt); updatePots(dt);
+  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateSmokes(dt); updateStations(dt); updateCaps(dt); updatePots(dt);
   for(const f of fighters) animFighter(f, dt);
   if(state === 'countdown') countdown(dt);
   if(cmsgT > 0){ cmsgT -= dt; if(cmsgT <= 0) $('cmsg').style.opacity = 0; }
@@ -4241,6 +4507,22 @@ window.__lv = {
   start(o){ Object.assign(menuSel, o || {}); startMatch(true); },
   map(id){ buildWorld(id); startAttract(); }, maps:() => MAP_IDS, get mapId(){ return MAP && MAP.id; },
   obsSig:() => obstacles.length + ':' + obstacles.reduce((a, o) => a + o.x * 3.1 + o.z * 1.7 + o.r * 5 + (o.base + o.h) * 0.3, 0).toFixed(2),
+  plot(nav){
+    const S = 9, W = MAP_X * 2 * S, H = MAP_Z * 2 * S, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d'), mx = x => (x + MAP_X) * S, my = z => (z + MAP_Z) * S;
+    for(let py = 0; py < H; py += 6) for(let px = 0; px < W; px += 6){ const x = px / S - MAP_X, z = py / S - MAP_Z, h = terrainH(x, z), w = rawWater(x, z); g.fillStyle = w > h + 0.05 ? '#3A7FA0' : 'hsl(100,35%,' + clamp(30 + h * 4, 15, 60) + '%)'; g.fillRect(px, py, 6, 6); }
+    for(const l of LANES){ g.strokeStyle = 'rgba(220,190,130,.6)'; g.lineWidth = 2 * S; g.beginPath(); g.moveTo(mx(l[0]), my(l[1])); g.lineTo(mx(l[2]), my(l[3])); g.stroke(); }
+    for(const s of SOFT){ g.fillStyle = 'rgba(170,255,120,.45)'; g.beginPath(); g.arc(mx(s.x), my(s.z), s.r * S, 0, TAU); g.fill(); }
+    for(const o of obstacles){ const gh = terrainH(o.x, o.z); g.fillStyle = o.mini ? 'rgba(230,190,120,.8)' : o.base > gh + 1.9 ? 'rgba(255,120,200,.35)' : o.base + o.h > gh + 1.35 ? 'rgba(10,10,10,.85)' : 'rgba(120,120,120,.8)'; g.beginPath(); g.arc(mx(o.x), my(o.z), Math.max(1, o.r * S), 0, TAU); g.fill(); }
+    if(nav){ g.fillStyle = 'rgba(255,255,255,.5)'; for(const n of NODES) g.fillRect(mx(n.x) - 1, my(n.z) - 1, 2, 2); }
+    for(const cp of CAPS){ g.strokeStyle = '#FFD24D'; g.lineWidth = 3; g.beginPath(); g.arc(mx(cp.x), my(cp.z), CAP_R * S, 0, TAU); g.stroke(); g.fillStyle = '#FFD24D'; g.font = 'bold 28px sans-serif'; g.fillText(cp.id, mx(cp.x) - 9, my(cp.z) + 10); }
+    for(const sp of SPAWNS.guard) { g.fillStyle = '#5BF07A'; g.fillRect(mx(sp.x) - 4, my(sp.z) - 4, 8, 8); }
+    for(const sp of SPAWNS.rot) { g.fillStyle = '#E07BFF'; g.fillRect(mx(sp.x) - 4, my(sp.z) - 4, 8, 8); }
+    for(const sp of SPAWNS.ffa) { g.strokeStyle = '#fff'; g.strokeRect(mx(sp.x) - 4, my(sp.z) - 4, 8, 8); }
+    g.strokeStyle = 'rgba(255,255,255,.15)'; g.lineWidth = 1; for(let x = -40; x <= 40; x += 10){ g.beginPath(); g.moveTo(mx(x), 0); g.lineTo(mx(x), H); g.stroke(); } for(let z = -50; z <= 50; z += 10){ g.beginPath(); g.moveTo(0, my(z)); g.lineTo(W, my(z)); g.stroke(); }
+    return c.toDataURL('image/png');
+  },
+  path:(ax, az, bx, bz) => findPath(ax, az, bx, bz), navInfo:() => ({ nodes:NODES.length, edges:NODES.reduce((a, n) => a + n.nb.length / 2, 0) / 2 }),
   pads:() => PADS.map(p => ({ x:p.x, z:p.z, top:p.top, v:p.v, dx:p.dx, dz:p.dz })), ceil:(x, z, y) => ceilingH(x, z, y, 0.4), arch:a => ARCH[a],
   cam(a){ dbgCam = a || null; }, env(t, se){ applySky(t); applySeason(se); }, h:(x, z) => groundH(x, z), sup:(x, z, y) => supportH(x, z, y, 0.4),
   world:() => ({ ms:buildWorld.ms, obs:obstacles.length, nav:NAV.length, pads:PADS.length, ffa:SPAWNS.ffa.length, pots:POTS.length, calls:renderer.info.render.calls, tris:renderer.info.render.triangles, geos:renderer.info.memory.geometries, tex:renderer.info.memory.textures, progs:renderer.info.programs.length }),
