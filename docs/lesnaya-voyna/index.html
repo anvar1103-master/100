@@ -115,6 +115,7 @@ button{cursor:pointer}
 .dmg.heal{color:#8CFFA8;font-size:19px}
 #m-mode button{flex:1 1 40%}
 .seg.map button{flex:1 1 28%;padding:8px 10px;font-size:15px;align-items:center;text-align:center}
+.seg.map.dim button{opacity:.4}
 .mapd{font:700 12.5px/1.35 var(--font-body);color:var(--ink-2);min-height:2.7em}
 .mapd b{color:var(--amber);font-weight:800}
 .caps{display:flex;gap:4px;justify-content:center;margin-top:4px}
@@ -320,6 +321,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
           <button data-v="tdm">Командный бой<small>6 на 6, до 50 побед</small></button>
           <button data-v="ffa">Каждый сам за себя<small>8 бойцов, до 20</small></button>
           <button data-v="cap">Захват полян<small>3 поляны, до 150 очков</small></button>
+          <button data-v="duel">Дуэль<small>1 на 1 на арене, до 10 побед</small></button>
         </div></div>
         <div class="grp"><span class="lbl">Локация</span><div class="seg map" id="m-map">
           <button data-v="rand">Любая</button><button data-v="stream">Ручей</button><button data-v="swamp">Болото</button><button data-v="hills">Холмы</button><button data-v="clearing">Вырубка</button>
@@ -925,9 +927,9 @@ function stumpHouse(x, z){
 const TC = {}; for(const [k, v] of Object.entries({ g1:'#8CC452', g2:'#5F9E3B', dry:'#BCC062', dirt:'#B0915F', mud:'#76693F', bed:'#4A5636', rot:'#6E5A55', rotP:'#7B5E8E', lush:'#79CF5A', forest:'#4C7A33', saw:'#D2B27A', chips:'#C79A5E', peat:'#4E5534', moss:'#5E8C3A', fire:'#A9677E' })) TC[k] = new THREE.Color(v);
 // tints every map shares: around the bases and along the dirt lanes
 function tintCommon(c, x, z, h, lane){
-  const gb = Math.hypot(x, z - BASE_Z), rb = Math.hypot(x, z + BASE_Z);
-  if(gb < 28) c.lerp(TC.lush, clamp((28 - gb) / 20, 0, 0.45));
-  if(rb < 30){ const u = clamp((30 - rb) / 18, 0, 1); c.lerp(TC.rot, u * 0.75); if(Math.sin(x * 0.6) * Math.sin(z * 0.5) > 0.3) c.lerp(TC.rotP, u * 0.35); }
+  const gb = Math.hypot(x, z - BASE_Z), rb = Math.hypot(x, z + BASE_Z), k = BASE_Z / 50;
+  if(gb < 28 * k) c.lerp(TC.lush, clamp((28 * k - gb) / (20 * k), 0, 0.45));
+  if(rb < 30 * k){ const u = clamp((30 * k - rb) / (18 * k), 0, 1); c.lerp(TC.rot, u * 0.75); if(Math.sin(x * 0.6) * Math.sin(z * 0.5) > 0.3) c.lerp(TC.rotP, u * 0.35); }
   if(lane !== false){ const pd = pathD(x, z); if(pd < 2.2) c.lerp(lane || TC.dirt, clamp((2.2 - pd) / 1.2, 0, 0.85)); }
 }
 function buildTerrain(){
@@ -1363,6 +1365,38 @@ const clearBase = (x, z) => 0.6 * Math.sin(x * 0.06) * Math.sin(z * 0.05) + 0.5 
 const pondLevel = P => clearBase(P[0], P[1]) - 0.55;
 
 const MAPS = {
+  arena:{
+    name:'Лесная арена', short:'Арена', seed:55, duel:true, X:20, Z:26, baseZ:24, water:'#2F6E78',
+    desc:'Маленькая поляна для дуэли: руины в центре, два фланга, гриб с батутом на каждой стороне.',
+    caps:[[-9, 9], [0, 0], [9, -9]], pots:[[-7, 18]],
+    spawns:[[-4, 22], [0, 23], [4, 22], [-8, 21], [8, 21]],
+    ffa:[[-14, 20], [12, 21], [0, 11], [-16, 6]],
+    lanes:(() => { const loop = [[0, 22], [-12, 16], [-15, 4], [-12, -8], [0, -16]], mid = [[0, 22], [0, 10]]; return lanesOf(loop, mirror(loop), mid, mirror(mid)); })(),
+    h(x, z){
+      let h = 0.45 * Math.sin(x * 0.18) * Math.sin(z * 0.15) + 0.35 * Math.cos(x * 0.11 + z * 0.09) + 0.25 * Math.cos(z * 0.2) * Math.cos(x * 0.16);
+      const r = Math.hypot(x / 20, z / 26); h += sstep(0.7, 1.0, r) * 1.2;
+      for(const s of [1, -1]){ const d = Math.hypot(x, z - 23 * s); if(d < 8) h += (1 - d / 8) ** 2 * 1.2; }
+      return h + edgeRise(x, z);
+    },
+    color(c, x, z, h){
+      c.copy(TC.g1).lerp(TC.g2, clamp(0.5 + Math.sin(x * 0.2) * Math.sin(z * 0.17) * 0.6, 0, 1));
+      const dn = Math.sin(x * 0.12 + 1) * Math.sin(z * 0.1); if(dn > 0.5) c.lerp(TC.dry, 0.4);
+      tintCommon(c, x, z, h); tintEdge(c, x, z);
+    },
+    build(){
+      both(s => {
+        const S = (x, z) => [x * s, z * s], R = a => a + (s < 0 ? Math.PI : 0);
+        stoneWall(...S(-13, 6), ...S(-9, 10.5), 2.4, 0.25); hedgeWall([S(10, 9), S(14, 4.5)]);
+        addLog(...S(-4, 15.5), ...S(3, 17), 0.6); addRock(...S(7, 14), 1.4, 1.3); addRock(...S(-15, 15), 1.6, 1.5); addRock(...S(15, -2), 1.3, 1.1);
+        const a = S(15, 16), g = giantMushroomTop(...a, 'agaric', terrainH(...a) + 4.6, 3.2, 0.7); bouncePad(...S(10.5, 18.5), g.top, g.x, g.z);
+        thicket(...S(-14, -1), 2.6); thicket(...S(5, 7), 2.2);
+        if(s > 0) mushroomHouse(-11, 23, '#B9542B'); else stumpHouse(11, -23);
+      });
+      ruin(0, 0, 0.785, 7, 7);
+      boundaryForest(240, ['pine', 'pine', 'pine', 'oak', 'oak', 'birch', 'birch']);
+      coverGrass({}); coverFerns({ p:() => 0.2 }); coverFlowers({ patches:40 }); coverMushrooms((x, z) => z < -8, 0.8); coverBushes(60);
+    }
+  },
   stream:{
     name:'Поляна у ручья', short:'Ручей', seed:11, water:'#2C7F88',
     desc:'Ручей делит поляну пополам: брод по камням, бревно-мост и три тропы.',
@@ -1569,7 +1603,7 @@ const MAPS = {
     }
   }
 };
-const MAP_IDS = Object.keys(MAPS);
+const MAP_IDS = Object.keys(MAPS).filter(k => !MAPS[k].duel);
 function tintEdge(c, x, z){ const e = Math.max(Math.abs(x) - MAP_X, Math.abs(z) - MAP_Z); if(e > -2) c.lerp(TC.forest, clamp((e + 2) / 10, 0, 0.85)); }
 // a giant mushroom whose cap top lands at an absolute height
 function giantMushroomTop(x, z, kind, top, R, stemR){
@@ -1658,7 +1692,7 @@ function freeSpot(x, z, pad){
 }
 function buildSpawns(def){
   SPAWNS.guard.length = SPAWNS.rot.length = SPAWNS.ffa.length = 0;
-  for(const [x0, z0] of GUARD_SPAWNS){ const [x, z] = freeSpot(x0, z0, 0.9); SPAWNS.guard.push({ x, z, yaw:0 }); const [rx, rz] = freeSpot(-x0, -z0, 0.9); SPAWNS.rot.push({ x:rx, z:rz, yaw:Math.PI }); }
+  for(const [x0, z0] of def.spawns || GUARD_SPAWNS){ const [x, z] = freeSpot(x0, z0, 0.9); SPAWNS.guard.push({ x, z, yaw:0 }); const [rx, rz] = freeSpot(-x0, -z0, 0.9); SPAWNS.rot.push({ x:rx, z:rz, yaw:Math.PI }); }
   for(const [x0, z0] of def.ffa) for(const s of [1, -1]){ const [x, z] = freeSpot(x0 * s, z0 * s, 1.2); SPAWNS.ffa.push({ x, z, yaw:Math.atan2(x, z) }); }
 }
 function disposeWorld(){
@@ -1674,7 +1708,8 @@ function buildWorld(id){
   const def = MAPS[id] || MAPS.stream;
   disposeWorld();
   clearObs(); PADS.length = 0; SOFT.length = 0; for(const k in VEG) delete VEG[k]; K = null;
-  MAP = def; MAP.id = MAPS[id] ? id : 'stream'; MAP_X = 40; MAP_Z = 52; BASE_Z = 50;
+  MAP = def; MAP.id = MAPS[id] ? id : 'stream'; MAP_X = def.X || 40; MAP_Z = def.Z || 52; BASE_Z = def.baseZ || MAP_Z - 2;
+  for(const k in baseFx) delete baseFx[k];
   terrainH = def.h; rawWater = def.w || (() => NOWATER); groundH = terrainH; waterAt = rawWater;
   LANES = def.lanes || [];
   RNG = seeded(def.seed);
@@ -1848,8 +1883,8 @@ function updateWorld(dt){
   skyU.t.value = time; windU.value = time;
   waterN.offset.x = (waterN.offset.x + dt * 0.025) % 1; waterN.offset.y = Math.sin(time * 0.2) * 0.05;
   for(const s of shafts) s.material.opacity = (0.02 + Math.sin(time * 0.5 + s.userData.ph) * 0.01) * (s.userData.k === undefined ? 1 : s.userData.k);
-  const gl = 2.2 + Math.sin(time * 1.6) * 0.5; baseFx.guardMat.emissiveIntensity = gl; baseFx.gills.emissiveIntensity = 0.3 + Math.sin(time * 1.6) * 0.08;
-  baseFx.rotMat.emissiveIntensity = 1.1 + Math.sin(time * 2.3) * 0.35; baseFx.rotLight.intensity = 55 + Math.sin(time * 2.3) * 12;
+  if(baseFx.guardMat){ baseFx.guardMat.emissiveIntensity = 2.2 + Math.sin(time * 1.6) * 0.5; baseFx.gills.emissiveIntensity = 0.3 + Math.sin(time * 1.6) * 0.08; }
+  if(baseFx.rotMat){ baseFx.rotMat.emissiveIntensity = 1.1 + Math.sin(time * 2.3) * 0.35; baseFx.rotLight.intensity = 55 + Math.sin(time * 2.3) * 12; }
   if(season === 'winter'){
     const cx = camera.position.x, cy = camera.position.y, cz = camera.position.z;
     for(let i = 0; i < moteN; i++){ const m = moteSeed[i], ox = ((m.x * 0.6 + 30 + Math.sin(time * 0.3 + m.p) * 2) % 30 + 30) % 30 - 15, oz = ((m.z * 0.6 + 30) % 30 + 30) % 30 - 15; motePos[i * 3] = cx + ox * 1.6; motePos[i * 3 + 1] = cy - 6 + ((m.y * 3 - time * (0.9 + m.s) + 1000) % 14); motePos[i * 3 + 2] = cz + oz * 1.6 + Math.cos(time * 0.4 + m.p) * 0.6; }
@@ -2553,7 +2588,7 @@ function damage(t, amt, src, o){
   return amt;
 }
 function killFighter(t, src, o){
-  t.alive = false; t.hp = 0; t.deaths++; t.deathT = 0; t.respawnT = match.mode === 'ffa' ? 4 : 6;
+  t.alive = false; t.hp = 0; t.deaths++; t.deathT = 0; t.respawnT = match.mode === 'duel' ? 3 : match.mode === 'ffa' ? 4 : 6;
   t.shieldT = t.invisT = t.dashT = t.ramT = t.slowT = t.rootT = 0; t.reloadT = 0; t.slam = false;
   const prevStreak = t.streak; t.streak = 0;
   const killer = src && src !== t ? src : (t.lastAtt && match.t - t.lastAttT < 5 ? t.lastAtt : null);
@@ -2567,7 +2602,7 @@ function killFighter(t, src, o){
       if(o.head) credit.heads++;
       revenge = credit.lastKiller === t; if(revenge) credit.lastKiller = null;
     }
-    if(match.mode === 'tdm' && (!NET.on || NET.role === 'host') && (killer.team === 'guard' || killer.team === 'rot')) match.scores[killer.team]++;
+    if((match.mode === 'tdm' || match.mode === 'duel') && (!NET.on || NET.role === 'host') && (killer.team === 'guard' || killer.team === 'rot')) match.scores[killer.team]++;
     for(const [g, tm] of t.dmgBy) if(g !== killer && match.t - tm < 8 && isEnemy(g, t) && fighters.includes(g)){ if(g.remote){ if(g.nid) assists.push(g.nid); } else { g.assists++; g.score += 50; if(g === me) onAssist(t); } }
   }
   if(NET.on) netKill(t, killer, o, assists);
@@ -2836,7 +2871,7 @@ function botHurt(f, src){
   const B = f.bot; if(!src || src === f || !f.alive) return;
   if(!B.target || B.target === src || Math.random() < 0.4){ B.lastSeen = { x:src.x, z:src.z }; B.lastSeenT = match.t; B.hunt = src; B.reactT = Math.min(B.reactT, 0.1); }
 }
-function homeOf(f){ return teamMode() ? { x:0, z:f.team === 'guard' ? 40 : -40 } : { x:f.x * 0.5, z:f.z * 0.5 }; }
+function homeOf(f){ return teamMode() ? { x:0, z:(f.team === 'guard' ? 1 : -1) * (BASE_Z - 10) } : { x:f.x * 0.5, z:f.z * 0.5 }; }
 function botPerceive(f, D){
   const B = f.bot, A = ARCH[f.arch], ex = f.x, ey = f.y + A.eye, ez = f.z, sy = Math.sin(f.yaw), cy = Math.cos(f.yaw);
   const range = f.sentry ? 50 : f.arch === 'sniper' ? 120 : 78;
@@ -2867,7 +2902,7 @@ function botGoal(f){
   for(const g of fighters) if(g.alive && isEnemy(f, g) && match.t - g.firedT < 2){ const d = Math.hypot(g.x - f.x, g.z - f.z); if(d < hd){ hd = d; heard = g; } }
   if(heard && Math.random() < 0.7 && f.arch !== 'sniper') return { x:heard.x + rand(-5, 5), z:heard.z + rand(-5, 5) };
   if(match.mode === 'cap') return capGoal(f);
-  if(teamMode()){
+  if(teamMode() && match.mode !== 'duel'){
     if(me && me.alive && !isEnemy(me, f) && Math.random() < 0.3) return { x:clamp(me.x + rand(-6, 6), -MAP_X + 2, MAP_X - 2), z:clamp(me.z + rand(-6, 6), -MAP_Z + 2, MAP_Z - 2) };
     const side = f.team === 'guard' ? 1 : -1, want = f.arch === 'sniper' ? rand(-8, 16) : rand(-32, 10);
     const cand = NAV.filter(n => Math.abs(n.z * side - want) < 9);
@@ -3639,7 +3674,7 @@ function showBoard(on){ if(on && inGame() && me){ $('board-c').innerHTML = board
    A shooter decides its hits and sends them to the target's owner, who applies the damage
    and reports the kill. Transports: claude.ai room (artifact), PeerJS (web), BroadcastChannel (tests). */
 const NET_V = 2;
-const MODE_NAMES = { tdm:'Командный бой', ffa:'Каждый сам за себя', cap:'Захват полян' };
+const MODE_NAMES = { tdm:'Командный бой', ffa:'Каждый сам за себя', cap:'Захват полян', duel:'Дуэль' };
 const NET = { kind:null, roomNs:null, lobby:null, room:null, on:false, role:null, code:null, myPeer:null, waiting:false,
   nick:'', seq:0, events:[], info:new Map(), lastObj:new Map(), remote:new Map(), sendT:0, lobbyT:0, balT:1, epoch:0,
   hostPeer:null, hostSeen:0, botSeq:0, trapSeq:0, busy:false };
@@ -3792,11 +3827,13 @@ async function netJoin(code){
 function clientStart(m){
   NET.waiting = false; NET.epoch = num(m.ep);
   clearMatch();
-  const mode = m.md === 'ffa' ? 'ffa' : m.md === 'cap' ? 'cap' : 'tdm';
+  const mode = MODE_NAMES[m.md] ? m.md : 'tdm';
+  // in a duel you always stand against the host
+  const fac = mode === 'duel' && (m.hf === 'guard' || m.hf === 'rot') ? (m.hf === 'guard' ? 'rot' : 'guard') : menuSel.fac;
   const mp = MAPS[m.mp] ? m.mp : 'stream'; if(!MAP || MAP.id !== mp) buildWorld(mp);
   capReset(); applySky(SKIES[m.td] ? m.td : 'day'); applySeason(SEASONS[m.ss] ? m.ss : 'summer');
   Object.assign(match, { mode, diff:DIFF[m.df] ? m.df : 'normal', limit:cl(m.li, 1, 999), dur:cl(m.du, 30, 3600), t:num(m.t), scores:{ guard:num(m.sg) | 0, rot:num(m.sr) | 0 }, over:false, winner:null, firstBlood:true, attract:false, live:true, frozen:false });
-  me = makeFighter({ name:'Ты', team:mode !== 'ffa' ? menuSel.fac : 'p' + NET.myPeer, fac:menuSel.fac, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(menuSel.fac, menuSel.arch)] || null });
+  me = makeFighter({ name:'Ты', team:mode !== 'ffa' ? fac : 'p' + NET.myPeer, fac, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(fac, menuSel.arch)] || null });
   me.nid = 'p' + NET.myPeer; setOutline(me); respawn(me); me.prot = 1.5;
   renderScore(); renderMeBox(); renderAbil(true);
   state = 'play'; endT = 0;
@@ -3826,7 +3863,7 @@ function netPack(){
   if(me) o.me = packF(me);
   if(NET.role === 'host'){
     const w = match.winner;
-    o.m = { ep:NET.epoch, md:match.mode, df:match.diff, t:r2(match.t), sg:match.scores.guard, sr:match.scores.rot, li:match.limit, du:match.dur, st:state === 'end' || match.over ? 'end' : state === 'countdown' ? 'cd' : 'play', w:w == null ? 0 : typeof w === 'string' ? w : w.nid || 0, cp:CAPS.map(c => r2(c.prog)), co:CAPS.map(c => c.owner ? c.owner[0] : '0').join(''), td:skyName, ss:season, mp:MAP.id };
+    o.m = { ep:NET.epoch, md:match.mode, df:match.diff, t:r2(match.t), sg:match.scores.guard, sr:match.scores.rot, li:match.limit, du:match.dur, st:state === 'end' || match.over ? 'end' : state === 'countdown' ? 'cd' : 'play', w:w == null ? 0 : typeof w === 'string' ? w : w.nid || 0, cp:CAPS.map(c => r2(c.prog)), co:CAPS.map(c => c.owner ? c.owner[0] : '0').join(''), td:skyName, ss:season, mp:MAP.id, hf:me ? me.fac : 0 };
   }
   o.bots = fighters.filter(f => f.bot && f !== me && !f.remote && f.nid).map(f => [f.nid, ...packF(f), f.name]);
   o.ev = NET.events.map(x => x.e);
@@ -3976,7 +4013,7 @@ function netEvent(peer, e){
       c.kills++; c.streak++; c.best = Math.max(c.best, c.streak); c.score += 100 + (head ? 25 : 0); if(head) c.heads++;
       revenge = c.lastKiller === v; if(revenge) c.lastKiller = null;
     }
-    if(NET.role === 'host' && match.mode === 'tdm' && k && !v.sentry && (k.team === 'guard' || k.team === 'rot')) match.scores[k.team]++;
+    if(NET.role === 'host' && (match.mode === 'tdm' || match.mode === 'duel') && k && !v.sentry && (k.team === 'guard' || k.team === 'rot')) match.scores[k.team]++;
     if(Array.isArray(e[6])) for(const a of e[6].slice(0, 12)){ const g = byNid(a); if(g && !g.remote && g !== k){ g.assists++; g.score += 50; if(g === me) onAssist(v); } }
     const first = !match.firstBlood && !!k && !v.sentry; if(first) match.firstBlood = true;
     onKill(v, k, { kind, head }, { first, revenge, ended:0, credit:c });
@@ -3997,7 +4034,7 @@ function netKill(t, killer, o, assists){ netEv('k', t.nid, killer ? killer.nid |
 function netBalance(dt){
   NET.balT -= dt; if(NET.balT > 0 || !me || state === 'end') return; NET.balT = 1;
   const real = f => f === me || (f.bot && !f.sentry) || (f.remote && f.human);
-  const groups = teamMode() ? [['guard', 6], ['rot', 6]] : [[null, 8]];
+  const groups = match.mode === 'duel' ? [['guard', 1], ['rot', 1]] : teamMode() ? [['guard', 6], ['rot', 6]] : [[null, 8]];
   for(const [team, cap] of groups){
     const all = fighters.filter(f => real(f) && (team === null || f.team === team));
     const bots = all.filter(f => f.bot && f !== me && !f.sentry);
@@ -4238,7 +4275,9 @@ function applyQuality(){
 const shuffle = a => { for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 function renderMenu(){
   for(const [id, key] of [['m-mode', 'mode'], ['m-fac', 'fac'], ['m-diff', 'diff'], ['m-map', 'map']]) for(const b of $(id).querySelectorAll('button')) b.classList.toggle('sel', b.dataset.v === menuSel[key]);
-  const md = MAPS[menuSel.map]; $('m-mapd').innerHTML = md ? '<b>' + md.name + '.</b> ' + md.desc : 'Каждый бой — случайная из четырёх локаций.';
+  const duel = menuSel.mode === 'duel', md = MAPS[duel ? 'arena' : menuSel.map];
+  $('m-map').classList.toggle('dim', duel);
+  $('m-mapd').innerHTML = md ? '<b>' + md.name + '.</b> ' + md.desc : 'Каждый бой — случайная из четырёх локаций.';
   $('classes').innerHTML = ARCHS.map(a => { const C = clsOf(menuSel.fac, a); return '<button class="tile' + (a === menuSel.arch ? ' sel' : '') + '" data-a="' + a + '" aria-pressed="' + (a === menuSel.arch) + '">' + icon(menuSel.fac, a) + '<b>' + C.name + '</b><small>' + C.role + '</small></button>'; }).join('');
   const C = clsOf(menuSel.fac, menuSel.arch), A = ARCH[menuSel.arch], W = A.w;
   const dps = Math.round(W.dmg * W.rate * (W.burst || 1) * (W.pellets || 1) + (W.splashDmg || 0) * W.rate * 0.5);
@@ -4256,9 +4295,9 @@ for(const [id, key] of [['m-mode', 'mode'], ['m-fac', 'fac'], ['m-diff', 'diff']
 $('m-map').addEventListener('click', e => {
   const b = e.target.closest('[data-v]'); if(!b) return;
   menuSel.map = b.dataset.v; store.set('map', b.dataset.v); renderMenu();
-  if(MAPS[menuSel.map] && MAP.id !== menuSel.map && state === 'menu'){ $('m-mapd').innerHTML += ' <i>Загружаем…</i>'; const want = menuSel.map; setTimeout(() => { if(state === 'menu' && menuSel.map === want && MAP.id !== want){ buildWorld(want); startAttract(); renderMenu(); } }, 30); }
+  if(menuSel.mode !== 'duel' && MAPS[menuSel.map] && MAP.id !== menuSel.map && state === 'menu'){ $('m-mapd').innerHTML += ' <i>Загружаем…</i>'; const want = menuSel.map; setTimeout(() => { if(state === 'menu' && menuSel.map === want && MAP.id !== want){ buildWorld(want); startAttract(); renderMenu(); } }, 30); }
 });
-const pickMap = () => MAPS[menuSel.map] ? menuSel.map : pick(MAP_IDS);
+const pickMap = () => menuSel.mode === 'duel' ? 'arena' : MAPS[menuSel.map] && !MAPS[menuSel.map].duel ? menuSel.map : pick(MAP_IDS);
 $('classes').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if(!b) return; menuSel.arch = b.dataset.a; store.set('arch', b.dataset.a); renderMenu(); });
 $('classes').addEventListener('dblclick', e => { if(e.target.closest('[data-a]')) startMatch(); });
 $('sens').addEventListener('input', e => { settings.sens = +e.target.value; store.set('sens', settings.sens); });
@@ -4345,7 +4384,7 @@ function clearMatch(){
   NET.remote.clear(); NET.lastObj.clear();
 }
 function startAttract(){
-  if(!MAP) buildWorld(pickMap());
+  if(!MAP || MAP.duel) buildWorld(MAPS[menuSel.map] && !MAPS[menuSel.map].duel ? menuSel.map : pick(MAP_IDS));
   clearMatch();
   capReset(); applySky(pick(['day', 'day', 'dusk', 'night'])); applySeason(pick(['summer', 'summer', 'autumn', 'winter']));
   Object.assign(match, { mode:Math.random() < 0.5 ? 'cap' : 'tdm', diff:'normal', limit:1e9, dur:1e9, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:true, attract:true, live:true, frozen:false });
@@ -4372,12 +4411,14 @@ function startMatch(sync){
 }
 function beginMatch(){
   clearMatch();
-  Object.assign(match, { mode:menuSel.mode, diff:menuSel.diff, limit:menuSel.mode === 'tdm' ? 50 : menuSel.mode === 'cap' ? 150 : 20, dur:480, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:false, attract:false, live:false, frozen:true });
+  Object.assign(match, { mode:menuSel.mode, diff:menuSel.diff, limit:{ tdm:50, cap:150, duel:10 }[menuSel.mode] || 20, dur:menuSel.mode === 'duel' ? 300 : 480, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:false, attract:false, live:false, frozen:true });
   const pf = menuSel.fac;
   capReset(); applySky(pickSky()); applySeason(pickSeason());
   me = makeFighter({ name:'Ты', team:teamMode() ? pf : 'p0', fac:pf, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(pf, menuSel.arch)] || null });
   const used = new Set(), nameFor = fac => { const l = NAMES[fac].filter(n => !used.has(n)), n = pick(l.length ? l : NAMES[fac]); used.add(n); return n; };
-  if(teamMode()){
+  if(match.mode === 'duel'){
+    const other = pf === 'guard' ? 'rot' : 'guard', f = makeFighter({ name:nameFor(other), team:other, fac:other, arch:pick(ARCHS), hat:botHat() }); f.bot = newBot();
+  } else if(teamMode()){
     const other = pf === 'guard' ? 'rot' : 'guard';
     for(const a of shuffle(['soldier', 'tank', 'scout', 'sniper', 'medic'])){ const f = makeFighter({ name:nameFor(pf), team:pf, fac:pf, arch:a, hat:botHat() }); f.bot = newBot(); }
     for(const a of shuffle(['soldier', 'tank', 'scout', 'sniper', 'medic', pick(['soldier', 'tank', 'scout'])])){ const f = makeFighter({ name:nameFor(other), team:other, fac:other, arch:a, hat:botHat() }); f.bot = newBot(); }
@@ -4505,7 +4546,7 @@ netInit();
 $('load').hidden = true;
 window.__lv = {
   start(o){ Object.assign(menuSel, o || {}); startMatch(true); },
-  map(id){ buildWorld(id); startAttract(); }, maps:() => MAP_IDS, get mapId(){ return MAP && MAP.id; },
+  map(id){ buildWorld(id); if(!MAP.duel) startAttract(); else { clearMatch(); applySky('day'); applySeason('summer'); } }, maps:() => MAP_IDS, get mapId(){ return MAP && MAP.id; },
   obsSig:() => obstacles.length + ':' + obstacles.reduce((a, o) => a + o.x * 3.1 + o.z * 1.7 + o.r * 5 + (o.base + o.h) * 0.3, 0).toFixed(2),
   plot(nav){
     const S = 9, W = MAP_X * 2 * S, H = MAP_Z * 2 * S, c = document.createElement('canvas'); c.width = W; c.height = H;
