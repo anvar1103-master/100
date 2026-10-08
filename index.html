@@ -1,0 +1,1551 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Метрострой</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@500;700;800&display=swap">
+<style>
+:root{
+  /* Layout: full-bleed city plan; thin instrument strip on top, tool rail docked left (bottom on phones), context card on the right */
+  --ground:#E6EBEE; --street:#F9FBFC; --water:#A3CBDF; --water-edge:#86B5CC; --bridge:#F2F4F5;
+  --ink:#17202A; --muted:#5A6774; --hair:#CDD5DC; --panel:#FFFFFF; --panel-2:#F0F3F5;
+  --accent:#D3322B; --good:#2C9657; --warn:#D49511; --bad:#CF372C;
+  --home:#C2694A; --work:#3B6C9C; --study:#7B5BB8; --shop:#D4841A; --fun:#3B985B;
+  --night:#0D1630; --lamp:#FFC861;
+  --shadow:0 8px 28px rgba(23,32,42,.14);
+  --f-display:'Unbounded','Arial Black',system-ui,sans-serif;
+  --f-body:'Golos Text',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E141A; --street:#1B252E; --water:#10304A; --water-edge:#174463; --bridge:#2A3743;
+    --ink:#E5ECF1; --muted:#8D9BA8; --hair:#2A3642; --panel:#141C24; --panel-2:#1B2630;
+    --accent:#EF4A40; --good:#45BF78; --warn:#EDB43B; --bad:#FF5B4F;
+    --home:#D88565; --work:#5D95CC; --study:#A487DC; --shop:#EFA044; --fun:#56BC7A;
+    --night:#02050C; --lamp:#FFD27A;
+    --shadow:0 8px 28px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E141A; --street:#1B252E; --water:#10304A; --water-edge:#174463; --bridge:#2A3743;
+  --ink:#E5ECF1; --muted:#8D9BA8; --hair:#2A3642; --panel:#141C24; --panel-2:#1B2630;
+  --accent:#EF4A40; --good:#45BF78; --warn:#EDB43B; --bad:#FF5B4F;
+  --home:#D88565; --work:#5D95CC; --study:#A487DC; --shop:#EFA044; --fun:#56BC7A;
+  --night:#02050C; --lamp:#FFD27A;
+  --shadow:0 8px 28px rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:14px;overflow:hidden;-webkit-tap-highlight-color:transparent}
+#app{position:relative;height:100%;width:100%;overflow:hidden}
+#map{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+#map.look{cursor:grab}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* HUD */
+.hud{position:absolute;top:0;left:0;right:0;display:flex;align-items:stretch;gap:2px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px));pointer-events:none;flex-wrap:wrap}
+.hud>*{pointer-events:auto}
+.hud .strip{display:flex;align-items:stretch;background:var(--panel);border:1px solid var(--hair);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;flex-wrap:wrap;max-width:100%}
+.brand{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border-right:1px solid var(--hair)}
+.logo{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:15px;letter-spacing:-.02em}
+.bname{font-family:var(--f-display);font-weight:700;font-size:14px;letter-spacing:.01em}
+.stat{display:flex;flex-direction:column;justify-content:center;padding:5px 14px;border-right:1px solid var(--hair);min-width:0}
+.stat:last-child{border-right:0}
+.lbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);white-space:nowrap}
+.val{font-family:var(--f-mono);font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.pill{font-style:normal;font-family:var(--f-body);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:99px;background:var(--accent);color:#fff}
+.meter{width:56px;height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden;border:1px solid var(--hair)}
+.meter i{display:block;height:100%;width:50%;background:var(--good);transition:width .4s,background .4s}
+.jam{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:13px;background:var(--good)}
+.speed{display:flex;gap:4px;align-items:center;padding:6px 8px}
+.speed button{border:1px solid var(--hair);background:var(--panel-2);border-radius:8px;height:30px;min-width:34px;padding:0 6px;cursor:pointer;font-family:var(--f-mono);font-weight:700;font-size:12px}
+.speed button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+
+/* tools */
+.tools{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:6px;box-shadow:var(--shadow)}
+.tool{display:flex;flex-direction:column;align-items:center;gap:2px;width:68px;padding:7px 2px 6px;border:0;background:transparent;border-radius:10px;cursor:pointer}
+.tool svg{width:24px;height:24px}
+.tool .tn{font-size:11px;font-weight:600}
+.tool .tc{font-family:var(--f-mono);font-size:9.5px;color:var(--muted)}
+.tool:hover{background:var(--panel-2)}
+.tool[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.tool[aria-pressed="true"] .tc{color:inherit;opacity:.7}
+.sep{height:1px;background:var(--hair);margin:3px 6px}
+.toggle{font-size:10.5px}
+
+/* line chips */
+.linebar{position:absolute;left:96px;bottom:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;align-items:center;background:var(--panel);border:1px solid var(--hair);border-radius:12px;padding:6px 8px;box-shadow:var(--shadow);max-width:calc(100% - 120px);overflow-x:auto}
+.linebar .lt{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding-right:4px;white-space:nowrap}
+.chip{flex:none;height:30px;min-width:30px;padding:0 9px;border-radius:15px;border:2px solid transparent;cursor:pointer;color:#fff;font-family:var(--f-display);font-weight:700;font-size:12px;display:flex;align-items:center;gap:5px}
+.chip[aria-pressed="true"]{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--ink)}
+.chip.add{background:var(--panel-2);color:var(--ink);border:1px dashed var(--muted)}
+
+/* goal + hint */
+.goal{position:absolute;left:96px;top:78px;max-width:300px;background:var(--panel);border:1px solid var(--hair);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}
+.goal .lbl{display:flex;justify-content:space-between;gap:10px}
+.goal .gt{font-weight:600;font-size:13.5px;margin-top:3px;text-wrap:balance}
+.goal .gp{height:4px;border-radius:2px;background:var(--panel-2);margin-top:7px;overflow:hidden}
+.goal .gp i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.goal .gr{font-family:var(--f-mono);font-size:11px;color:var(--good);font-weight:700}
+.hint{position:absolute;left:50%;transform:translateX(-50%);bottom:70px;bottom:calc(70px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:8px 14px;border-radius:10px;font-size:13px;max-width:min(560px,calc(100% - 32px));text-align:center;pointer-events:none;box-shadow:var(--shadow)}
+
+/* panel */
+.panel{position:absolute;right:12px;top:78px;width:290px;max-height:calc(100% - 100px);overflow:auto;background:var(--panel);border:1px solid var(--hair);border-radius:14px;box-shadow:var(--shadow);padding:14px}
+.panel h3{font-family:var(--f-display);font-weight:700;font-size:17px;margin:2px 0 4px;text-wrap:balance;line-height:1.2}
+.panel .x{position:absolute;right:8px;top:8px;width:28px;height:28px;border-radius:8px;border:0;background:var(--panel-2);cursor:pointer;font-size:16px;line-height:1}
+.rows{display:grid;grid-template-columns:1fr auto;gap:6px 10px;margin:10px 0;font-size:13px}
+.rows span:nth-child(odd){color:var(--muted)}
+.rows span:nth-child(even){font-family:var(--f-mono);font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden;margin:4px 0 2px;border:1px solid var(--hair)}
+.bar i{display:block;height:100%;width:0;background:var(--good);transition:width .3s}
+.warnbox{border-radius:10px;padding:8px 10px;font-size:12.5px;margin:8px 0;background:var(--panel-2);border-left:3px solid var(--bad)}
+.warnbox.ok{border-left-color:var(--good)}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.btn{border:1px solid var(--hair);background:var(--panel-2);border-radius:9px;padding:8px 8px;cursor:pointer;font-size:12.5px;font-weight:600;text-align:left;display:flex;flex-direction:column;gap:1px}
+.btn small{font-family:var(--f-mono);font-weight:500;color:var(--muted);font-size:10.5px}
+.btn:hover{border-color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.danger{color:var(--bad)}
+.btn.wide{grid-column:1/-1}
+.lchips{display:flex;gap:4px;flex-wrap:wrap}
+.lchip{font-size:11px;font-weight:700;color:#fff;border-radius:99px;padding:2px 8px}
+
+/* toasts */
+.toasts{position:absolute;right:12px;bottom:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none;max-width:calc(100% - 24px)}
+.toast{pointer-events:auto;background:var(--panel);border:1px solid var(--hair);border-radius:10px;padding:8px 12px;box-shadow:var(--shadow);font-size:13px;max-width:320px;animation:tin .25s ease-out;border-left:4px solid var(--muted)}
+.toast.good{border-left-color:var(--good)} .toast.bad{border-left-color:var(--bad)} .toast.info{border-left-color:var(--work)}
+.toast.click{cursor:pointer}
+.toast b{font-family:var(--f-mono)}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+
+/* modals */
+.modal{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--ground) 55%,transparent);backdrop-filter:blur(3px);padding:16px;z-index:10}
+.card{background:var(--panel);border:1px solid var(--hair);border-radius:18px;box-shadow:var(--shadow);max-width:540px;width:100%;padding:26px 26px 22px;max-height:calc(100% - 32px);overflow:auto}
+.card .big{display:flex;align-items:center;gap:14px}
+.card .big .logo{width:52px;height:52px;font-size:26px;flex:none}
+.card h1{font-family:var(--f-display);font-weight:800;font-size:30px;margin:0;letter-spacing:-.01em;line-height:1.05}
+.card h2{font-family:var(--f-display);font-weight:700;font-size:22px;margin:0 0 6px;text-wrap:balance}
+.card .sub{color:var(--muted);font-size:13px;margin-top:4px}
+.card p{line-height:1.5;margin:14px 0;max-width:62ch}
+.rules{display:grid;gap:10px;margin:16px 0;padding:0;list-style:none}
+.rules li{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start;line-height:1.45;font-size:13.5px}
+.rules .ic{width:30px;height:30px;border-radius:9px;background:var(--panel-2);display:grid;place-items:center;border:1px solid var(--hair)}
+.rules .ic svg{width:18px;height:18px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:6px 0 16px}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:50%;display:block}
+.cta{width:100%;border:0;border-radius:12px;background:var(--accent);color:#fff;font-family:var(--f-display);font-weight:700;font-size:15px;padding:14px;cursor:pointer;letter-spacing:.02em}
+.cta:hover{filter:brightness(1.07)}
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 18px}
+.statgrid div{background:var(--panel-2);border-radius:10px;padding:10px}
+.statgrid b{display:block;font-family:var(--f-mono);font-size:18px}
+.statgrid span{font-size:11px;color:var(--muted)}
+
+@media (max-width:760px){
+  .hud{padding:6px 8px;padding-top:calc(6px + env(safe-area-inset-top,0px))}
+  .brand .bname{display:none}
+  .brand{padding:4px 8px}
+  .logo{width:26px;height:26px;font-size:13px}
+  .stat{padding:4px 8px}
+  .stat.hide-s{display:none}
+  .val{font-size:13px}
+  .meter{width:36px}
+  .speed{padding:4px 6px}
+  .speed button{height:28px;min-width:30px}
+  .tools{top:auto;transform:none;left:8px;right:8px;bottom:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));flex-direction:row;overflow-x:auto;padding:4px}
+  .tool{width:auto;min-width:58px;flex:none;padding:5px 6px}
+  .tools .sep{width:1px;height:auto;margin:6px 2px}
+  .linebar{left:8px;bottom:84px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:calc(100% - 16px)}
+  .goal{left:8px;top:auto;bottom:134px;bottom:calc(134px + env(safe-area-inset-bottom,0px));max-width:calc(100% - 16px);padding:7px 10px}
+  .goal .gt{font-size:12.5px}
+  .hint{bottom:auto;top:62px;top:calc(62px + env(safe-area-inset-top,0px));font-size:12px}
+  .panel{left:8px;right:8px;width:auto;top:auto;bottom:84px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-height:52%;z-index:3}
+  .toasts{top:100px;bottom:auto;right:8px}
+  .card{padding:20px 18px}
+  .card h1{font-size:24px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="map" aria-label="Карта города"></canvas>
+
+  <header class="hud">
+    <div class="strip">
+      <div class="brand"><span class="logo">М</span><span class="bname">Метрострой</span></div>
+      <div class="stat"><span class="lbl">День <span id="hDay">1</span></span><span class="val"><span id="hTime">06:00</span><i class="pill" id="hPeak" hidden>пик</i></span></div>
+      <div class="stat"><span class="lbl">Бюджет, млн ₽</span><span class="val" id="hMoney">0</span></div>
+      <div class="stat"><span class="lbl">Рейтинг мэрии</span><span class="val"><span class="meter"><i id="hSatBar"></i></span><span id="hSat">0</span></span></div>
+      <div class="stat"><span class="lbl">Пробки</span><span class="val"><span class="jam" id="hJam">0</span><span class="hide-s" id="hJamTxt" style="font-family:var(--f-body);font-weight:600;font-size:12px">свободно</span></span></div>
+      <div class="stat hide-s"><span class="lbl">Доля метро</span><span class="val" id="hShare">0%</span></div>
+      <div class="stat hide-s"><span class="lbl">Перевезено</span><span class="val" id="hPax">0</span></div>
+      <div class="speed" role="group" aria-label="Скорость">
+        <button id="sp0" title="Пауза (пробел)">❚❚</button>
+        <button id="sp1" title="Обычная скорость">1×</button>
+        <button id="sp2" title="Быстрее">2×</button>
+        <button id="sp3" title="Ещё быстрее">4×</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tools" aria-label="Инструменты">
+    <button class="tool" data-tool="look" title="Обзор (1)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V5.5a1.5 1.5 0 0 1 3 0V13M17 9.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5a6 6 0 0 1-4.6-2.2L4.6 15.6a1.6 1.6 0 0 1 2.5-2L8 15"/></svg>
+      <span class="tn">Обзор</span><span class="tc">клик — инфо</span></button>
+    <button class="tool" data-tool="station" title="Станция (2)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="10" stroke-width="1" stroke-dasharray="2 2.5"/></svg>
+      <span class="tn">Станция</span><span class="tc">200</span></button>
+    <button class="tool" data-tool="line" title="Линия (3)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h5l7-9h6"/><circle cx="3.5" cy="18" r="1.6" fill="currentColor"/><circle cx="20.5" cy="9" r="1.6" fill="currentColor"/></svg>
+      <span class="tn">Линия</span><span class="tc">50 / км</span></button>
+    <button class="tool" data-tool="vest" title="Вестибюль (4)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="7" width="12" height="11" rx="2"/><path d="M6 15v-5l3 3 3-3v5"/><path d="M15 12.5h5" stroke-dasharray="2 2"/><circle cx="20.5" cy="12.5" r="1.8"/></svg>
+      <span class="tn">Вестибюль</span><span class="tc">80</span></button>
+    <button class="tool" data-tool="demolish" title="Снос (5)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13M10.5 11v6M13.5 11v6"/></svg>
+      <span class="tn">Снос</span><span class="tc">возврат 40%</span></button>
+    <div class="sep"></div>
+    <button class="tool toggle" id="tgJam" aria-pressed="true" title="Слой пробок (П)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20 10 4M20 20 14 4"/><path d="M12 6v2M12 11v2M12 16v2"/></svg>
+      <span class="tn">Пробки</span></button>
+    <button class="tool toggle" id="tgCov" aria-pressed="false" title="Зоны охвата (О)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="10" r="6"/><circle cx="15" cy="14" r="6"/></svg>
+      <span class="tn">Охват</span></button>
+  </nav>
+
+  <div class="linebar" id="linebar"></div>
+  <div class="goal" id="goal"></div>
+  <div class="hint" id="hint" hidden></div>
+  <aside class="panel" id="panel" hidden></aside>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <div class="modal" id="intro">
+    <div class="card">
+      <div class="big"><span class="logo">М</span><div><h1>Метрострой</h1><div class="sub">Стратегия о том, как не утопить город в пробках</div></div></div>
+      <p>Вы — главный инженер метрополитена. Город растёт каждый день: появляются новые кварталы, офисы и университеты. Люди едут на работу утром и домой вечером. Если метро до них не дошло, они садятся в машины, и улицы встают.</p>
+      <ul class="rules">
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="6"/></svg></span><span><b>Станции</b> собирают пассажиров из домов в радиусе пешей доступности. Ставьте их там, где плотно.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M3 18h5l7-9h6"/></svg></span><span><b>Линии</b> соединяют станции. Выберите «Линия», затем нажимайте на станции по очереди. Через реку строить дороже.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="6" width="12" height="12" rx="2"/><path d="M7 15v-5l3 3 3-3v5"/></svg></span><span><b>Вестибюли</b> ускоряют вход и расширяют охват. Без них в час пик у входа собирается давка.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20 10 4M20 20 14 4"/></svg></span><span><b>Пробки</b> от 0 до 10 баллов. Красные улицы показывают, где метро не хватает. Мосты всегда узкое место.</span></li>
+      </ul>
+      <div class="legend">
+        <span><i style="background:var(--home)"></i>жильё</span><span><i style="background:var(--work)"></i>офисы</span><span><i style="background:var(--study)"></i>учёба</span><span><i style="background:var(--shop)"></i>торговля</span><span><i style="background:var(--fun)"></i>отдых</span>
+      </div>
+      <p class="sub" style="margin:0 0 14px">Цвет точки-пассажира показывает, куда он едет. Рейтинг мэрии падает от пробок и давки; на нуле вас отправят в отставку. Колесо мыши или щипок — масштаб, перетаскивание — сдвиг карты.</p>
+      <button class="cta" id="startBtn">Начать стройку</button>
+    </div>
+  </div>
+
+  <div class="modal" id="over" hidden>
+    <div class="card">
+      <h2 id="overTitle">Мэр подписал приказ об отставке</h2>
+      <p id="overText" class="sub"></p>
+      <div class="statgrid" id="overStats"></div>
+      <button class="cta" id="againBtn">Строить заново</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const cv = $('#map'), ctx = cv.getContext('2d');
+const TAU = Math.PI * 2, rnd = Math.random, SQ2 = Math.SQRT2;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const pick = a => a[(rnd() * a.length) | 0];
+
+/* ---------- world constants ---------- */
+const WW = 3200, WH = 2200, GRID = 64;
+const NX = Math.floor(WW / GRID) + 1, NY = Math.floor(WH / GRID) + 1;
+const WALK = 125, ST_MIN = 58, VEST_MAX = 150;
+const COST = { station: 200, vest: 80, plat: 120, train: 150, wagon: 60, perUnit: 0.5, river: 250 };
+const FARE = 1.0, CAPW = 8, MAXW = 4, MAXTR = 10, TR_SPEED = 85;
+const B_PEN = 30, DW_PEN = 6, T_PEN = 80;
+const QUEUE_OVER = 22, QUEUE_GIVEUP = 45;
+const LINE_COLORS = [['#E2322B', 'Красная'], ['#2BA24C', 'Зелёная'], ['#0B6FBF', 'Синяя'], ['#11B0E3', 'Голубая'], ['#EC8A16', 'Оранжевая'], ['#8C3DAA', 'Фиолетовая'], ['#8A5A2C', 'Коричневая'], ['#D9B70C', 'Жёлтая']];
+const TYPES = ['home', 'work', 'study', 'shop', 'fun'];
+const BRIDGES = [512, 1216, 1984, 2752];
+const RW = 44;
+function riverY(x) { return 1170 + 150 * Math.sin(x / 470 + 0.4) + 50 * Math.sin(x / 170 + 1.1); }
+function inRiver(x, y, pad = 0) { return Math.abs(y - riverY(x)) < RW + pad; }
+function sideOf(x, y) { return y < riverY(x) ? 0 : 1; }
+
+const ST_NAMES = {
+  home: ['Садовая', 'Новосёлов', 'Берёзовая', 'Тополиная', 'Солнечная', 'Черёмушки', 'Каштановая', 'Сиреневый бульвар', 'Молодёжная', 'Лесная', 'Рябиновая', 'Озёрная', 'Улица Мира', 'Светлая', 'Кленовая', 'Весенняя', 'Полевая', 'Липовая аллея', 'Жилой массив', 'Сосновая', 'Ольховая', 'Вишнёвая'],
+  work: ['Деловой центр', 'Площадь Труда', 'Биржевая', 'Конторская', 'Заводская', 'Фабричная', 'Технопарк', 'Банковская', 'Почтамт', 'Индустриальная', 'Проектная'],
+  study: ['Университет', 'Студенческая', 'Академическая', 'Лицейская', 'Библиотечная', 'Политехническая', 'Научная'],
+  shop: ['Торговая', 'Рынок', 'Гостиный двор', 'Пассаж', 'Ярмарочная', 'Универмаг'],
+  fun: ['Парковая', 'Стадион', 'Ботанический сад', 'Зоопарк', 'Театральная', 'Цирк', 'Филармония'],
+  river: ['Набережная', 'Речной вокзал', 'Мостовая', 'Причал', 'Затон']
+};
+const DIST_NAMES = ['Солнечный', 'Северный', 'Берёзки', 'Новые Черёмушки', 'Речной', 'Лесной', 'Кузнецы', 'Южный порт', 'Сосновка', 'Ясный', 'Вишнёвый', 'Звёздный', 'Луговой', 'Приозёрный', 'Каменка', 'Заводской', 'Озерки', 'Сокол'];
+const KIND_LBL = { res: 'жилой', biz: 'деловой', campus: 'студенческий', mixed: 'смешанный', park: 'парковый' };
+
+/* ---------- theme ---------- */
+const C = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['ground', 'street', 'water', 'water-edge', 'bridge', 'ink', 'muted', 'hair', 'panel', 'panel-2', 'accent', 'good', 'warn', 'bad', 'home', 'work', 'study', 'shop', 'fun', 'night', 'lamp'])
+    C[k] = cs.getPropertyValue('--' + k).trim();
+  const h = C.ground.replace('#', '');
+  const lum = parseInt(h.slice(0, 2), 16) * .3 + parseInt(h.slice(2, 4), 16) * .59 + parseInt(h.slice(4, 6), 16) * .11;
+  C.dark = lum < 100;
+}
+readTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
+new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* ---------- state ---------- */
+let G, cam = { x: 1600, y: 1120, z: 0.6 }, view = { w: 0, h: 0, dpr: 1 };
+const ui = { tool: 'look', line: null, anchor: null, end: null, sel: null, hover: null, showJam: true, showCov: false, vestFor: null };
+
+function newGame() {
+  G = {
+    money: 3000, sat: 62, day: 1, time: 6 * 60, speed: 1, paused: true, over: false,
+    buildings: [], byType: { home: [], work: [], study: [], shop: [], fun: [] }, districts: [],
+    stations: [], lines: [], trains: [], byId: new Map(),
+    hLoad: new Float32Array(NX * NY), vLoad: new Float32Array(NX * NY),
+    dev: new Uint8Array(NX * NY), nextId: 1, tripAcc: 0, pop: 0,
+    delivered: 0, failed: 0, giveup: 0, share: 0, bal: 0, jamRaw: 0, overCount: 0, failEma: 0,
+    dist: null, NL: 0, dirty: true, objIdx: 0, usedNames: new Set(), usedDist: new Set(),
+    dayIncome: 0, dayFare: 0, lowSatT: 0, stats: { maxStations: 0 }
+  };
+  seedCity();
+}
+
+/* ---------- city ---------- */
+function addDistrict(kind, x, y, name, n) {
+  const d = { kind, x, y, name, r: 110, born: G.day };
+  G.districts.push(d); G.usedDist.add(name);
+  for (let i = 0; i < n; i++) growIn(d);
+  return d;
+}
+function typeFor(kind) {
+  const r = rnd();
+  switch (kind) {
+    case 'res': return r < .84 ? 'home' : r < .95 ? 'shop' : 'fun';
+    case 'biz': return r < .68 ? 'work' : r < .86 ? 'shop' : r < .94 ? 'fun' : 'home';
+    case 'campus': return r < .5 ? 'study' : r < .82 ? 'home' : r < .92 ? 'shop' : 'fun';
+    case 'park': return r < .45 ? 'fun' : r < .8 ? 'home' : 'shop';
+    default: return r < .45 ? 'home' : r < .7 ? 'work' : r < .85 ? 'shop' : r < .93 ? 'study' : 'fun';
+  }
+}
+function growIn(d) {
+  for (let t = 0; t < 40; t++) {
+    const a = rnd() * TAU, r = Math.sqrt(rnd()) * d.r;
+    const gx = Math.floor((d.x + Math.cos(a) * r) / GRID), gy = Math.floor((d.y + Math.sin(a) * r) / GRID);
+    const x = gx * GRID + GRID / 2 + (rnd() - .5) * 26, y = gy * GRID + GRID / 2 + (rnd() - .5) * 26;
+    if (x < 60 || y < 60 || x > WW - 60 || y > WH - 60) continue;
+    if (inRiver(x, y, 26)) continue;
+    let ok = true;
+    for (const b of G.buildings) if (Math.abs(b.x - x) < 24 && Math.abs(b.y - y) < 24) { ok = false; break; }
+    if (!ok) continue;
+    const type = typeFor(d.kind);
+    const size = type === 'home' ? 2.5 + rnd() * 4 : type === 'work' ? 4 + rnd() * 6 : 3 + rnd() * 5;
+    const b = { x, y, type, size, seed: rnd() };
+    G.buildings.push(b); G.byType[type].push(b);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const cx = gx + dx, cy = gy + dy;
+      if (cx >= 0 && cy >= 0 && cx < NX && cy < NY) G.dev[cy * NX + cx] = 1;
+    }
+    d.r = Math.min(d.r + 3.2, 330);
+    return b;
+  }
+  d.r = Math.min(d.r + 12, 360);
+  return null;
+}
+function recountPop() { G.pop = G.byType.home.reduce((s, b) => s + b.size, 0); }
+function seedCity() {
+  const cx = 1600;
+  addDistrict('biz', cx, riverY(cx) - 175, 'Центр', 34);
+  addDistrict('res', cx - 520, riverY(cx - 520) - 300, 'Черёмушки', 28);
+  addDistrict('res', cx + 160, riverY(cx + 160) + 260, 'Заречье', 28);
+  addDistrict('campus', cx + 600, riverY(cx + 600) - 230, 'Академгородок', 18);
+  addDistrict('res', cx - 380, riverY(cx - 380) + 300, 'Южный', 16);
+  recountPop();
+}
+function spawnDistrict() {
+  const kinds = ['res', 'res', 'biz', 'mixed', 'res', 'campus', 'park', 'res', 'biz', 'mixed'];
+  const kind = kinds[G.districts.length % kinds.length];
+  for (let t = 0; t < 80; t++) {
+    const a = rnd() * TAU, r = 480 + rnd() * (500 + G.day * 40);
+    const x = 1600 + Math.cos(a) * r * 1.2, y = 1120 + Math.sin(a) * r * 0.8;
+    if (x < 220 || y < 200 || x > WW - 220 || y > WH - 200 || inRiver(x, y, 120)) continue;
+    if (G.districts.some(d => Math.hypot(d.x - x, d.y - y) < d.r + 220)) continue;
+    const name = DIST_NAMES.find(n => !G.usedDist.has(n)) || ('Квартал ' + G.districts.length);
+    const d = addDistrict(kind, x, y, name, 12);
+    toast(`Новый район: <b>«${name}»</b>, ${KIND_LBL[kind]}. Нажмите, чтобы показать.`, 'info', () => flyTo(d.x, d.y));
+    return;
+  }
+}
+
+/* ---------- geometry ---------- */
+function octi(a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, ax = Math.abs(dx), ay = Math.abs(dy), sx = Math.sign(dx), sy = Math.sign(dy);
+  if (ax >= ay) { const s = (ax - ay) / 2; return [{ x: a.x, y: a.y }, { x: a.x + sx * s, y: a.y }, { x: a.x + sx * (s + ay), y: b.y }, { x: b.x, y: b.y }]; }
+  const s = (ay - ax) / 2; return [{ x: a.x, y: a.y }, { x: a.x, y: a.y + sy * s }, { x: b.x, y: a.y + sy * (s + ax) }, { x: b.x, y: b.y }];
+}
+function octiLen(a, b) { const ax = Math.abs(b.x - a.x), ay = Math.abs(b.y - a.y); return Math.abs(ax - ay) + Math.min(ax, ay) * SQ2; }
+function crossings(pts) {
+  let c = 0, prev = null;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1], L = Math.hypot(b.x - a.x, b.y - a.y), n = Math.max(1, Math.ceil(L / 8));
+    for (let k = 0; k <= n; k++) {
+      const s = sideOf(a.x + (b.x - a.x) * k / n, a.y + (b.y - a.y) * k / n);
+      if (prev !== null && s !== prev) c++;
+      prev = s;
+    }
+  }
+  return c;
+}
+function segCost(a, b) { return Math.round(octiLen(a, b) * COST.perUnit + crossings(octi(a, b)) * COST.river); }
+function segDist(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, l = dx * dx + dy * dy;
+  let t = l ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l : 0; t = clamp(t, 0, 1);
+  return Math.hypot(p.x - a.x - dx * t, p.y - a.y - dy * t);
+}
+
+/* ---------- network rebuild & routing ---------- */
+const lineById = id => G.lines.find(l => l.id === id);
+function rebuild() {
+  G.dirty = false;
+  const S = G.stations;
+  S.forEach((s, i) => { s.idx = i; s.lines = []; });
+  G.byId = new Map(S.map(s => [s.id, s]));
+  const use = new Map();
+  G.lines.forEach((L, li) => {
+    L.li = li;
+    const n = L.stops.length;
+    if (L.loop && n < 3) L.loop = false;
+    const segs = n < 2 ? 0 : (L.loop ? n : n - 1);
+    for (let i = 0; i < segs; i++) {
+      const a = L.stops[i], b = L.stops[(i + 1) % n], k = a < b ? a + '-' + b : b + '-' + a;
+      if (!use.has(k)) use.set(k, []);
+      use.get(k).push(L.id);
+    }
+    for (const id of L.stops) { const s = G.byId.get(id); if (s && !s.lines.includes(L)) s.lines.push(L); }
+  });
+  for (const L of G.lines) buildPath(L, use);
+  computeRouting();
+  for (const t of G.trains) {
+    const L = lineById(t.line);
+    if (!L || !L.path) { t.dead = true; continue; }
+    let i = L.stops.indexOf(t.sid);
+    if (i < 0) i = Math.min(t.stop | 0, L.stops.length - 1);
+    t.stop = i; t.d = L.path.stopD[i]; t.state = 'dwell'; t.dwell = .4; t.sid = L.stops[i];
+    if (!L.loop) t.dir = i === 0 ? 1 : i === L.stops.length - 1 ? -1 : t.dir;
+  }
+  for (const t of G.trains) if (t.dead) { G.failed += t.pax.length; }
+  G.trains = G.trains.filter(t => !t.dead);
+  G.stats.maxStations = Math.max(G.stats.maxStations, S.length);
+  renderLinebar();
+}
+function buildPath(L, use) {
+  const n = L.stops.length;
+  if (n < 2) { L.path = null; L.cross = 0; return; }
+  const pts = [], cum = [], stopD = [0];
+  let total = 0;
+  const segs = L.loop ? n : n - 1;
+  for (let i = 0; i < segs; i++) {
+    const A = G.byId.get(L.stops[i]), B = G.byId.get(L.stops[(i + 1) % n]);
+    const lo = A.id < B.id ? A : B, hi = A.id < B.id ? B : A;
+    const arr = use.get(lo.id + '-' + hi.id), k = arr.indexOf(L.id), off = (k - (arr.length - 1) / 2) * 8;
+    let nx = -(hi.y - lo.y), ny = hi.x - lo.x; const nl = Math.hypot(nx, ny) || 1; nx = nx / nl * off; ny = ny / nl * off;
+    const sp = octi(A, B).map(p => ({ x: p.x + nx, y: p.y + ny }));
+    for (const p of sp) {
+      if (pts.length) { const q = pts[pts.length - 1]; total += Math.hypot(p.x - q.x, p.y - q.y); }
+      pts.push(p); cum.push(total);
+    }
+    stopD[i + 1] = total;
+  }
+  L.path = { pts, cum, stopD, total };
+  L.cross = crossings(pts);
+  L.len = total;
+}
+function computeRouting() {
+  const S = G.stations.length, NL = G.lines.length, N = S + S * NL;
+  G.NL = NL;
+  const radj = Array.from({ length: N }, () => []);
+  const on = (s, l) => S + s * NL + l;
+  G.lines.forEach((L, li) => {
+    const n = L.stops.length; if (n < 2) return;
+    const segs = L.loop ? n : n - 1;
+    for (let i = 0; i < segs; i++) {
+      const a = G.byId.get(L.stops[i]), b = G.byId.get(L.stops[(i + 1) % n]);
+      const len = octiLen(a, b);
+      radj[on(b.idx, li)].push(a.idx, len + B_PEN); radj[on(a.idx, li)].push(b.idx, len + B_PEN);
+      radj[on(b.idx, li)].push(on(a.idx, li), len + DW_PEN); radj[on(a.idx, li)].push(on(b.idx, li), len + DW_PEN);
+    }
+    for (const id of L.stops) { const s = G.byId.get(id); radj[s.idx].push(on(s.idx, li), T_PEN); }
+  });
+  G.dist = [];
+  const heap = new Heap();
+  for (let d = 0; d < S; d++) {
+    const D = new Float32Array(N).fill(Infinity);
+    heap.clear();
+    D[d] = 0; heap.push(d, 0);
+    for (let li = 0; li < NL; li++) if (G.lines[li].stops.includes(G.stations[d].id)) { D[on(d, li)] = 0; heap.push(on(d, li), 0); }
+    while (heap.size) {
+      const [u, du] = heap.pop();
+      if (du > D[u]) continue;
+      const r = radj[u];
+      for (let j = 0; j < r.length; j += 2) {
+        const v = r[j], nd = du + r[j + 1];
+        if (nd < D[v]) { D[v] = nd; heap.push(v, nd); }
+      }
+    }
+    G.dist.push(D);
+  }
+}
+class Heap {
+  constructor() { this.k = []; this.p = []; }
+  get size() { return this.k.length; }
+  clear() { this.k.length = 0; this.p.length = 0; }
+  push(k, p) {
+    const K = this.k, P = this.p; let i = K.length; K.push(k); P.push(p);
+    while (i > 0) { const j = (i - 1) >> 1; if (P[j] <= p) break; K[i] = K[j]; P[i] = P[j]; i = j; }
+    K[i] = k; P[i] = p;
+  }
+  pop() {
+    const K = this.k, P = this.p, rk = K[0], rp = P[0], lk = K.pop(), lp = P.pop(), n = K.length;
+    if (n) {
+      let i = 0;
+      for (;;) {
+        let c = 2 * i + 1; if (c >= n) break;
+        if (c + 1 < n && P[c + 1] < P[c]) c++;
+        if (P[c] >= lp) break;
+        K[i] = K[c]; P[i] = P[c]; i = c;
+      }
+      K[i] = lk; P[i] = lp;
+    }
+    return [rk, rp];
+  }
+}
+function W(destId, s) { const d = G.byId.get(destId); if (!d || !G.dist[d.idx]) return Infinity; return G.dist[d.idx][s.idx]; }
+function Pon(destId, s, li) { const d = G.byId.get(destId); if (!d || !G.dist[d.idx]) return Infinity; return G.dist[d.idx][G.stations.length + s.idx * G.NL + li]; }
+
+/* ---------- names ---------- */
+function nameStation(x, y) {
+  const cnt = { home: 0, work: 0, study: 0, shop: 0, fun: 0 };
+  for (const b of G.buildings) if (Math.hypot(b.x - x, b.y - y) < WALK) cnt[b.type] += b.size * (b.type === 'home' ? .6 : 1);
+  let order = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]);
+  if (Math.abs(y - riverY(x)) < RW + 70) order = ['river', ...order];
+  for (const t of order) {
+    const n = ST_NAMES[t].find(n => !G.usedNames.has(n));
+    if (n && (t === 'river' || cnt[t] > 0)) { G.usedNames.add(n); return n; }
+  }
+  let near = G.districts[0];
+  for (const d of G.districts) if (Math.hypot(d.x - x, d.y - y) < Math.hypot(near.x - x, near.y - y)) near = d;
+  let i = 1, nm;
+  do { nm = near.name + (i > 1 ? '-' + i : ''); i++; } while (G.usedNames.has(nm));
+  G.usedNames.add(nm); return nm;
+}
+
+/* ---------- actions ---------- */
+function canAfford(c) { if (G.money >= c) return true; toast(`Не хватает денег: нужно <b>${c}</b> млн ₽`, 'bad'); return false; }
+function stationValid(x, y) {
+  if (x < 40 || y < 40 || x > WW - 40 || y > WH - 40) return 'За границей города';
+  if (inRiver(x, y, 14)) return 'Нельзя строить в реке';
+  for (const s of G.stations) if (Math.hypot(s.x - x, s.y - y) < ST_MIN) return 'Слишком близко к другой станции';
+  return null;
+}
+function buildStation(x, y) {
+  const err = stationValid(x, y);
+  if (err) { toast(err, 'bad'); return; }
+  if (!canAfford(COST.station)) return;
+  G.money -= COST.station;
+  const s = { id: G.nextId++, x, y, name: nameStation(x, y), ent: [{ x, y }], plat: 1, queue: [], wait: [], acc: 0, over: 0, lines: [], idx: 0, served: 0 };
+  G.stations.push(s); G.dirty = true;
+  pulse(x, y, C.good);
+}
+function removeStation(s) {
+  for (const L of G.lines) {
+    const i = L.stops.indexOf(s.id);
+    if (i >= 0) L.stops.splice(i, 1);
+  }
+  G.failed += s.queue.length + s.wait.length;
+  G.stations = G.stations.filter(x => x !== s);
+  const dead = G.lines.filter(L => L.stops.length < 2 && !(ui.line === L.id && L.stops.length === 1));
+  for (const L of dead) removeLine(L, true);
+  G.money += Math.round(COST.station * .4 + (s.ent.length - 1) * COST.vest * .4);
+  if (ui.sel && ui.sel.id === s.id) closePanel();
+  G.dirty = true;
+}
+function removeLine(L, silent) {
+  for (const t of G.trains) if (t.line === L.id) { t.dead = true; G.failed += t.pax.length; }
+  G.trains = G.trains.filter(t => !t.dead);
+  G.lines = G.lines.filter(x => x !== L);
+  if (!silent && L.len) G.money += Math.round(L.len * COST.perUnit * .4);
+  if (ui.line === L.id) { ui.line = null; ui.anchor = null; }
+  if (ui.sel && ui.sel.type === 'line' && ui.sel.id === L.id) closePanel();
+  G.dirty = true;
+}
+function addTrain(L, free) {
+  if (G.trains.filter(t => t.line === L.id).length >= MAXTR) { toast('На линии уже максимум поездов', 'bad'); return; }
+  if (!free) { if (!canAfford(COST.train)) return; G.money -= COST.train; }
+  const n = L.stops.length, cnt = G.trains.filter(t => t.line === L.id).length;
+  let i = L.loop ? Math.floor(rnd() * n) : (cnt % 2 ? n - 1 : 0);
+  const t = { id: G.nextId++, line: L.id, stop: i, sid: L.stops[i], d: L.path ? L.path.stopD[i] : 0, dir: L.loop ? (cnt % 2 ? -1 : 1) : (i === 0 ? 1 : -1), state: 'dwell', dwell: .5, wag: 1, pax: [] };
+  G.trains.push(t);
+}
+function lineColor(L) { return LINE_COLORS[L.ci][0]; }
+function newLineSlot() {
+  const used = new Set(G.lines.map(l => l.ci));
+  for (let i = 0; i < LINE_COLORS.length; i++) if (!used.has(i)) return i;
+  return -1;
+}
+
+/* ---------- line tool ---------- */
+function lineClick(s) {
+  let L = ui.line != null ? lineById(ui.line) : null;
+  if (!L) {
+    const ci = newLineSlot();
+    if (ci < 0) { toast('Все 8 линий уже построены — продлевайте существующие', 'bad'); return; }
+    L = { id: G.nextId++, ci, stops: [s.id], loop: false, path: null, len: 0, cross: 0 };
+    G.lines.push(L); ui.line = L.id; ui.anchor = s.id; ui.end = 'tail';
+    G.dirty = true; return;
+  }
+  const n = L.stops.length;
+  if (ui.anchor == null) {
+    if (L.loop) { toast('Кольцевую линию продлить нельзя', 'bad'); return; }
+    if (s.id === L.stops[0]) { ui.anchor = s.id; ui.end = 'head'; }
+    else if (s.id === L.stops[n - 1]) { ui.anchor = s.id; ui.end = 'tail'; }
+    else toast('Продолжать линию можно только с конечной станции', 'bad');
+    return;
+  }
+  if (s.id === ui.anchor) { ui.anchor = null; return; }
+  const A = G.byId.get(ui.anchor);
+  const other = ui.end === 'tail' ? L.stops[0] : L.stops[n - 1];
+  if (s.id === other && n >= 3) {
+    const c = segCost(A, s);
+    if (!canAfford(c)) return;
+    G.money -= c; L.loop = true; ui.anchor = null; G.dirty = true;
+    toast(`${LINE_COLORS[L.ci][1]} линия замкнута в кольцо`, 'good'); return;
+  }
+  if (L.stops.includes(s.id)) { toast('Эта станция уже на линии', 'bad'); return; }
+  const c = segCost(A, s);
+  if (!canAfford(c)) return;
+  G.money -= c;
+  if (ui.end === 'tail') L.stops.push(s.id); else L.stops.unshift(s.id);
+  ui.anchor = s.id;
+  G.dirty = true;
+  if (L.stops.length === 2) {
+    rebuild(); addTrain(L, true);
+    toast(`Открыта ${LINE_COLORS[L.ci][1].toLowerCase()} линия. Первый поезд — подарок от мэрии`, 'good');
+  }
+}
+function finishLineDraft() {
+  const L = ui.line != null ? lineById(ui.line) : null;
+  if (L && L.stops.length < 2) { G.lines = G.lines.filter(x => x !== L); ui.line = null; G.dirty = true; }
+  ui.anchor = null;
+}
+
+/* ---------- simulation ---------- */
+const hour = () => (G.time / 60) % 24;
+function demand(h) {
+  const m = Math.exp(-((h - 8.4) ** 2) / 1.6), e = Math.exp(-((h - 18.4) ** 2) / 2.0);
+  const base = (h >= 6.5 && h < 23) ? .32 : .05;
+  return base + 1.25 * m + 1.1 * e;
+}
+function wpick(list) { let r = rnd(); for (const [k, w] of list) { if ((r -= w) <= 0) return k; } return list[list.length - 1][0]; }
+function pickB(type) {
+  const a = G.byType[type]; if (!a.length) return null;
+  const x = pick(a), y = pick(a);
+  return x.size >= y.size ? x : y;
+}
+function nearestStation(b) {
+  let best = null, bd = WALK;
+  for (const s of G.stations) for (const e of s.ent) {
+    const d = Math.hypot(e.x - b.x, e.y - b.y);
+    if (d < bd) { bd = d; best = s; }
+  }
+  return best;
+}
+function makeTrip(h) {
+  let o, d;
+  if (h < 12.5) { o = pickB('home'); d = pickB(wpick([['work', .56], ['study', .24], ['shop', .1], ['fun', .1]])); }
+  else if (rnd() < .66) { o = pickB(wpick([['work', .58], ['study', .22], ['shop', .12], ['fun', .08]])); d = pickB('home'); }
+  else { o = pickB('home'); d = pickB(rnd() < .5 ? 'shop' : 'fun'); }
+  if (!o || !d || o === d) return;
+  if (dist(o, d) < 190) return;
+  const so = nearestStation(o), sd = nearestStation(d);
+  let metro = false;
+  if (so && sd && so !== sd && W(sd.id, so) < Infinity) {
+    if (so.queue.length >= QUEUE_GIVEUP) { G.giveup++; G.failEma += .02; }
+    else { so.queue.push({ d: sd.id, c: d.type }); metro = true; }
+  }
+  G.share += ((metro ? 1 : 0) - G.share) * .0015;
+  if (!metro) carTrip(o, d);
+}
+function addH(row, x0, x1) {
+  if (row < 0 || row >= NY) return;
+  const a = Math.min(x0, x1), b = Math.max(x0, x1);
+  for (let x = Math.max(0, a); x < b && x < NX - 1; x++) G.hLoad[row * NX + x] += 1;
+}
+function addV(col, y0, y1) {
+  if (col < 0 || col >= NX) return;
+  const a = Math.min(y0, y1), b = Math.max(y0, y1);
+  for (let y = Math.max(0, a); y < b && y < NY - 1; y++) G.vLoad[y * NX + col] += 1;
+}
+function carTrip(o, d) {
+  const ox = Math.round(o.x / GRID), oy = Math.round(o.y / GRID), dx = Math.round(d.x / GRID), dy = Math.round(d.y / GRID);
+  if (sideOf(o.x, o.y) === sideOf(d.x, d.y)) {
+    if (rnd() < .5) { addH(oy, ox, dx); addV(dx, oy, dy); } else { addV(ox, oy, dy); addH(dy, ox, dx); }
+  } else {
+    let bx = BRIDGES[0], bc = Infinity;
+    for (const x of BRIDGES) { const c = Math.abs(o.x - x) + Math.abs(d.x - x); if (c < bc) { bc = c; bx = x; } }
+    const gb = Math.round(bx / GRID);
+    addH(oy, ox, gb); addV(gb, oy, dy); addH(dy, gb, dx);
+  }
+}
+const JAM_CAP = 15;
+function trafficTick(dt) {
+  const k = Math.exp(-dt / 7);
+  const H = G.hLoad, V = G.vLoad;
+  const top = [];
+  for (let i = 0; i < H.length; i++) {
+    H[i] *= k; V[i] *= k;
+    if (H[i] > 3) top.push(H[i]);
+    if (V[i] > 3) top.push(V[i]);
+  }
+  top.sort((a, b) => b - a);
+  let s = 0; const n = 14;
+  for (let i = 0; i < n; i++) s += (top[i] || 0);
+  G.jamRaw = s / n / JAM_CAP;
+  const target = clamp(G.jamRaw * 3.1, 0, 10);
+  G.balF = (G.balF || 0) + (target - (G.balF || 0)) * Math.min(1, dt * .5);
+  G.bal = clamp(Math.round(G.balF), 0, 10);
+}
+const platCap = s => 24 + (s.plat - 1) * 16;
+const entryRate = s => 1.1 + (s.ent.length - 1) * 1.2;
+let purgeT = 0;
+function stationTick(dt) {
+  purgeT += dt;
+  const purge = purgeT > 1; if (purge) purgeT = 0;
+  let over = 0;
+  for (const s of G.stations) {
+    s.acc = Math.min(s.acc + dt * entryRate(s), 3);
+    const cap = platCap(s);
+    while (s.acc >= 1 && s.queue.length && s.wait.length < cap) { s.wait.push(s.queue.shift()); s.acc -= 1; }
+    if (purge) {
+      const before = s.wait.length + s.queue.length;
+      s.wait = s.wait.filter(p => W(p.d, s) < Infinity);
+      s.queue = s.queue.filter(p => W(p.d, s) < Infinity);
+      G.failed += before - s.wait.length - s.queue.length;
+    }
+    const crowded = s.queue.length > QUEUE_OVER || s.wait.length >= cap;
+    s.over = crowded ? Math.min(s.over + dt, 30) : Math.max(0, s.over - dt * 2);
+    s.crowd = crowded ? (s.queue.length > QUEUE_OVER ? 'entry' : 'platform') : null;
+    if (s.over > 4) over++;
+  }
+  G.overCount = over;
+}
+function orient(t, L) {
+  const n = L.stops.length;
+  if (L.loop) {
+    if (t.dir > 0 && t.stop >= n) { t.stop = 0; t.d = 0; }
+    if (t.dir < 0 && t.stop <= 0) { t.stop = n; t.d = L.path.total; }
+  } else {
+    if (t.stop <= 0) t.dir = 1; else if (t.stop >= n - 1) t.dir = -1;
+  }
+}
+function arrive(t, L) {
+  orient(t, L);
+  const n = L.stops.length;
+  const s = G.byId.get(L.stops[t.stop % n]);
+  t.sid = s.id;
+  const nxt = G.byId.get(L.stops[(t.stop + t.dir + n) % n]);
+  const len = octiLen(s, nxt);
+  let moved = 0;
+  const keep = [];
+  const wS = T_PEN;
+  for (const p of t.pax) {
+    if (p.d === s.id) { G.delivered++; s.served++; G.money += FARE; G.dayFare += FARE; moved++; continue; }
+    const stay = len + DW_PEN + Pon(p.d, nxt, L.li);
+    const off = wS + W(p.d, s);
+    if (stay <= off + .01) keep.push(p);
+    else if (off < Infinity) { s.wait.push(p); moved++; }
+    else { G.failed++; moved++; }
+  }
+  t.pax = keep;
+  const cap = t.wag * CAPW;
+  if (t.pax.length < cap && s.wait.length) {
+    const rest = [];
+    for (const p of s.wait) {
+      if (t.pax.length < cap) {
+        const c = len + B_PEN + Pon(p.d, nxt, L.li);
+        if (c <= W(p.d, s) + .01) { t.pax.push(p); moved++; continue; }
+      }
+      rest.push(p);
+    }
+    s.wait = rest;
+  }
+  t.state = 'dwell'; t.dwell = .7 + moved * .045;
+}
+function trainTick(dt) {
+  for (const t of G.trains) {
+    const L = lineById(t.line); if (!L || !L.path) continue;
+    if (t.state === 'dwell') { t.dwell -= dt; if (t.dwell <= 0) { orient(t, L); t.state = 'run'; } continue; }
+    const P = L.path, tgt = t.stop + t.dir, td = P.stopD[tgt];
+    if (td === undefined) { t.stop = clamp(t.stop, 0, L.stops.length - 1); t.state = 'dwell'; t.dwell = .3; continue; }
+    const rem = (td - t.d) * t.dir, dep = (t.d - P.stopD[t.stop]) * t.dir;
+    const v = TR_SPEED * Math.min(1, .3 + rem / 55, .3 + dep / 40);
+    const step = v * dt;
+    if (step >= rem) { t.d = td; t.stop = tgt; arrive(t, L); }
+    else t.d += step * t.dir;
+  }
+}
+function satTick(dt) {
+  G.failEma = Math.max(0, G.failEma - dt * .01);
+  const target = clamp(30 + 66 * G.share - 5 * Math.max(0, G.bal - 2) - 6 * G.overCount - 12 * Math.min(1, G.failEma), -30, 100);
+  G.sat += (target - G.sat) * Math.min(1, dt * .022);
+  G.sat = clamp(G.sat, 0, 100);
+  if (G.sat < 1.5 && !G.over) gameOver();
+}
+function step(dt) {
+  if (G.dirty) rebuild();
+  const before = G.time;
+  G.time += dt * 6;
+  const h = hour();
+  G.tripAcc += G.pop * .04 * demand(h) * dt;
+  let n = 0;
+  while (G.tripAcc >= 1 && n < 200) { G.tripAcc--; n++; makeTrip(h); }
+  if (G.tripAcc > 20) G.tripAcc = 20;
+  stationTick(dt);
+  trainTick(dt);
+  trafficTick(dt);
+  satTick(dt);
+  if (Math.floor(G.time / 1440) > Math.floor(before / 1440)) newDay();
+  checkObjectives();
+}
+function newDay() {
+  G.day++;
+  const subsidy = Math.round(G.sat * 3.2);
+  const ops = G.trains.reduce((s, t) => s + 10 + t.wag * 3, 0) + G.stations.length * 4;
+  G.money += subsidy - ops;
+  toast(`День ${G.day}. Дотация мэрии <b>+${subsidy}</b>, содержание <b>−${ops}</b>, выручка за проезд <b>+${Math.round(G.dayFare)}</b> млн ₽`, 'info');
+  G.dayFare = 0;
+  const add = 6 + Math.floor(G.day * 1.7);
+  for (let i = 0; i < add; i++) {
+    const ds = G.districts;
+    const d = rnd() < .55 ? ds[ds.length - 1 - Math.floor(rnd() * Math.min(3, ds.length))] : pick(ds);
+    growIn(d);
+  }
+  for (const b of G.byType.home) b.size = Math.min(b.size * 1.025, 10);
+  if (G.day % 2 === 0 && G.districts.length < 16) spawnDistrict();
+  recountPop();
+}
+
+/* ---------- objectives ---------- */
+const OBJ = [
+  { t: 'Постройте станцию у жилых домов', ok: () => G.stations.length >= 1, r: 0 },
+  { t: 'Постройте вторую станцию — в деловом центре', ok: () => G.stations.length >= 2, r: 0 },
+  { t: 'Соедините станции линией', ok: () => G.lines.some(l => l.stops.length >= 2), r: 300 },
+  { t: 'Перевезите 150 пассажиров', ok: () => G.delivered >= 150, p: () => G.delivered / 150, r: 300 },
+  { t: 'Сделайте пересадочную станцию на двух линиях', ok: () => G.stations.some(s => s.lines.length >= 2), r: 400 },
+  { t: 'Добавьте вестибюль к станции', ok: () => G.stations.some(s => s.ent.length >= 2), r: 200 },
+  { t: 'Проложите линию через реку', ok: () => G.lines.some(l => l.cross > 0), r: 300 },
+  { t: 'Доведите долю метро до 35%', ok: () => G.share >= .35, p: () => G.share / .35, r: 600 },
+  { t: 'Удержите пробки на 4 баллах в вечерний пик', ok: () => { const h = hour(); return G.day >= 2 && h >= 17.8 && h <= 19 && G.bal <= 4; }, r: 700 },
+  { t: 'Перевезите 5 000 пассажиров', ok: () => G.delivered >= 5000, p: () => G.delivered / 5000, r: 1000 },
+  { t: 'Доведите долю метро до 55%', ok: () => G.share >= .55, p: () => G.share / .55, r: 1500 },
+  { t: 'Перевезите 25 000 пассажиров', ok: () => G.delivered >= 25000, p: () => G.delivered / 25000, r: 2500 },
+  { t: 'Продержитесь до 20-го дня', ok: () => G.day >= 20, p: () => G.day / 20, r: 3000 },
+];
+function checkObjectives() {
+  const o = OBJ[G.objIdx];
+  if (o && o.ok()) {
+    G.objIdx++;
+    if (o.r) { G.money += o.r; toast(`Задача выполнена: ${o.t.toLowerCase()}. Премия <b>+${o.r}</b> млн ₽`, 'good'); }
+    renderGoal();
+  }
+}
+function renderGoal() {
+  const o = OBJ[G.objIdx], el = $('#goal');
+  if (!o) { el.innerHTML = `<div class="lbl"><span>Свободная игра</span></div><div class="gt">Все задачи выполнены. Сколько дней продержится город?</div>`; return; }
+  el.innerHTML = `<div class="lbl"><span>Задача ${G.objIdx + 1} из ${OBJ.length}</span>${o.r ? `<span class="gr">+${o.r}</span>` : ''}</div><div class="gt">${o.t}</div>${o.p ? '<div class="gp"><i id="gpBar"></i></div>' : ''}`;
+}
+
+/* ---------- camera ---------- */
+function resize() {
+  view.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  view.w = cv.clientWidth; view.h = cv.clientHeight;
+  cv.width = Math.round(view.w * view.dpr); cv.height = Math.round(view.h * view.dpr);
+}
+window.addEventListener('resize', resize);
+const toWorld = (sx, sy) => ({ x: (sx - view.w / 2) / cam.z + cam.x, y: (sy - view.h / 2) / cam.z + cam.y });
+function clampCam() {
+  cam.z = clamp(cam.z, Math.max(0.22, Math.min(view.w / WW, view.h / WH)), 2.6);
+  cam.x = clamp(cam.x, 0, WW); cam.y = clamp(cam.y, 0, WH);
+}
+let fly = null;
+function flyTo(x, y) { fly = { x, y }; }
+
+/* ---------- input ---------- */
+const ptrs = new Map();
+let drag = null, pinch = null;
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+  if (ptrs.size === 1) drag = { sx: e.offsetX, sy: e.offsetY, cx: cam.x, cy: cam.y, moved: false, btn: e.button };
+  else if (ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: cam.z }; if (drag) drag.moved = true;
+  }
+});
+cv.addEventListener('pointermove', e => {
+  ui.hover = toWorld(e.offsetX, e.offsetY);
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+  if (pinch && ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()];
+    cam.z = pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d; clampCam(); return;
+  }
+  if (drag) {
+    const dx = e.offsetX - drag.sx, dy = e.offsetY - drag.sy;
+    if (!drag.moved && Math.hypot(dx, dy) > 7) drag.moved = true;
+    if (drag.moved) { cam.x = drag.cx - dx / cam.z; cam.y = drag.cy - dy / cam.z; clampCam(); fly = null; }
+  }
+});
+const endPtr = e => {
+  ptrs.delete(e.pointerId);
+  if (ptrs.size < 2) pinch = null;
+  if (drag && ptrs.size === 0) {
+    if (!drag.moved) {
+      if (drag.btn === 2) cancelAction();
+      else if (drag.btn === 0) handleClick(toWorld(e.offsetX, e.offsetY));
+    }
+    drag = null;
+  }
+};
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); drag = null; pinch = null; });
+cv.addEventListener('pointerleave', () => { if (!ptrs.size) ui.hover = null; });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const before = toWorld(e.offsetX, e.offsetY);
+  cam.z *= Math.exp(-e.deltaY * .0015); clampCam();
+  const after = toWorld(e.offsetX, e.offsetY);
+  cam.x += before.x - after.x; cam.y += before.y - after.y; clampCam(); fly = null;
+}, { passive: false });
+
+const hitR = () => Math.max(16, 14 / cam.z);
+function stationAt(p) {
+  let best = null, bd = hitR();
+  for (const s of G.stations) { const d = Math.hypot(s.x - p.x, s.y - p.y); if (d < bd) { bd = d; best = s; } }
+  return best;
+}
+function vestAt(p) {
+  for (const s of G.stations) for (let i = 1; i < s.ent.length; i++) if (Math.hypot(s.ent[i].x - p.x, s.ent[i].y - p.y) < Math.max(12, 10 / cam.z)) return { s, i };
+  return null;
+}
+function lineAt(p) {
+  let best = null, bd = Math.max(10, 9 / cam.z);
+  for (const L of G.lines) {
+    if (!L.path) continue;
+    const pts = L.path.pts;
+    for (let i = 0; i < pts.length - 1; i++) { const d = segDist(p, pts[i], pts[i + 1]); if (d < bd) { bd = d; best = L; } }
+  }
+  return best;
+}
+function handleClick(p) {
+  if (G.over) return;
+  const s = stationAt(p);
+  switch (ui.tool) {
+    case 'look': {
+      if (s) openPanel({ type: 'station', id: s.id });
+      else { const L = lineAt(p); if (L) openPanel({ type: 'line', id: L.id }); else closePanel(); }
+      break;
+    }
+    case 'station': if (!s) buildStation(p.x, p.y); else openPanel({ type: 'station', id: s.id }); break;
+    case 'line': if (s) lineClick(s); else { finishLineDraft(); } break;
+    case 'vest': {
+      const err = vestCheck(p);
+      if (err) { toast(err.msg, 'bad'); break; }
+      if (!canAfford(COST.vest)) break;
+      G.money -= COST.vest; err.s.ent.push({ x: p.x, y: p.y }); pulse(p.x, p.y, C.good);
+      if (ui.sel && ui.sel.id === err.s.id) refreshPanel(true);
+      break;
+    }
+    case 'demolish': {
+      const v = vestAt(p);
+      if (v) { v.s.ent.splice(v.i, 1); G.money += Math.round(COST.vest * .4); pulse(p.x, p.y, C.bad); break; }
+      if (s) { removeStation(s); pulse(p.x, p.y, C.bad); break; }
+      const L = lineAt(p);
+      if (L) openPanel({ type: 'line', id: L.id });
+      break;
+    }
+  }
+  updateHint();
+}
+function vestCheck(p) {
+  if (inRiver(p.x, p.y, 10)) return { msg: 'Нельзя строить в реке' };
+  let best = null, bd = VEST_MAX;
+  if (ui.vestFor) { const s = G.byId.get(ui.vestFor); if (s && Math.hypot(s.x - p.x, s.y - p.y) < VEST_MAX) best = s; }
+  if (!best) for (const s of G.stations) { const d = Math.hypot(s.x - p.x, s.y - p.y); if (d < bd) { bd = d; best = s; } }
+  if (!best) return { msg: 'Вестибюль ставится не дальше 1,5 км от станции' };
+  if (Math.hypot(best.x - p.x, best.y - p.y) < 34) return { msg: 'Отойдите от станции: вестибюль нужен в другом конце квартала' };
+  if (best.ent.length >= 4) return { msg: 'У станции уже 3 дополнительных вестибюля' };
+  for (const e of best.ent) if (Math.hypot(e.x - p.x, e.y - p.y) < 30) return { msg: 'Слишком близко к другому входу' };
+  return { ok: true, s: best };
+}
+function cancelAction() {
+  if (ui.tool === 'line') finishLineDraft();
+  else setTool('look');
+  updateHint();
+}
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  if (k === ' ') { e.preventDefault(); if (!G.over && $('#intro').hidden) setSpeed(G.paused ? (G.lastSpeed || 1) : 0); }
+  else if (k === 'escape') cancelAction();
+  else if ('12345'.includes(k) && k.length === 1) setTool(['look', 'station', 'line', 'vest', 'demolish'][+k - 1]);
+  else if (k === 'п' || k === 'g') toggleJam();
+  else if (k === 'о' || k === 'j') toggleCov();
+});
+
+/* ---------- UI ---------- */
+function setTool(t) {
+  if (ui.tool === 'line' && t !== 'line') finishLineDraft();
+  ui.tool = t;
+  if (t !== 'vest') ui.vestFor = null;
+  document.querySelectorAll('.tool[data-tool]').forEach(b => b.setAttribute('aria-pressed', b.dataset.tool === t));
+  cv.classList.toggle('look', t === 'look');
+  renderLinebar(); updateHint();
+}
+document.querySelectorAll('.tool[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+function toggleJam() { ui.showJam = !ui.showJam; $('#tgJam').setAttribute('aria-pressed', ui.showJam); }
+function toggleCov() { ui.showCov = !ui.showCov; $('#tgCov').setAttribute('aria-pressed', ui.showCov); }
+$('#tgJam').addEventListener('click', toggleJam);
+$('#tgCov').addEventListener('click', toggleCov);
+function setSpeed(i) {
+  if (i === 0) { G.paused = true; }
+  else { G.paused = false; G.speed = [0, 1, 2, 4][i]; G.lastSpeed = i; }
+  for (let j = 0; j < 4; j++) $('#sp' + j).setAttribute('aria-pressed', j === 0 ? G.paused : (!G.paused && G.speed === [0, 1, 2, 4][j]));
+}
+for (let i = 0; i < 4; i++) $('#sp' + i).addEventListener('click', () => { if (!G.over) setSpeed(i); });
+
+function updateHint() {
+  const el = $('#hint'); let t = '';
+  if (ui.tool === 'station') t = 'Нажмите на карту, чтобы построить станцию — 200 млн ₽. Круг показывает, откуда люди дойдут пешком.';
+  else if (ui.tool === 'line') {
+    const L = ui.line != null ? lineById(ui.line) : null;
+    if (!L) t = 'Нажмите на станцию, чтобы начать новую линию. Или выберите цвет существующей линии внизу.';
+    else if (ui.anchor == null) t = 'Нажмите на конечную станцию линии, чтобы продолжить её. Esc — закончить.';
+    else t = L.stops.length < 2 ? 'Теперь нажмите на следующую станцию.' : 'Нажмите на следующую станцию. Первую конечную — замкнуть кольцо. Esc — закончить.';
+  }
+  else if (ui.tool === 'vest') t = 'Нажмите рядом со станцией (до 1,5 км), чтобы поставить ещё один вход — 80 млн ₽.';
+  else if (ui.tool === 'demolish') t = 'Нажмите на станцию или вестибюль, чтобы снести. Линию удаляют через её карточку.';
+  el.textContent = t; el.hidden = !t;
+}
+function renderLinebar() {
+  const el = $('#linebar');
+  let h = '<span class="lt">Линии</span>';
+  for (const L of G.lines) {
+    const tr = G.trains.filter(t => t.line === L.id).length;
+    const on = ui.tool === 'line' ? ui.line === L.id : (ui.sel && ui.sel.type === 'line' && ui.sel.id === L.id);
+    h += `<button class="chip" data-l="${L.id}" aria-pressed="${!!on}" style="background:${lineColor(L)}" title="${LINE_COLORS[L.ci][1]} линия">${L.ci + 1}${L.stops.length > 1 ? `<span style="font-family:var(--f-mono);font-weight:500;font-size:10px;opacity:.85">×${tr}</span>` : ''}</button>`;
+  }
+  if (newLineSlot() >= 0) h += `<button class="chip add" data-l="new" aria-pressed="${ui.tool === 'line' && ui.line == null}">+ новая</button>`;
+  el.innerHTML = h;
+}
+$('#linebar').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  if (b.dataset.l === 'new') { finishLineDraft(); setTool('line'); ui.line = null; ui.anchor = null; renderLinebar(); updateHint(); return; }
+  const id = +b.dataset.l;
+  if (ui.tool === 'line') { finishLineDraft(); ui.line = id; ui.anchor = null; renderLinebar(); updateHint(); }
+  else openPanel({ type: 'line', id });
+});
+
+/* panel */
+function openPanel(sel) { ui.sel = sel; refreshPanel(true); renderLinebar(); }
+function closePanel() { ui.sel = null; $('#panel').hidden = true; renderLinebar(); }
+function lchip(L) { return `<span class="lchip" style="background:${lineColor(L)}">${L.ci + 1} · ${LINE_COLORS[L.ci][1]}</span>`; }
+function refreshPanel(full) {
+  const el = $('#panel'); const sel = ui.sel;
+  if (!sel) { el.hidden = true; return; }
+  if (sel.type === 'station') {
+    const s = G.byId.get(sel.id); if (!s) { closePanel(); return; }
+    const cap = platCap(s), fill = s.wait.length / cap;
+    let warn = '';
+    if (s.crowd === 'entry') warn = `<div class="warnbox"><b>Давка у входа.</b> Вестибюль не успевает пропускать людей. Добавьте вестибюль.</div>`;
+    else if (s.crowd === 'platform') warn = `<div class="warnbox"><b>Платформа переполнена.</b> Поезда не успевают вывозить людей: добавьте поезда, вагоны или расширьте платформу.</div>`;
+    else if (!s.lines.length) warn = `<div class="warnbox">Станция ни к чему не подключена. Проведите к ней линию.</div>`;
+    else warn = `<div class="warnbox ok">Станция работает нормально.</div>`;
+    if (full) {
+      el.innerHTML = `<button class="x" data-act="close" aria-label="Закрыть">×</button>
+        <div class="lbl">Станция</div><h3>${s.name}</h3>
+        <div class="lchips">${s.lines.map(lchip).join('') || '<span class="lbl">нет линий</span>'}</div>
+        <div class="rows">
+          <span>Ждут у входа</span><span data-k="q"></span>
+          <span>На платформе</span><span data-k="w"></span>
+          <span>Входов (вестибюлей)</span><span>${s.ent.length}</span>
+          <span>Пропуск через вход</span><span>${entryRate(s).toFixed(1)}/с</span>
+          <span>Уровень платформы</span><span>${s.plat} из 3</span>
+          <span>Обслужено</span><span data-k="sv"></span>
+        </div>
+        <div class="bar"><i data-k="bar"></i></div>
+        <div data-k="warn"></div>
+        <div class="acts">
+          <button class="btn" data-act="vest" ${s.ent.length >= 4 ? 'disabled' : ''}>+ Вестибюль<small>${COST.vest} млн</small></button>
+          <button class="btn" data-act="plat" ${s.plat >= 3 ? 'disabled' : ''}>Расширить платформу<small>${COST.plat} млн</small></button>
+          <button class="btn danger wide" data-act="delst">Снести станцию<small>вернётся ${Math.round(COST.station * .4)} млн</small></button>
+        </div>`;
+    }
+    const q = el.querySelector('[data-k="q"]'); if (!q) return;
+    q.textContent = s.queue.length; q.style.color = s.queue.length > QUEUE_OVER ? C.bad : '';
+    el.querySelector('[data-k="w"]').textContent = `${s.wait.length} / ${cap}`;
+    el.querySelector('[data-k="sv"]').textContent = s.served;
+    const bar = el.querySelector('[data-k="bar"]'); bar.style.width = Math.min(100, fill * 100) + '%'; bar.style.background = fill > .9 ? C.bad : fill > .6 ? C.warn : C.good;
+    const wb = el.querySelector('[data-k="warn"]'); if (wb.innerHTML !== warn) wb.innerHTML = warn;
+  } else {
+    const L = lineById(sel.id); if (!L) { closePanel(); return; }
+    const trains = G.trains.filter(t => t.line === L.id);
+    const cap = trains.reduce((s, t) => s + t.wag * CAPW, 0), load = trains.reduce((s, t) => s + t.pax.length, 0);
+    const fill = cap ? load / cap : 0;
+    const wag = trains.length ? Math.min(...trains.map(t => t.wag)) : 0;
+    if (full) {
+      el.innerHTML = `<button class="x" data-act="close" aria-label="Закрыть">×</button>
+        <div class="lbl">Линия ${L.ci + 1}${L.loop ? ' · кольцевая' : ''}</div><h3 style="color:${lineColor(L)}">${LINE_COLORS[L.ci][1]} линия</h3>
+        <div class="rows">
+          <span>Станций</span><span>${L.stops.length}</span>
+          <span>Длина</span><span>${((L.len || 0) / 100).toFixed(1)} км</span>
+          <span>Поездов</span><span>${trains.length}</span>
+          <span>Вагонов в поезде</span><span>${wag || '—'}</span>
+          <span>Пассажиров в поездах</span><span data-k="ld"></span>
+        </div>
+        <div class="bar"><i data-k="bar"></i></div>
+        <div data-k="warn"></div>
+        <div class="acts">
+          <button class="btn" data-act="train" ${!L.path || trains.length >= MAXTR ? 'disabled' : ''}>+ Поезд<small>${COST.train} млн</small></button>
+          <button class="btn" data-act="wagon" ${!trains.length || wag >= MAXW ? 'disabled' : ''}>+ Вагон<small>${COST.wagon} млн</small></button>
+          <button class="btn" data-act="extend">Продлить линию<small>инструмент «Линия»</small></button>
+          <button class="btn" data-act="rmtrain" ${trains.length <= 1 ? 'disabled' : ''}>− Поезд<small>вернётся ${COST.train * .4}</small></button>
+          <button class="btn danger wide" data-act="delline">Закрыть линию<small>вернётся 40% стоимости путей</small></button>
+        </div>`;
+    }
+    const ld = el.querySelector('[data-k="ld"]'); if (!ld) return;
+    ld.textContent = `${load} / ${cap}`;
+    const bar = el.querySelector('[data-k="bar"]'); bar.style.width = Math.min(100, fill * 100) + '%'; bar.style.background = fill > .85 ? C.bad : fill > .6 ? C.warn : C.good;
+    const warn = fill > .85 ? '<div class="warnbox"><b>Поезда переполнены.</b> Добавьте поезд или вагоны.</div>' : '';
+    const wb = el.querySelector('[data-k="warn"]'); if (wb.innerHTML !== warn) wb.innerHTML = warn;
+  }
+  el.hidden = false;
+}
+$('#panel').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  const sel = ui.sel; if (!sel) return;
+  const act = b.dataset.act;
+  if (act === 'close') return closePanel();
+  if (sel.type === 'station') {
+    const s = G.byId.get(sel.id); if (!s) return;
+    if (act === 'vest') { setTool('vest'); ui.vestFor = s.id; flyTo(s.x, s.y); }
+    if (act === 'plat' && s.plat < 3 && canAfford(COST.plat)) { G.money -= COST.plat; s.plat++; pulse(s.x, s.y, C.good); }
+    if (act === 'delst') { removeStation(s); return; }
+  } else {
+    const L = lineById(sel.id); if (!L) return;
+    const trains = G.trains.filter(t => t.line === L.id);
+    if (act === 'train') { addTrain(L, false); }
+    if (act === 'wagon') {
+      const t = trains.reduce((a, b) => a.wag <= b.wag ? a : b);
+      if (t.wag < MAXW && canAfford(COST.wagon)) { G.money -= COST.wagon; t.wag++; }
+    }
+    if (act === 'rmtrain' && trains.length > 1) {
+      const t = trains[trains.length - 1];
+      for (const p of t.pax) { const s = G.byId.get(t.sid); if (s) s.wait.push(p); }
+      G.trains = G.trains.filter(x => x !== t); G.money += COST.train * .4;
+    }
+    if (act === 'extend') { setTool('line'); ui.line = L.id; ui.anchor = null; renderLinebar(); updateHint(); }
+    if (act === 'delline') { removeLine(L); closePanel(); return; }
+    renderLinebar();
+  }
+  refreshPanel(true);
+});
+
+/* toasts */
+function toast(html, kind = '', onClick) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind + (onClick ? ' click' : '');
+  el.innerHTML = html;
+  if (onClick) el.addEventListener('click', () => { onClick(); el.remove(); });
+  const box = $('#toasts'); box.appendChild(el);
+  while (box.children.length > 4) box.firstChild.remove();
+  setTimeout(() => el.remove(), onClick ? 9000 : 5200);
+}
+const pulses = [];
+function pulse(x, y, col) { pulses.push({ x, y, col, t: 0 }); }
+
+/* HUD */
+const fmt = n => Math.round(n).toLocaleString('ru-RU');
+const JAM_TXT = ['свободно', 'свободно', 'свободно', 'местами', 'местами', 'плотно', 'плотно', 'пробки', 'пробки', 'стоит', 'стоит'];
+function hud() {
+  const h = hour(), hh = Math.floor(h), mm = Math.floor((h - hh) * 60 / 10) * 10;
+  $('#hDay').textContent = G.day;
+  $('#hTime').textContent = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+  $('#hPeak').hidden = demand(h) < 1;
+  const m = $('#hMoney'); m.textContent = fmt(G.money); m.style.color = G.money < 0 ? C.bad : '';
+  $('#hSat').textContent = Math.round(G.sat);
+  const sb = $('#hSatBar'); sb.style.width = G.sat + '%'; sb.style.background = G.sat > 55 ? C.good : G.sat > 28 ? C.warn : C.bad;
+  const j = $('#hJam'); j.textContent = G.bal; j.style.background = G.bal <= 3 ? C.good : G.bal <= 6 ? C.warn : C.bad;
+  $('#hJamTxt').textContent = JAM_TXT[G.bal];
+  $('#hShare').textContent = Math.round(G.share * 100) + '%';
+  $('#hPax').textContent = fmt(G.delivered);
+  const o = OBJ[G.objIdx], gp = $('#gpBar');
+  if (o && o.p && gp) gp.style.width = clamp(o.p() * 100, 0, 100) + '%';
+  if (G.sat < 20 && !G.warned) { G.warned = true; toast('<b>Мэр недоволен.</b> Рейтинг ниже 20: снижайте пробки и давку, иначе отставка.', 'bad'); }
+  if (G.sat > 30) G.warned = false;
+  refreshPanel(false);
+}
+
+function gameOver() {
+  G.over = true; G.paused = true;
+  $('#overText').textContent = `Город продержался ${G.day} ${plural(G.day, 'день', 'дня', 'дней')}. Пробки и давка в метро довели рейтинг мэрии до нуля.`;
+  $('#overStats').innerHTML = `<div><b>${fmt(G.delivered)}</b><span>пассажиров перевезено</span></div><div><b>${G.stats.maxStations}</b><span>станций построено</span></div><div><b>${G.objIdx}/${OBJ.length}</b><span>задач выполнено</span></div>`;
+  $('#over').hidden = false;
+}
+function plural(n, a, b, c) { const m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 10 || h >= 20) ? b : c; }
+$('#startBtn').addEventListener('click', () => { $('#intro').hidden = true; setSpeed(1); setTool('station'); });
+$('#againBtn').addEventListener('click', () => {
+  newGame(); $('#over').hidden = true; closePanel(); ui.line = null; ui.anchor = null;
+  cam = { x: 1600, y: 1080, z: view.w < 760 ? .5 : .8 }; renderGoal(); renderLinebar(); setSpeed(1); setTool('station');
+});
+
+/* ---------- rendering ---------- */
+let T = 0;
+function trainPos(L, d) {
+  const { pts, cum } = L.path;
+  let lo = 0, hi = cum.length - 1;
+  while (lo < hi - 1) { const m = (lo + hi) >> 1; if (cum[m] <= d) lo = m; else hi = m; }
+  const a = pts[lo], b = pts[hi], seg = cum[hi] - cum[lo] || 1, t = clamp((d - cum[lo]) / seg, 0, 1);
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, a: Math.atan2(b.y - a.y, b.x - a.x) };
+}
+function nightAlpha(h) {
+  if (h >= 7 && h <= 18.5) return 0;
+  if (h > 18.5 && h < 21.5) return (h - 18.5) / 3;
+  if (h > 5 && h < 7) return (7 - h) / 2;
+  return 1;
+}
+function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+function jamColor(c) {
+  if (c < 1) return C.good;
+  if (c < 1.8) return C.warn;
+  return C.bad;
+}
+function draw() {
+  const z = cam.z, dpr = view.dpr;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = C.ground; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (view.w / 2 - cam.x * z), dpr * (view.h / 2 - cam.y * z));
+  const v0 = toWorld(0, 0), v1 = toWorld(view.w, view.h);
+  const px = 1 / z;
+  const gx0 = Math.max(0, Math.floor(v0.x / GRID) - 1), gx1 = Math.min(NX - 1, Math.ceil(v1.x / GRID) + 1);
+  const gy0 = Math.max(0, Math.floor(v0.y / GRID) - 1), gy1 = Math.min(NY - 1, Math.ceil(v1.y / GRID) + 1);
+
+  // world border
+  ctx.strokeStyle = C.hair; ctx.lineWidth = 2 * px; ctx.strokeRect(0, 0, WW, WH);
+
+  // streets in developed areas
+  ctx.strokeStyle = C.street; ctx.lineWidth = Math.max(7, 2.2 * px); ctx.lineCap = 'butt';
+  ctx.beginPath();
+  const dev = G.dev;
+  for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx < gx1; gx++) {
+    const up = gy > 0 ? dev[(gy - 1) * NX + gx] : 0, dn = dev[gy * NX + gx];
+    if (up || dn) { ctx.moveTo(gx * GRID, gy * GRID); ctx.lineTo((gx + 1) * GRID, gy * GRID); }
+  }
+  for (let gx = gx0; gx <= gx1; gx++) for (let gy = gy0; gy < gy1; gy++) {
+    const l = gx > 0 ? dev[gy * NX + gx - 1] : 0, r = dev[gy * NX + gx];
+    if (l || r) { ctx.moveTo(gx * GRID, gy * GRID); ctx.lineTo(gx * GRID, (gy + 1) * GRID); }
+  }
+  ctx.stroke();
+
+  // river
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (let x = Math.max(-40, v0.x - 80); x <= Math.min(WW + 40, v1.x + 80); x += 16) { const y = riverY(x); x === Math.max(-40, v0.x - 80) ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  ctx.strokeStyle = C['water-edge']; ctx.lineWidth = RW * 2 + 6; ctx.stroke();
+  ctx.strokeStyle = C.water; ctx.lineWidth = RW * 2; ctx.stroke();
+  // bridges
+  for (const bx of BRIDGES) {
+    const y = riverY(bx);
+    ctx.fillStyle = C.bridge; ctx.fillRect(bx - 6, y - RW - 6, 12, RW * 2 + 12);
+    ctx.strokeStyle = C.hair; ctx.lineWidth = 1.2; ctx.strokeRect(bx - 6, y - RW - 6, 12, RW * 2 + 12);
+  }
+
+  // traffic
+  if (ui.showJam) {
+    ctx.lineCap = 'round';
+    const H = G.hLoad, V = G.vLoad;
+    const segs = [[], [], []];
+    for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+      const i = gy * NX + gx;
+      const ch = H[i] / JAM_CAP, cvv = V[i] / JAM_CAP;
+      if (ch > .45) segs[ch < 1 ? 0 : ch < 1.8 ? 1 : 2].push(gx * GRID, gy * GRID, (gx + 1) * GRID, gy * GRID);
+      if (cvv > .45) segs[cvv < 1 ? 0 : cvv < 1.8 ? 1 : 2].push(gx * GRID, gy * GRID, gx * GRID, (gy + 1) * GRID);
+    }
+    const cols = [C.good, C.warn, C.bad], speeds = [26, 11, 3];
+    for (let k = 0; k < 3; k++) {
+      const a = segs[k]; if (!a.length) continue;
+      ctx.beginPath();
+      for (let i = 0; i < a.length; i += 4) { ctx.moveTo(a[i], a[i + 1]); ctx.lineTo(a[i + 2], a[i + 3]); }
+      ctx.globalAlpha = .3; ctx.strokeStyle = cols[k]; ctx.lineWidth = 15; ctx.setLineDash([]); ctx.stroke();
+      ctx.globalAlpha = .95; ctx.lineWidth = 4.5; ctx.setLineDash([7, 6]); ctx.lineDashOffset = -T * speeds[k]; ctx.stroke();
+    }
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+
+  // coverage
+  const showCov = ui.showCov || ui.tool === 'station' || ui.tool === 'vest';
+  if (showCov) {
+    ctx.fillStyle = C.accent; ctx.globalAlpha = C.dark ? .1 : .07;
+    ctx.beginPath();
+    for (const s of G.stations) for (const e of s.ent) { ctx.moveTo(e.x + WALK, e.y); ctx.arc(e.x, e.y, WALK, 0, TAU); }
+    ctx.fill(); ctx.globalAlpha = 1;
+  }
+
+  // buildings
+  const h = hour(), na = nightAlpha(h);
+  for (const b of G.buildings) {
+    if (b.x < v0.x - 30 || b.x > v1.x + 30 || b.y < v0.y - 30 || b.y > v1.y + 30) continue;
+    const r = 6 + b.size * .85;
+    ctx.fillStyle = C[b.type];
+    switch (b.type) {
+      case 'home': roundRect(b.x - r, b.y - r * .8, r * 2, r * 1.6, 2.5); ctx.fill(); break;
+      case 'work': roundRect(b.x - r * .75, b.y - r * 1.15, r * 1.5, r * 2.3, 2); ctx.fill(); break;
+      case 'study': ctx.beginPath(); ctx.moveTo(b.x, b.y - r * 1.15); ctx.lineTo(b.x + r * 1.15, b.y + r * .85); ctx.lineTo(b.x - r * 1.15, b.y + r * .85); ctx.closePath(); ctx.fill(); break;
+      case 'shop': ctx.beginPath(); ctx.moveTo(b.x, b.y - r * 1.1); ctx.lineTo(b.x + r * 1.1, b.y); ctx.lineTo(b.x, b.y + r * 1.1); ctx.lineTo(b.x - r * 1.1, b.y); ctx.closePath(); ctx.fill(); break;
+      case 'fun': ctx.beginPath(); ctx.arc(b.x, b.y, r * 1.05, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(b.x - r * .9, b.y + r * .5, r * .55, 0, TAU); ctx.fill(); break;
+    }
+  }
+  // night
+  if (na > 0) {
+    ctx.globalAlpha = na * (C.dark ? .35 : .26); ctx.fillStyle = C.night;
+    ctx.fillRect(v0.x - 10, v0.y - 10, v1.x - v0.x + 20, v1.y - v0.y + 20);
+    ctx.globalAlpha = na; ctx.fillStyle = C.lamp;
+    for (const b of G.buildings) {
+      if (b.type !== 'home' || b.x < v0.x || b.x > v1.x || b.y < v0.y || b.y > v1.y) continue;
+      if (b.seed < .35) continue;
+      ctx.fillRect(b.x - 1.5 + (b.seed - .5) * 6, b.y - 1.5, 3, 3);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // district labels
+  if (z < .95) {
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `700 ${Math.round(15 * px)}px Unbounded, system-ui, sans-serif`;
+    ctx.fillStyle = C.muted; ctx.globalAlpha = clamp((.95 - z) * 3, 0, .6);
+    for (const d of G.districts) ctx.fillText(d.name.toUpperCase(), d.x, d.y - d.r * .2);
+    ctx.globalAlpha = 1;
+  }
+
+  // vestibule connectors
+  ctx.setLineDash([4, 4]); ctx.strokeStyle = C.muted; ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  for (const s of G.stations) for (let i = 1; i < s.ent.length; i++) { ctx.moveTo(s.x, s.y); ctx.lineTo(s.ent[i].x, s.ent[i].y); }
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // lines
+  const lw = Math.max(7, 3 * px);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  for (const L of G.lines) {
+    if (!L.path) continue;
+    const pts = L.path.pts;
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    if (L.loop) ctx.closePath();
+    ctx.strokeStyle = C.ground; ctx.lineWidth = lw + 4; ctx.stroke();
+    ctx.strokeStyle = lineColor(L); ctx.lineWidth = lw;
+    const selL = (ui.tool === 'line' && ui.line === L.id) || (ui.sel && ui.sel.type === 'line' && ui.sel.id === L.id);
+    if (selL) { ctx.globalAlpha = .25; ctx.lineWidth = lw * 2.2; ctx.stroke(); ctx.globalAlpha = 1; ctx.lineWidth = lw; }
+    ctx.stroke();
+    // terminus caps
+    if (!L.loop) for (const e of [[pts[0], pts[1]], [pts[pts.length - 1], pts[pts.length - 2]]]) {
+      const [a, b] = e, ang = Math.atan2(a.y - b.y, a.x - b.x);
+      const ex = a.x + Math.cos(ang) * 16, ey = a.y + Math.sin(ang) * 16;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ex - Math.sin(ang) * 8, ey + Math.cos(ang) * 8); ctx.lineTo(ex + Math.sin(ang) * 8, ey - Math.cos(ang) * 8); ctx.stroke();
+    }
+  }
+
+  // line draft preview
+  if (ui.tool === 'line' && ui.anchor != null && ui.hover) {
+    const A = G.byId.get(ui.anchor), L = lineById(ui.line);
+    if (A && L) {
+      const tgt = stationAt(ui.hover) || ui.hover;
+      const pts = octi(A, tgt);
+      ctx.strokeStyle = lineColor(L); ctx.globalAlpha = .6; ctx.lineWidth = lw; ctx.setLineDash([10, 8]);
+      ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (const p of pts) ctx.lineTo(p.x, p.y); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+      if (tgt !== ui.hover || true) {
+        const c = segCost(A, tgt), cr = crossings(pts);
+        label(tgt.x, tgt.y - 26 * px, `${c} млн${cr ? ' · через реку' : ''}`, G.money >= c ? C.ink : C.bad, px);
+      }
+    }
+  }
+
+  // trains
+  for (const t of G.trains) {
+    const L = lineById(t.line); if (!L || !L.path) continue;
+    const p = trainPos(L, t.d);
+    const len = 10 + t.wag * 9, wd = 11;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a);
+    ctx.fillStyle = lineColor(L); ctx.strokeStyle = C.ground; ctx.lineWidth = 2;
+    roundRect(-len / 2, -wd / 2, len, wd, 3.5); ctx.fill(); ctx.stroke();
+    const cap = t.wag * CAPW, n = t.pax.length;
+    const cols = Math.ceil(cap / 2);
+    for (let i = 0; i < n; i++) {
+      const cx = -len / 2 + 4 + (i % cols) * ((len - 8) / Math.max(1, cols - 1)), cy = i < cols ? -2.3 : 2.3;
+      ctx.fillStyle = '#fff'; ctx.fillRect(cx - 1.3, cy - 1.3, 2.6, 2.6);
+    }
+    if (n >= cap) { ctx.strokeStyle = C.bad; ctx.lineWidth = 2; roundRect(-len / 2 - 2, -wd / 2 - 2, len + 4, wd + 4, 5); ctx.stroke(); }
+    ctx.restore();
+  }
+
+  // stations
+  for (const s of G.stations) {
+    const inter = s.lines.length >= 2, r = inter ? 12 : 9.5;
+    // crowd halo
+    if (s.over > 2) {
+      const a = .25 + .2 * Math.sin(T * 6);
+      ctx.fillStyle = C.bad; ctx.globalAlpha = a;
+      ctx.beginPath(); ctx.arc(s.x, s.y, r + 12 + Math.min(16, s.queue.length * .3), 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+    }
+    // vestibules
+    for (let i = 1; i < s.ent.length; i++) {
+      const e = s.ent[i];
+      ctx.fillStyle = C.panel; ctx.strokeStyle = C.ink; ctx.lineWidth = 2.2;
+      roundRect(e.x - 7, e.y - 7, 14, 14, 3); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = C.accent; ctx.font = '800 8.5px Unbounded, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('М', e.x, e.y + .5);
+    }
+    ctx.fillStyle = C.panel; ctx.strokeStyle = C.ink; ctx.lineWidth = inter ? 4 : 3.2;
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, TAU); ctx.fill(); ctx.stroke();
+    if (inter) { ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(s.x, s.y, r - 5, 0, TAU); ctx.stroke(); }
+    // platform fill arc
+    const cap = platCap(s), f = s.wait.length / cap;
+    if (f > 0) {
+      ctx.strokeStyle = f > .9 ? C.bad : f > .6 ? C.warn : C.good; ctx.lineWidth = 3.5; ctx.lineCap = 'butt';
+      ctx.beginPath(); ctx.arc(s.x, s.y, r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, f)); ctx.stroke(); ctx.lineCap = 'round';
+    }
+    // waiting passengers (platform)
+    const shown = Math.min(s.wait.length, 16);
+    for (let i = 0; i < shown; i++) {
+      const p = s.wait[i], col = i % 8, row = (i / 8) | 0;
+      ctx.fillStyle = C[p.c];
+      ctx.beginPath(); ctx.arc(s.x + r + 10 + col * 6.2, s.y - 3 + row * 6.2, 2.4, 0, TAU); ctx.fill();
+    }
+    if (s.wait.length > 16) { ctx.fillStyle = C.ink; ctx.font = '700 9px "JetBrains Mono", monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText('+' + (s.wait.length - 16), s.x + r + 10 + 8 * 6.2, s.y); }
+    // street queue at entrances
+    if (s.queue.length) {
+      const per = Math.ceil(s.queue.length / s.ent.length);
+      s.ent.forEach((e, ei) => {
+        const n = Math.min(per, 30, Math.max(0, s.queue.length - ei * per));
+        ctx.fillStyle = s.queue.length > QUEUE_OVER ? C.bad : C.muted;
+        for (let i = 0; i < n; i++) {
+          const a = i * 2.399 + ei, rr = (ei ? 10 : r + 6) + Math.sqrt(i) * 3.6;
+          ctx.beginPath(); ctx.arc(e.x + Math.cos(a) * rr, e.y + 6 + Math.sin(a) * rr * .7 + rr * .35, 1.9, 0, TAU); ctx.fill();
+        }
+      });
+      if (s.queue.length > QUEUE_OVER) {
+        ctx.fillStyle = C.bad; ctx.font = '700 10px "JetBrains Mono", monospace'; ctx.textAlign = 'center';
+        ctx.fillText(s.queue.length + ' у входа', s.x, s.y + r + 34);
+      }
+    }
+    // name
+    if (z > .48) {
+      ctx.font = `600 ${Math.max(11, 11 * px * .9).toFixed(1)}px "Golos Text", system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.lineWidth = 3.5; ctx.strokeStyle = C.ground; ctx.lineJoin = 'round';
+      ctx.strokeText(s.name, s.x, s.y + r + 6); ctx.fillStyle = C.ink; ctx.fillText(s.name, s.x, s.y + r + 6);
+    }
+    if (ui.sel && ui.sel.type === 'station' && ui.sel.id === s.id) {
+      ctx.strokeStyle = C.accent; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.lineDashOffset = -T * 12;
+      ctx.beginPath(); ctx.arc(s.x, s.y, r + 11, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    }
+    if (ui.tool === 'line' && ui.anchor === s.id) {
+      ctx.strokeStyle = lineColor(lineById(ui.line) || { ci: 0 }); ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(s.x, s.y, r + 7 + Math.sin(T * 5) * 2, 0, TAU); ctx.stroke();
+    }
+  }
+
+  // ghost previews
+  if (ui.hover && !drag) {
+    const p = ui.hover;
+    if (ui.tool === 'station' && !stationAt(p)) {
+      const err = stationValid(p.x, p.y);
+      let cov = 0; for (const b of G.buildings) if (Math.hypot(b.x - p.x, b.y - p.y) < WALK) cov++;
+      ctx.strokeStyle = err ? C.bad : C.ink; ctx.lineWidth = 1.5; ctx.setLineDash([5, 5]);
+      ctx.beginPath(); ctx.arc(p.x, p.y, WALK, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      ctx.globalAlpha = .7; ctx.fillStyle = C.panel; ctx.strokeStyle = err ? C.bad : C.ink; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 9.5, 0, TAU); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1;
+      label(p.x, p.y - WALK - 12 * px, err || `${cov} ${plural(cov, 'здание', 'здания', 'зданий')} рядом · 200 млн`, err ? C.bad : C.ink, px);
+    }
+    if (ui.tool === 'vest') {
+      const r = vestCheck(p);
+      ctx.globalAlpha = .75; ctx.fillStyle = C.panel; ctx.strokeStyle = r.ok ? C.ink : C.bad; ctx.lineWidth = 2.2;
+      roundRect(p.x - 7, p.y - 7, 14, 14, 3); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1;
+      if (r.ok) {
+        ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(r.s.x, r.s.y); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = C.ink; ctx.lineWidth = 1.3; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.arc(p.x, p.y, WALK, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      }
+      label(p.x, p.y - 22 * px, r.ok ? `Вход для «${r.s.name}» · 80 млн` : r.msg, r.ok ? C.ink : C.bad, px);
+    }
+  }
+
+  // pulses
+  for (let i = pulses.length - 1; i >= 0; i--) {
+    const q = pulses[i]; q.t += 1 / 60;
+    if (q.t > .7) { pulses.splice(i, 1); continue; }
+    ctx.strokeStyle = q.col; ctx.globalAlpha = 1 - q.t / .7; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(q.x, q.y, 12 + q.t * 70, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+}
+function label(x, y, text, col, px) {
+  ctx.font = `600 ${(12 * px).toFixed(2)}px "Golos Text", system-ui, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width + 14 * px, hh = 22 * px;
+  ctx.fillStyle = C.panel; ctx.strokeStyle = C.hair; ctx.lineWidth = px;
+  roundRect(x - w / 2, y - hh / 2, w, hh, 6 * px); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = col; ctx.fillText(text, x, y + .5 * px);
+}
+
+/* ---------- loop ---------- */
+let last = performance.now(), hudT = 0;
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now; T += dt;
+  if (fly) { cam.x += (fly.x - cam.x) * .12; cam.y += (fly.y - cam.y) * .12; if (Math.hypot(fly.x - cam.x, fly.y - cam.y) < 2) fly = null; }
+  if (!G.paused && !G.over) {
+    const sub = G.speed, h = dt;
+    for (let i = 0; i < sub; i++) step(h);
+  } else if (G.dirty) rebuild();
+  draw();
+  hudT += dt; if (hudT > .2) { hudT = 0; hud(); }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- boot ---------- */
+newGame();
+resize();
+cam.z = view.w < 760 ? .5 : .8; cam.y = 1080;
+clampCam(); renderGoal(); renderLinebar(); setTool('look'); setSpeed(0); G.paused = true;
+// let the city breathe a bit behind the intro so roads already show traffic
+for (let i = 0; i < 900; i++) { step(1 / 30); }
+G.time = 6 * 60; G.sat = 62; G.share = 0;
+window.__metro = { get G() { return G; }, step, buildStation, lineClick, setTool, rebuild, addTrain };
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
