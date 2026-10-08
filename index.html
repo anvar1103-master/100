@@ -796,14 +796,39 @@ function arrive(t, L) {
   }
   t.state = 'dwell'; t.dwell = .7 + moved * .045;
 }
+// distance to the nearest train ahead on the same line and in the same direction
+function gapAhead(t, L) {
+  const total = L.path.total; let best = Infinity;
+  for (const u of G.trains) {
+    if (u === t || u.line !== t.line || u.dir !== t.dir) continue;
+    let g = (u.d - t.d) * t.dir;
+    if (L.loop) g = ((g % total) + total) % total;
+    if (g < 0 || (g === 0 && u.id > t.id)) continue;
+    if (g < best) best = g;
+  }
+  return best;
+}
 function trainTick(dt) {
   for (const t of G.trains) {
     const L = lineById(t.line); if (!L || !L.path) continue;
-    if (t.state === 'dwell') { t.dwell -= dt; if (t.dwell <= 0) { orient(t, L); t.state = 'run'; } continue; }
+    if (t.state === 'dwell') {
+      t.dwell -= dt;
+      if (t.dwell <= 0) {
+        orient(t, L);
+        // headway control: hold the train if the one ahead left too recently
+        const n = G.trains.reduce((c, u) => c + (u.line === t.line ? 1 : 0), 0);
+        const spacing = (L.loop ? L.path.total / Math.max(1, Math.ceil(n / 2)) : 2 * L.path.total / n);
+        if (n > 1 && (t.hold || 0) < 3 && gapAhead(t, L) < spacing * .4) { t.dwell = .25; t.hold = (t.hold || 0) + .25; continue; }
+        t.hold = 0; t.state = 'run';
+      }
+      continue;
+    }
     const P = L.path, tgt = t.stop + t.dir, td = P.stopD[tgt];
     if (td === undefined) { t.stop = clamp(t.stop, 0, L.stops.length - 1); t.state = 'dwell'; t.dwell = .3; continue; }
     const rem = (td - t.d) * t.dir, dep = (t.d - P.stopD[t.stop]) * t.dir;
-    const v = TR_SPEED * Math.min(1, .3 + rem / 55, .3 + dep / 40);
+    let v = TR_SPEED * Math.min(1, .3 + rem / 55, .3 + dep / 40);
+    const ahead = gapAhead(t, L);
+    if (ahead < 55) v *= clamp((ahead - 28) / 27, 0, 1);
     const step = v * dt;
     if (step >= rem) { t.d = td; t.stop = tgt; arrive(t, L); }
     else t.d += step * t.dir;
@@ -976,7 +1001,7 @@ function handleClick(p) {
     case 'line': if (s) lineClick(s); else { finishLineDraft(); } break;
     case 'vest': {
       const err = vestCheck(p);
-      if (err) { toast(err.msg, 'bad'); break; }
+      if (!err.ok) { toast(err.msg, 'bad'); break; }
       if (!canAfford(COST.vest)) break;
       G.money -= COST.vest; err.s.ent.push({ x: p.x, y: p.y }); pulse(p.x, p.y, C.good);
       if (ui.sel && ui.sel.id === err.s.id) refreshPanel(true);
@@ -1086,6 +1111,8 @@ function refreshPanel(full) {
     if (s.crowd === 'entry') warn = `<div class="warnbox"><b>Давка у входа.</b> Вестибюль не успевает пропускать людей. Добавьте вестибюль.</div>`;
     else if (s.crowd === 'platform') warn = `<div class="warnbox"><b>Платформа переполнена.</b> Поезда не успевают вывозить людей: добавьте поезда, вагоны или расширьте платформу.</div>`;
     else if (!s.lines.length) warn = `<div class="warnbox">Станция ни к чему не подключена. Проведите к ней линию.</div>`;
+    else if (fill >= .85) warn = `<div class="warnbox"><b>Платформа почти заполнена.</b> Скоро начнётся давка: добавьте поезда или вагоны.</div>`;
+    else if (s.queue.length > 10) warn = `<div class="warnbox"><b>У входа очередь.</b> Ещё один вестибюль ускорит проход.</div>`;
     else warn = `<div class="warnbox ok">Станция работает нормально.</div>`;
     if (full) {
       el.innerHTML = `<button class="x" data-act="close" aria-label="Закрыть">×</button>
@@ -1719,7 +1746,7 @@ clampCam(); renderGoal(); renderLinebar(); setTool('look'); setSpeed(0); G.pause
 // let the city breathe a bit behind the intro so roads already show traffic
 for (let i = 0; i < 900; i++) { step(1 / 30); }
 G.time = 6 * 60; G.sat = 62; G.share = 0;
-window.__metro = { get G() { return G; }, step, buildStation, lineClick, setTool, rebuild, addTrain };
+window.__metro = { get G() { return G; }, get cam() { return cam; }, step, buildStation, lineClick, setTool, rebuild, addTrain };
 requestAnimationFrame(frame);
 })();
 </script>
