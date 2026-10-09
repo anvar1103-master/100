@@ -322,6 +322,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
           <button data-v="ffa">Каждый сам за себя<small>8 бойцов, до 20</small></button>
           <button data-v="cap">Захват полян<small>3 поляны, до 150 очков</small></button>
           <button data-v="duel">Дуэль<small>1 на 1 на арене, до 10 побед</small></button>
+          <button data-v="br">Последний гриб<small>10 бойцов, одна жизнь, туман</small></button>
         </div></div>
         <div class="grp"><span class="lbl">Локация</span><div class="seg map" id="m-map">
           <button data-v="rand">Любая</button><button data-v="stream">Ручей</button><button data-v="swamp">Болото</button><button data-v="hills">Холмы</button><button data-v="clearing">Вырубка</button>
@@ -2336,7 +2337,7 @@ function pickSpawn(f){
     const list = SPAWNS[f.team], free = list.filter(s => !fighters.some(g => g.alive && Math.hypot(g.x - s.x, g.z - s.z) < 1.8));
     return pick(free.length ? free : list);
   }
-  const sc = SPAWNS.ffa.map(s => { let d = 60; for(const g of fighters) if(g.alive && g !== f) d = Math.min(d, Math.hypot(g.x - s.x, g.z - s.z)); return { s, d:d + rand(0, 10) }; });
+  const br = match.mode === 'br', sc = (br ? BR.spawns : SPAWNS.ffa).map(s => { let d = br ? 200 : 60; for(const g of fighters) if(g.alive && g !== f) d = Math.min(d, Math.hypot(g.x - s.x, g.z - s.z)); return { s, d:d + (br ? 0 : rand(0, 10)) }; });
   sc.sort((a, b) => b.d - a.d);
   return sc[0].s;
 }
@@ -2387,7 +2388,7 @@ function stepFighter(f, dt){
     if(inp.fire && f.fireT <= 0 && !match.frozen){ fireWeapon(f); f.ammo = 9999; f.fireT += 1 / W.rate; }
     return;
   }
-  if(!f.alive){ f.respawnT -= dt; if(f.respawnT <= 0 && match.live && !match.over) respawn(f); return; }
+  if(!f.alive){ if(match.mode === 'br' && f.life > 0) return; f.respawnT -= dt; if(f.respawnT <= 0 && match.live && !match.over) respawn(f); return; }
   f.cdQ = Math.max(0, f.cdQ - dt); f.cdE = Math.max(0, f.cdE - dt);
   f.shieldT = Math.max(0, f.shieldT - dt); f.invisT = Math.max(0, f.invisT - dt); f.slowT = Math.max(0, f.slowT - dt); f.rootT = Math.max(0, f.rootT - dt); f.prot = Math.max(0, f.prot - dt);
   f.hurtT += dt; f.spreadAcc = Math.max(0, f.spreadAcc - dt * 2.4);
@@ -2490,7 +2491,7 @@ function traceSeg(owner, ax, ay, az, bx, by, bz){
 }
 function applyHit(owner, h, px, py, pz, W, dist){
   if(h.f){
-    let dmg = W.dmg;
+    let dmg = W.dmg * (1 + 0.1 * (owner.power || 0)) * (isBR() ? BR.dmg : 1);
     if(W.falloff && dist > W.falloff[0]) dmg *= Math.max(W.falloff[1], 1 - (dist - W.falloff[0]) / (W.falloff[2] || 40));
     if(h.head) dmg *= W.headMul;
     owner.shotsH += 1 / (W.pellets || 1);
@@ -2608,6 +2609,7 @@ function killFighter(t, src, o){
   if(NET.on) netKill(t, killer, o, assists);
   t.lastKiller = credit || killer; t.dmgBy.clear();
   const first = !match.firstBlood && !!killer && !t.sentry; if(first) match.firstBlood = true;
+  if(!t.sentry){ brDrop(t); brOnDeath(t); }
   onKill(t, killer, o, { first, revenge, ended:prevStreak >= 3 ? prevStreak : 0, credit });
   checkWin();
 }
@@ -2625,7 +2627,7 @@ function explode(x, y, z, r, dmg, owner, kind, except){
     if(d > r) continue;
     if(segWorld(x, y + 0.2, z, g.x, cy, g.z) >= 0) continue;
     const k = clamp(1 - Math.max(0, d) / r, 0.3, 1);
-    damage(g, dmg * k, owner, { kind, x, z, kb:9 * k, splash:true });
+    damage(g, dmg * k * (1 + 0.1 * (owner.power || 0)) * (isBR() ? BR.dmg : 1), owner, { kind, x, z, kb:9 * k, splash:true });
   }
   fxExplosion(x, y, z, r, kind, owner);
 }
@@ -2871,15 +2873,18 @@ function botHurt(f, src){
   const B = f.bot; if(!src || src === f || !f.alive) return;
   if(!B.target || B.target === src || Math.random() < 0.4){ B.lastSeen = { x:src.x, z:src.z }; B.lastSeenT = match.t; B.hunt = src; B.reactT = Math.min(B.reactT, 0.1); }
 }
-function homeOf(f){ return teamMode() ? { x:0, z:(f.team === 'guard' ? 1 : -1) * (BASE_Z - 10) } : { x:f.x * 0.5, z:f.z * 0.5 }; }
+function homeOf(f){ if(isBR()) return brRefuge(f); return teamMode() ? { x:0, z:(f.team === 'guard' ? 1 : -1) * (BASE_Z - 10) } : { x:f.x * 0.5, z:f.z * 0.5 }; }
 function botPerceive(f, D){
   const B = f.bot, A = ARCH[f.arch], ex = f.x, ey = f.y + A.eye, ez = f.z, sy = Math.sin(f.yaw), cy = Math.cos(f.yaw);
-  const range = f.sentry ? 50 : f.arch === 'sniper' ? 120 : 78;
+  let range = f.sentry ? 50 : f.arch === 'sniper' ? 120 : 78;
+  // early in «Последний гриб» bots forage and only fight what comes close
+  // (whoever just shot them is always fair game)
+  if(isBR()) range = Math.min(range, 9 + Math.max(0, match.t - 15) * 0.4);
   let best = null, bs = 1e9;
   for(const g of fighters){
     if(!g.alive || !isEnemy(f, g) || g.invisT > 0) continue;
     const dx = g.x - f.x, dz = g.z - f.z, d = Math.hypot(dx, dz);
-    if(d > range) continue;
+    if(d > range && !(B.hunt === g && f.hurtT < 3)) continue;
     const front = (-sy * dx - cy * dz) / (d || 1);
     if(!f.sentry && front < -0.15 && d > 10 && match.t - g.firedT > 1.2 && B.hunt !== g && B.target !== g) continue;
     if(!losClear(ex, ey, ez, g.x, g.y + g.M.hover + ARCH[g.arch].body[0] + 0.3, g.z)) continue;
@@ -2900,8 +2905,10 @@ function botGoal(f){
   if(B.lastSeen && match.t - B.lastSeenT < 7 && f.arch !== 'sniper') return { x:B.lastSeen.x + rand(-3, 3), z:B.lastSeen.z + rand(-3, 3) };
   let heard = null, hd = 46;
   for(const g of fighters) if(g.alive && isEnemy(f, g) && match.t - g.firedT < 2){ const d = Math.hypot(g.x - f.x, g.z - f.z); if(d < hd){ hd = d; heard = g; } }
+  if(isBR() && (brOutside(f, 6) || Math.random() < (match.t < 50 ? 0.9 : 0.55))) return brGoal(f);
   if(heard && Math.random() < 0.7 && f.arch !== 'sniper') return { x:heard.x + rand(-5, 5), z:heard.z + rand(-5, 5) };
   if(match.mode === 'cap') return capGoal(f);
+  if(isBR()) return brGoal(f);
   if(teamMode() && match.mode !== 'duel'){
     if(me && me.alive && !isEnemy(me, f) && Math.random() < 0.3) return { x:clamp(me.x + rand(-6, 6), -MAP_X + 2, MAP_X - 2), z:clamp(me.z + rand(-6, 6), -MAP_Z + 2, MAP_Z - 2) };
     const side = f.team === 'guard' ? 1 : -1, want = f.arch === 'sniper' ? rand(-8, 16) : rand(-32, 10);
@@ -2993,7 +3000,7 @@ function botThink(f, dt){
   if(B.reactT <= 0){ B.reactT = D.react * rand(0.7, 1.2); botPerceive(f, D); }
   let T = B.target;
   if(T && (!T.alive || T.invisT > 0)){ T = B.target = null; }
-  if(f.hp < f.max * 0.3 && T) B.retreat = true;
+  if(f.hp < f.max * (isBR() ? 0.45 : 0.3) && T) B.retreat = true;
   if(B.retreat && (f.hp > f.max * 0.75 || (!T && f.hurtT > 6))) B.retreat = false;
   const ex = f.x, ey = f.y + A.eye, ez = f.z;
   let wantX = 0, wantZ = 0;
@@ -3027,6 +3034,7 @@ function botThink(f, dt){
     const ux = dx / d, uz = dz / d, strafe = inp.scope ? 0.35 : 0.85;
     wantX = ux * radial - uz * B.strafeDir * strafe; wantZ = uz * radial + ux * B.strafeDir * strafe;
     if(chase){ wantX = chase[0] - uz * B.strafeDir * 0.25; wantZ = chase[1] + ux * B.strafeDir * 0.25; }
+    if(isBR() && brOutside(f, 3)){ const cx = BR.cx - f.x, cz = BR.cz - f.z, L = Math.hypot(cx, cz) || 1; wantX += cx / L * 1.6; wantZ += cz / L * 1.6; }
     if(B.retreat){ const h = homeOf(f), hl = Math.hypot(h.x - f.x, h.z - f.z) || 1; wantX += (h.x - f.x) / hl * 0.7; wantZ += (h.z - f.z) / hl * 0.7; }
     else if(match.mode === 'cap' && B.capPt && f.arch !== 'sniper'){ const cx = B.capPt.x - f.x, cz = B.capPt.z - f.z, cd = Math.hypot(cx, cz); if(cd > CAP_R * 0.75 && cd < CAP_R + 14){ wantX += cx / cd * 0.9; wantZ += cz / cd * 0.9; } }
     if(B.abilT <= 0){ B.abilT = rand(0.4, 1.0); botAbilities(f, T, d, D); }
@@ -3115,6 +3123,7 @@ const SFX = {
   streak(){ if(!AC || muted) return; const t = AC.currentTime; [784, 988, 1175].forEach((f, i) => tn(master, t + i * 0.07, 'square', f, f, 0.06, 0.2)); },
   heal(){ if(!AC || muted || !ok('heal', 160)) return; const t = AC.currentTime; tn(master, t, 'sine', 660, 990, 0.08, 0.18); tn(master, t + 0.06, 'sine', 990, 1320, 0.06, 0.2); },
   plant(x, y, z){ const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'lowpass', 600, 1, 0.25, 0.3); [392, 523, 659].forEach((f, i) => tn(o, t + i * 0.07, 'triangle', f, f, 0.12, 0.25)); },
+  pick(){ if(!AC || muted) return; const t = AC.currentTime; tn(master, t, 'sine', 880, 1320, 0.12, 0.12); tn(master, t + 0.08, 'sine', 1320, 1760, 0.1, 0.16); },
   smoke(x, y, z){ const o = spot(x, y, z); if(!o) return; nz(o, AC.currentTime, 'lowpass', 900, 0.7, 0.5, 0.9, 250); nz(o, AC.currentTime, 'highpass', 2500, 0.7, 0.12, 0.4); },
   toss(f){ const o = spot(f === me ? undefined : f.x, f.y, f.z); if(!o) return; nz(o, AC.currentTime, 'bandpass', 1100, 1.2, 0.25, 0.18, 2400); },
   snap(x, y, z){ const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'highpass', 2500, 1, 0.35, 0.08); tn(o, t, 'square', 180, 90, 0.12, 0.12); },
@@ -3417,7 +3426,7 @@ function onDamage(t, amt, src, o){
     camShake = Math.max(camShake, Math.min(0.35, amt / 80));
   }
 }
-const KIND_LABEL = { burst:'очередь', auto:'очередь', rapid:'иглы', shot:'дробь', lob:'бомба', snipe:'выстрел', zone:'отрава', slam:'прыжок', grenade:'граната', ram:'таран', trap:'ловушка' };
+const KIND_LABEL = { fog:'туман', burst:'очередь', auto:'очередь', rapid:'иглы', shot:'дробь', lob:'бомба', snipe:'выстрел', zone:'отрава', slam:'прыжок', grenade:'граната', ram:'таран', trap:'ловушка' };
 function onKill(t, killer, o, info){
   emit('soft', t.x, t.y + 1, t.z, 34, { spd:5, up:1.2, size:0.35, size1:0.08, life:0.9, col:gooCol(t), g:-8, r:0.4 });
   emit('glow', t.x, t.y + 1.2, t.z, 16, { spd:3, up:1.5, size:0.5, size1:0.05, life:0.8, col:fcol(t), g:-1, r:0.4 });
@@ -3500,6 +3509,9 @@ function renderScore(){
     const mine = me.team;
     s.className = 'score';
     s.innerHTML = '<div class="tm g"><b id="sc-g">0</b>' + (mine === 'guard' ? '<span class="me-tag">вы</span>' : '') + '</div><div class="mid"><b id="clock">7:00</b><small>до ' + match.limit + (NET.on ? ' · ' + NET.code : '') + '</small>' + (match.mode === 'cap' ? capBadges() : '') + '</div><div class="tm r"><b id="sc-r">0</b>' + (mine === 'rot' ? '<span class="me-tag">вы</span>' : '') + '</div>';
+  } else if(isBR()){
+    s.className = 'score ffa';
+    s.innerHTML = '<div class="tm" style="background:rgba(255,201,77,.22)">Живых <b id="sc-alive">10</b></div><div class="mid"><b id="clock">5:00</b><small id="sc-fog">туман</small></div><div class="tm" style="background:rgba(182,255,90,.16)">Сила <b id="sc-pow">0</b></div>';
   } else {
     s.className = 'score ffa';
     s.innerHTML = '<div class="tm" style="background:rgba(255,201,77,.22)">Ты <b id="sc-me">0</b></div><div class="mid"><b id="clock">7:00</b><small>до ' + match.limit + (NET.on ? ' · ' + NET.code : '') + '</small></div><div class="tm" style="background:rgba(255,255,255,.08)"><span id="sc-ln">Лидер</span> <b id="sc-l">0</b></div>';
@@ -3552,6 +3564,10 @@ function drawMini(){
     if(enemy && !(match.t - f.firedT < 1.6 || (f.losOk && f.tagOn))) continue;
     g.fillStyle = enemy ? '#FF5A64' : '#7DF0A6'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.5;
     g.beginPath(); g.arc(mx(f.x), my(f.z), enemy ? 4.5 : 4, 0, TAU); g.fill(); g.stroke();
+  }
+  if(isBR()){
+    g.strokeStyle = 'rgba(200,120,255,.95)'; g.lineWidth = 2.5; g.beginPath(); g.arc(mx(BR.cx), my(BR.cz), brRadius(match.t) * W / (2 * MAP_X), 0, TAU); g.stroke();
+    for(const p of pickups){ g.fillStyle = p.type === 'power' ? '#B6FF5A' : p.type === 'heal' ? '#FF6A6A' : '#FFB347'; g.fillRect(mx(p.x) - 2, my(p.z) - 2, 4, 4); }
   }
   if(match.mode === 'cap') for(const c of CAPS){ g.save(); g.translate(mx(c.x), my(c.z)); g.fillStyle = c.owner ? FACTIONS[c.owner].color : 'rgba(240,240,230,.85)'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 11, 0, TAU); g.fill(); g.stroke(); if(flip) g.rotate(Math.PI); g.fillStyle = '#10180F'; g.font = '700 14px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(c.id, 0, 1); g.restore(); }
   g.translate(mx(me.x), my(me.z)); g.rotate(-me.yaw + Math.PI);
@@ -3616,11 +3632,13 @@ function updateHud(dt){
   const ring = $('ring').firstElementChild;
   ring.style.strokeDashoffset = me.reloadT > 0 ? (151 * me.reloadT / W.reload).toFixed(1) : '151';
   if(teamMode()){ txt($('sc-g'), String(match.scores.guard)); txt($('sc-r'), String(match.scores.rot)); updateCapBadges(); }
+  else if(isBR()){ txt($('sc-alive'), String(brAliveList().length)); txt($('sc-pow'), String(me.power || 0)); const t = match.t, sh = BR.grace + BR.shrink; txt($('sc-fog'), t < BR.grace ? 'туман через ' + Math.ceil(BR.grace - t) : t < sh ? 'туман сужается' : 'последний круг'); }
   else { let top = null; for(const f of fighters) if(f !== me && (!top || f.kills > top.kills)) top = f; txt($('sc-me'), String(me.kills)); if(top){ txt($('sc-ln'), top.name); txt($('sc-l'), String(top.kills)); } }
   txt($('clock'), fmtTime(match.dur - match.t));
   hurtFlash = Math.max(0, hurtFlash - dt * 1.6);
   const low = me.alive && me.hp < me.max * 0.3 ? 0.22 + Math.sin(time * 6) * 0.06 : 0;
   $('vig').style.boxShadow = 'inset 0 0 ' + (120 + hurtFlash * 80).toFixed(0) + 'px rgba(255,30,40,' + Math.min(0.75, hurtFlash * 0.6 + low).toFixed(2) + ')';
+  if(isBR() && me.alive && brOutside(me)) $('vig').style.boxShadow = 'inset 0 0 170px rgba(150,60,200,.75)';
   if(hitT > 0){ hitT -= dt; if(hitT <= 0) $('hitm').style.opacity = 0; }
   for(const h of hdirs){
     if(h.t <= 0){ h.i.style.opacity = 0; continue; }
@@ -3645,7 +3663,7 @@ function updateHud(dt){
   if(!me.alive){
     me.deathTimer = (me.deathTimer || 0) + dt;
     if(me.deathTimer > 0.8 && $('dead').hidden && state === 'play') showDead();
-    if(!$('dead').hidden) txt($('d-resp'), 'Возрождение через ' + Math.max(1, Math.ceil(me.respawnT)));
+    if(!$('dead').hidden) txt($('d-resp'), isBR() ? 'Место: ' + (BR.place || '—') + ' · смотри, кто победит' : 'Возрождение через ' + Math.max(1, Math.ceil(me.respawnT)));
   }
 }
 function showDead(){
@@ -3653,6 +3671,7 @@ function showDead(){
   $('d-label').textContent = k ? 'Тебя сразил' : 'Ты пал в бою';
   $('d-who').textContent = k ? (k.sentry ? k.name + (k.master ? ' (' + k.master.name + ')' : '') : k.name + ' · ' + clsOf(k.fac, k.arch).name) : '';
   renderSwap(); $('dead').hidden = false;
+  const br = isBR(); $('swap').hidden = br; $('dead').querySelector('.deadcard > small:last-child').hidden = br;
 }
 function renderSwap(){
   $('swap').innerHTML = ARCHS.map((a, i) => { const C = clsOf(me.fac, a); return '<button data-a="' + a + '"' + (me.nextArch === a ? ' class="sel"' : '') + '>' + icon(me.fac, a) + C.name + (TOUCH ? '' : '<kbd>' + (i + 1) + '</kbd>') + '</button>'; }).join('');
@@ -3673,8 +3692,8 @@ function showBoard(on){ if(on && inGame() && me){ $('board-c').innerHTML = board
    The host also simulates the bots and owns the match clock and team score.
    A shooter decides its hits and sends them to the target's owner, who applies the damage
    and reports the kill. Transports: claude.ai room (artifact), PeerJS (web), BroadcastChannel (tests). */
-const NET_V = 2;
-const MODE_NAMES = { tdm:'Командный бой', ffa:'Каждый сам за себя', cap:'Захват полян', duel:'Дуэль' };
+const NET_V = 3;
+const MODE_NAMES = { tdm:'Командный бой', ffa:'Каждый сам за себя', cap:'Захват полян', duel:'Дуэль', br:'Последний гриб' };
 const NET = { kind:null, roomNs:null, lobby:null, room:null, on:false, role:null, code:null, myPeer:null, waiting:false,
   nick:'', seq:0, events:[], info:new Map(), lastObj:new Map(), remote:new Map(), sendT:0, lobbyT:0, balT:1, epoch:0,
   hostPeer:null, hostSeen:0, botSeq:0, trapSeq:0, busy:false };
@@ -3814,6 +3833,7 @@ function netHostStarted(){
   me.nid = 'p' + NET.myPeer;
   for(const f of fighters) if(f.bot) f.nid = 'b' + (++NET.botSeq);
   NET.balT = 0.5; lobbyPresence();
+  if(isBR()) brStart(NET.epoch, BR.cx, BR.cz);
 }
 async function netJoin(code){
   if(NET.busy || NET.on) return;
@@ -3833,7 +3853,8 @@ function clientStart(m){
   const mp = MAPS[m.mp] ? m.mp : 'stream'; if(!MAP || MAP.id !== mp) buildWorld(mp);
   capReset(); applySky(SKIES[m.td] ? m.td : 'day'); applySeason(SEASONS[m.ss] ? m.ss : 'summer');
   Object.assign(match, { mode, diff:DIFF[m.df] ? m.df : 'normal', limit:cl(m.li, 1, 999), dur:cl(m.du, 30, 3600), t:num(m.t), scores:{ guard:num(m.sg) | 0, rot:num(m.sr) | 0 }, over:false, winner:null, firstBlood:true, attract:false, live:true, frozen:false });
-  me = makeFighter({ name:'Ты', team:mode !== 'ffa' ? fac : 'p' + NET.myPeer, fac, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(fac, menuSel.arch)] || null });
+  me = makeFighter({ name:'Ты', team:mode !== 'ffa' && mode !== 'br' ? fac : 'p' + NET.myPeer, fac, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(fac, menuSel.arch)] || null });
+  if(mode === 'br') brStart(num(m.ep), cl(m.zc && m.zc[0], -40, 40), cl(m.zc && m.zc[1], -50, 50));
   me.nid = 'p' + NET.myPeer; setOutline(me); respawn(me); me.prot = 1.5;
   renderScore(); renderMeBox(); renderAbil(true);
   state = 'play'; endT = 0;
@@ -3855,7 +3876,7 @@ function netHostLost(){ netLeave(); setNote('Хозяин покинул игр�
 // ---- outgoing ----
 function netEv(...a){ if(NET.on) NET.events.push({ t:performance.now(), e:[++NET.seq, ...a] }); }
 function flagsOf(f){ return (f.alive ? 1 : 0) | (f.ground ? 2 : 0) | (f.inp.fire && f.alive ? 4 : 0) | (f.inp.scope ? 8 : 0) | (f.shieldT > 0 ? 16 : 0) | (f.invisT > 0 ? 32 : 0) | (f.dashT > 0 ? 64 : 0) | (f.ramT > 0 ? 128 : 0) | (f.inp.sprint ? 256 : 0) | (f.reloadT > 0 ? 512 : 0) | (f.rootT > 0 ? 1024 : 0) | (f.slowT > 0 ? 2048 : 0); }
-function packF(f){ return [f.fac, f.arch, f.team, r2(f.x), r2(f.y), r2(f.z), r3(f.yaw), r3(f.pitch), r2(f.vx + f.kx), r2(f.vz + f.kz), Math.max(0, Math.round(f.hp)), flagsOf(f), f.kills, f.deaths, f.assists, f.score, f.life || 0, f.hat || 0]; }
+function packF(f){ return [f.fac, f.arch, f.team, r2(f.x), r2(f.y), r2(f.z), r3(f.yaw), r3(f.pitch), r2(f.vx + f.kx), r2(f.vz + f.kz), Math.max(0, Math.round(f.hp)), flagsOf(f), f.kills, f.deaths, f.assists, f.score, f.life || 0, f.hat || 0, f.power || 0]; }
 function netPack(){
   const now = performance.now();
   while(NET.events.length && (now - NET.events[0].t > 1500 || NET.events.length > 26)) NET.events.shift();
@@ -3863,7 +3884,7 @@ function netPack(){
   if(me) o.me = packF(me);
   if(NET.role === 'host'){
     const w = match.winner;
-    o.m = { ep:NET.epoch, md:match.mode, df:match.diff, t:r2(match.t), sg:match.scores.guard, sr:match.scores.rot, li:match.limit, du:match.dur, st:state === 'end' || match.over ? 'end' : state === 'countdown' ? 'cd' : 'play', w:w == null ? 0 : typeof w === 'string' ? w : w.nid || 0, cp:CAPS.map(c => r2(c.prog)), co:CAPS.map(c => c.owner ? c.owner[0] : '0').join(''), td:skyName, ss:season, mp:MAP.id, hf:me ? me.fac : 0 };
+    o.m = { ep:NET.epoch, md:match.mode, df:match.diff, t:r2(match.t), sg:match.scores.guard, sr:match.scores.rot, li:match.limit, du:match.dur, st:state === 'end' || match.over ? 'end' : state === 'countdown' ? 'cd' : 'play', w:w == null ? 0 : typeof w === 'string' ? w : w.nid || 0, cp:CAPS.map(c => r2(c.prog)), co:CAPS.map(c => c.owner ? c.owner[0] : '0').join(''), td:skyName, ss:season, mp:MAP.id, hf:me ? me.fac : 0, zc:[r2(BR.cx), r2(BR.cz)] };
   }
   o.bots = fighters.filter(f => f.bot && f !== me && !f.remote && f.nid).map(f => [f.nid, ...packF(f), f.name]);
   o.ev = NET.events.map(x => x.e);
@@ -3909,7 +3930,7 @@ function netReceive(peer, pr, now){
   if(Array.isArray(pr.me)) netPuppet('p' + peer, pr.me, info.nick, now, peer, true);
   if(Array.isArray(pr.bots) && (pr.r !== 'h' || NET.role === 'client')){
     const keep = new Set();
-    for(const b of pr.bots.slice(0, 24)){ if(!Array.isArray(b) || !/^(b\d{1,6}|s[\w-]{1,48})$/.test(String(b[0]))) continue; keep.add(String(b[0])); netPuppet(String(b[0]), b.slice(1, 19), cleanNick(b[19]) || 'Бот', now, peer, false); }
+    for(const b of pr.bots.slice(0, 24)){ if(!Array.isArray(b) || !/^(b\d{1,6}|s[\w-]{1,48})$/.test(String(b[0]))) continue; keep.add(String(b[0])); netPuppet(String(b[0]), b.slice(1, 20), cleanNick(b[20]) || 'Бот', now, peer, false); }
     for(const [nid, f] of NET.remote) if(f.owner === peer && !f.human && !keep.has(nid)) removeFighter(f);
   }
   if(Array.isArray(pr.ev)) for(const e of pr.ev){ if(!Array.isArray(e)) continue; const s = num(e[0]); if(s > info.seq){ info.seq = s; try{ netEvent(peer, e); }catch(err){} } }
@@ -3939,12 +3960,13 @@ function netPuppet(nid, a, name, now, owner, human){
   f.buf.push({ t:now, x:cl(a[3], -70, 70), y:cl(a[4], -30, 60), z:cl(a[5], -80, 80), yaw:num(a[6]), pitch:cl(a[7], -1.3, 1.3), vx:cl(a[8], -40, 40), vz:cl(a[9], -40, 40), hp:cl(a[10], 0, 999), fl:num(a[11]) | 0, life:num(a[16]) | 0 });
   if(f.buf.length > 10) f.buf.shift();
   f.kills = num(a[12]) | 0; f.deaths = num(a[13]) | 0; f.assists = num(a[14]) | 0; f.score = num(a[15]) | 0;
+  f.power = cl(a[18], 0, 60) | 0; f.max = ARCH[f.arch].hp + 15 * f.power;
 }
 function puppetStep(f, dt){
   const b = f.buf; if(!b || !b.length) return;
   const last = b[b.length - 1], alive = !!(last.fl & 1);
   if(alive && !f.alive && last.life !== f.lifeSeen){
-    f.alive = true; f.deathT = 0; f.max = ARCH[f.arch].hp; f.x = last.x; f.y = last.y; f.z = last.z; f.yaw = last.yaw;
+    f.alive = true; f.deathT = 0; f.max = ARCH[f.arch].hp + 15 * (f.power || 0); f.x = last.x; f.y = last.y; f.z = last.z; f.yaw = last.yaw;
     b.splice(0, b.length - 1); f.M.g.visible = true; f.M.g.rotation.set(0, f.yaw + Math.PI, 0);
     const c = fcol(f); emit('glow', f.x, f.y + 1, f.z, 20, { spd:3, up:1.5, size:0.45, size1:0.05, life:0.9, col:c, g:-1, r:0.6 });
   } else if(!alive && f.alive){ f.alive = false; f.deathT = 0; }
@@ -3982,6 +4004,7 @@ function netMatchIn(m){
     for(const f of fighters.slice()) if(f.sentry && !f.remote) removeFighter(f);
     const newMap = MAPS[m.mp] && m.mp !== MAP.id;
     if(newMap){ clearCombat(); buildWorld(m.mp); }
+    if(m.md === 'br') brStart(num(m.ep), cl(m.zc && m.zc[0], -40, 40), cl(m.zc && m.zc[1], -50, 50));
     if(SKIES[m.td] && (newMap || m.td !== skyName)) applySky(m.td);
     if(SEASONS[m.ss] && (newMap || m.ss !== season)) applySeason(m.ss);
     state = 'play'; endT = 0; $('end').hidden = true; $('hud').hidden = false; $('dead').hidden = true; respawn(me);
@@ -4021,6 +4044,8 @@ function netEvent(peer, e){
   } else if(!from || !from.remote) return;
   else if(type === 'z') addZone(from, cl(e[3], -MAP_X, MAP_X), cl(e[4], -MAP_Z, MAP_Z));
   else if(type === 't') placeTrap(from, cl(e[3], -MAP_X, MAP_X), cl(e[4], -MAP_Z, MAP_Z), String(e[5]).slice(0, 40));
+  else if(type === 'pk') removePickup(String(e[3]).slice(0, 60));
+  else if(type === 'pd'){ if(isBR()) addPickup(String(e[3]).slice(0, 60), 'power', cl(e[4], -60, 60), cl(e[5], -70, 70), cl(e[6], 1, 60) | 0); }
   else if(type === 'g') throwGrenade(from, [cl(e[3], -70, 70), cl(e[4], -30, 60), cl(e[5], -80, 80), cl(e[6], -60, 60), cl(e[7], -60, 60), cl(e[8], -60, 60)], e[9] === 1);
   else if(type === 'l'){ MZ.set(cl(e[3], -70, 70), cl(e[4], -30, 60), cl(e[5], -80, 80)); DIR.set(num(e[6]), num(e[7]), num(e[8])); if(DIR.lengthSq() < 1e-6) return; DIR.normalize(); const W = ARCH[from.arch].w; spawnShot(from, MZ, DIR, W, true); fxShot(from, W, MZ, DIR); }
   else if(type === 'b'){ const W = ARCH.sniper.w, ax = num(e[3]), ay = num(e[4]), az = num(e[5]), bx = num(e[6]), by = num(e[7]), bz = num(e[8]); fxBeam(from, ax, ay, az, bx, by, bz); fxShot(from, W, MZ.set(ax, ay, az), DIR.set(bx - ax, by - ay, bz - az).normalize()); fxImpact(bx, by, bz, null, W, from, false); }
@@ -4034,7 +4059,7 @@ function netKill(t, killer, o, assists){ netEv('k', t.nid, killer ? killer.nid |
 function netBalance(dt){
   NET.balT -= dt; if(NET.balT > 0 || !me || state === 'end') return; NET.balT = 1;
   const real = f => f === me || (f.bot && !f.sentry) || (f.remote && f.human);
-  const groups = match.mode === 'duel' ? [['guard', 1], ['rot', 1]] : teamMode() ? [['guard', 6], ['rot', 6]] : [[null, 8]];
+  const groups = match.mode === 'br' ? [[null, BR.n]] : match.mode === 'duel' ? [['guard', 1], ['rot', 1]] : teamMode() ? [['guard', 6], ['rot', 6]] : [[null, 8]];
   for(const [team, cap] of groups){
     const all = fighters.filter(f => real(f) && (team === null || f.team === team));
     const bots = all.filter(f => f.bot && f !== me && !f.sentry);
@@ -4050,7 +4075,7 @@ function netBalance(dt){
 /* ================= capture mode: three glades ================= */
 const CAP_R = 6.2;
 const CAPS = [{ id:'A', x:-22, z:24 }, { id:'B', x:0, z:0 }, { id:'C', x:22, z:-24 }];
-const teamMode = () => match.mode !== 'ffa';
+const teamMode = () => match.mode !== 'ffa' && match.mode !== 'br';
 const capGroup = new THREE.Group(); capGroup.visible = false; scene.add(capGroup);
 const TEAM_COL = { guard:new THREE.Color(0.45, 1.25, 0.55), rot:new THREE.Color(1.15, 0.45, 1.35), none:new THREE.Color(0.8, 0.85, 0.8) };
 let capScoreT = 0;
@@ -4232,6 +4257,156 @@ function updatePots(dt){
   for(const f of fighters) if(f.plantCd > 0) f.plantCd -= dt;
 }
 
+/* ================= «Последний гриб»: ten fighters, one life, a closing rot fog ================= */
+const BR = { n:10, dmg:0.5, grace:20, shrink:120, r0:72, rMin:5, cx:0, cz:0, place:0, alive:0, lastAlive:0, fogT:0, warned:false };
+const isBR = () => match.mode === 'br';
+// radius of the safe circle at match time t
+function brRadius(t){ const u = clamp((t - BR.grace) / BR.shrink, 0, 1); return lerp(BR.r0, BR.rMin, u * u * (3 - 2 * u)); }
+function brOutside(f, pad){ return Math.hypot(f.x - BR.cx, f.z - BR.cz) > brRadius(match.t) - (pad || 0); }
+const brAliveList = () => fighters.filter(f => f.alive && !f.sentry);
+// everyone who has entered the match (spawned at least once)
+const brEntrants = () => fighters.filter(f => !f.sentry && (f.life > 0 || f.remote));
+
+/* ---- the fog wall ---- */
+const fogMat = new THREE.ShaderMaterial({ transparent:true, depthWrite:false, side:THREE.DoubleSide, fog:false, uniforms:{ t:{ value:0 } },
+  vertexShader:'varying vec2 vU; varying float vY; void main(){ vU = uv; vY = position.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader:'uniform float t; varying vec2 vU; varying float vY; void main(){ float band = 0.55 + 0.45 * sin(vU.x * 180.0 + t * 1.5 + vY * 0.4) * sin(vU.x * 47.0 - t * 0.7); float a = (1.0 - smoothstep(0.0, 1.0, vU.y)) * (0.32 + 0.18 * band); vec3 c = mix(vec3(0.42, 0.62, 0.30), vec3(0.62, 0.30, 0.72), 0.5 + 0.5 * sin(vU.x * 25.0 + t * 0.3)); gl_FragColor = vec4(c * 1.4, a);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}' });
+const fogWall = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 30, 96, 1, true), fogMat);
+fogWall.position.y = 10; fogWall.renderOrder = 6; fogWall.frustumCulled = false; fogWall.visible = false; scene.add(fogWall);
+
+/* ---- pickups: power spores, healing caps and spare grenades ---- */
+const PICK = { power:{ name:'Спора силы', col:'#B6FF5A', glow:'#7CFF2A' }, heal:{ name:'Лечебный гриб', col:'#FF6A6A', glow:'#FF3A50' }, gren:{ name:'Шишка-граната', col:'#C8955A', glow:'#FFB347' } };
+let pickups = [];
+const pickG = { power:new THREE.OctahedronGeometry(0.34, 0), heal:new THREE.SphereGeometry(0.34, 14, 8, 0, TAU, 0, Math.PI / 2), gren:new THREE.IcosahedronGeometry(0.3, 0) };
+const pickStem = new THREE.CylinderGeometry(0.09, 0.12, 0.34, 8);
+function pickMesh(type, n){
+  const P = PICK[type], g = new THREE.Group();
+  const m = new THREE.Mesh(pickG[type], new THREE.MeshStandardMaterial({ color:P.col, emissive:P.glow, emissiveIntensity:type === 'power' ? 1.2 : 0.55, roughness:0.4, flatShading:type !== 'heal' }));
+  if(type === 'heal'){ const st = new THREE.Mesh(pickStem, new THREE.MeshStandardMaterial({ color:'#F4EAD6' })); st.position.y = -0.16; m.add(st); }
+  if(type === 'gren') m.scale.set(0.9, 1.25, 0.9);
+  if(n > 1) m.scale.multiplyScalar(1 + Math.min(n, 6) * 0.12);
+  g.add(m);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 24), new THREE.MeshBasicMaterial({ color:new THREE.Color(P.glow).multiplyScalar(1.5), transparent:true, opacity:0.5, depthWrite:false, side:THREE.DoubleSide }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = -0.55; g.add(ring);
+  scene.add(g); return g;
+}
+function addPickup(id, type, x, z, n){
+  if(pickups.some(p => p.id === id)) return;
+  const y = Math.max(supportH(x, z, 99, 0), waterAt(x, z)) + 0.75;
+  pickups.push({ id, type, x, z, y, n:n || 1, mesh:pickMesh(type, n || 1), ph:rand(0, TAU) });
+}
+function removePickup(id){
+  const i = pickups.findIndex(p => p.id === id); if(i < 0) return;
+  const p = pickups[i]; scene.remove(p.mesh); p.mesh.traverse(o => { if(o.material) o.material.dispose(); if(o.geometry && o.geometry.type === 'RingGeometry') o.geometry.dispose(); });
+  pickups.splice(i, 1);
+}
+function clearPickups(){ for(const p of pickups.slice()) removePickup(p.id); }
+// the same scatter on every machine: seeded by the match epoch
+function brScatter(seed){
+  clearPickups();
+  const r = seeded(seed || 1), pts = NAV.filter(n => Math.hypot(n.x, n.z) < 60).slice();
+  for(let i = pts.length - 1; i > 0; i--){ const j = Math.floor(r() * (i + 1)); [pts[i], pts[j]] = [pts[j], pts[i]]; }
+  const n = Math.min(pts.length, 30);
+  for(let i = 0; i < n; i++){ const t = r(), type = t < 0.5 ? 'power' : t < 0.8 ? 'heal' : 'gren', p = pts[i]; addPickup('s' + i, type, p.x + (r() - 0.5) * 2, p.z + (r() - 0.5) * 2, 1); }
+}
+function grabPickup(f, p){
+  if(p.type === 'heal'){ if(f.hp >= f.max) return false; heal(f, 70, f); }
+  else if(p.type === 'gren'){ if(f.gren >= GREN.max + 1) return false; f.gren = Math.min(GREN.max + 1, f.gren + p.n); }
+  else { f.power = (f.power || 0) + p.n; f.max += 15 * p.n; f.hp = Math.min(f.max, f.hp + 15 * p.n); }
+  if(f === me){ killNotice('<em>' + PICK[p.type].name + (p.n > 1 ? ' ×' + p.n : '') + '</em>' + (p.type === 'power' ? ' · сила ' + f.power : '')); SFX.pick(); }
+  emit('glow', p.x, p.y, p.z, 18, { spd:3, up:2, size:0.4, size1:0.05, life:0.6, col:p.type === 'power' ? [0.7, 1.4, 0.4] : p.type === 'heal' ? [1.4, 0.5, 0.5] : [1.3, 0.9, 0.4], g:-2 });
+  if(NET.on && f.nid) netEv('pk', f.nid, p.id);
+  removePickup(p.id);
+  return true;
+}
+// a fallen fighter scatters the spores they carried
+function brDrop(f){
+  if(!isBR() || f.remote || !(f.power > 0)) return;
+  const id = 'd' + (f.nid || f.id) + '_' + f.life;
+  addPickup(id, 'power', f.x, f.z, f.power);
+  if(NET.on && f.nid) netEv('pd', f.nid, id, r2(f.x), r2(f.z), f.power);
+}
+
+/* ---- match flow ---- */
+// starting spots spread over the whole map: greedy farthest-point picks from the walking grid
+function brSpawnPoints(){
+  const cand = NAV.filter(n => Math.abs(n.x) < MAP_X - 5 && Math.abs(n.z) < MAP_Z - 5), out = [];
+  if(!cand.length) return SPAWNS.ffa.slice();
+  out.push(cand[Math.floor(Math.random() * cand.length)]);
+  while(out.length < 12){
+    let best = null, bd = -1;
+    for(const c of cand){ let d = 1e9; for(const o of out) d = Math.min(d, Math.hypot(c.x - o.x, c.z - o.z)); if(d > bd){ bd = d; best = c; } }
+    out.push(best);
+  }
+  return out.map(p => { const [x, z] = freeSpot(p.x, p.z, 1.2); return { x, z, yaw:Math.atan2(x, z) }; });
+}
+function brStart(seed, cx, cz){
+  BR.cx = cx; BR.cz = cz; BR.place = 0; BR.warned = false; BR.lastAlive = 0; BR.fogT = 0; BR.spawns = brSpawnPoints();
+  brScatter(seed);
+}
+function brPickCenter(){ const c = NAV.filter(n => Math.hypot(n.x, n.z) < 16); const p = c.length ? pick(c) : { x:0, z:0 }; return [p.x, p.z]; }
+function updateBR(dt){
+  const on = isBR() && (state === 'play' || state === 'countdown' || state === 'end');
+  fogWall.visible = on;
+  if(!on){ if(pickups.length && !isBR()) clearPickups(); return; }
+  const R = brRadius(match.t);
+  fogWall.scale.set(R, 1, R); fogWall.position.set(BR.cx, 10, BR.cz); fogMat.uniforms.t.value = time;
+  for(const p of pickups){ p.mesh.position.set(p.x, p.y + Math.sin(time * 2 + p.ph) * 0.12, p.z); p.mesh.children[0].rotation.y += dt * 1.5; }
+  if(state !== 'play' || match.over) return;
+  if(!BR.warned && match.t > BR.grace - 6){ BR.warned = true; announce('Туман наступает!', 'держись внутри круга', 2.4); SFX.horn(); }
+  // the fog hurts whoever is outside, more and more as the circle closes
+  BR.fogT += dt;
+  if(BR.fogT >= 0.5){
+    BR.fogT = 0;
+    const dps = 8 + clamp((match.t - BR.grace) / 8, 0, 22);
+    for(const f of fighters) if(f.alive && !f.remote && !f.sentry && brOutside(f)) damage(f, dps * 0.5, null, { kind:'fog' });
+  }
+  // grab what you walk over
+  for(const f of fighters){ if(!f.alive || f.remote || f.sentry) continue; for(const p of pickups) if(Math.abs(f.x - p.x) < 1.3 && Math.abs(f.z - p.z) < 1.3 && Math.abs(f.y + 0.6 - p.y) < 2){ if(grabPickup(f, p)) break; } }
+  const alive = brAliveList().length;
+  if(alive !== BR.lastAlive){ if(BR.lastAlive && alive > 1 && alive <= 5) killNotice('Осталось бойцов: <em>' + alive + '</em>'); BR.lastAlive = alive; }
+  brCheckWin();
+}
+function brCheckWin(){
+  if(match.over || (NET.on && NET.role !== 'host') || match.t < 4) return;
+  const ent = brEntrants(); if(ent.length < 2) return;
+  const alive = ent.filter(f => f.alive);
+  if(alive.length <= 1) endMatch(alive[0] || null);
+}
+// called when somebody falls: remember my place
+function brOnDeath(t){
+  if(!isBR() || t !== me) return;
+  BR.place = brAliveList().length + 1;
+  announce('Ты выбыл', BR.place + '-е место из ' + brEntrants().length, 2.6);
+}
+function brTimeUp(){
+  const alive = brAliveList(); let best = null;
+  for(const f of alive) if(!best || f.kills > best.kills || (f.kills === best.kills && f.hp > best.hp)) best = f;
+  endMatch(best);
+}
+// a hurt bot runs for the nearest healing cap inside the circle, or just away from whoever shoots it
+function brRefuge(f){
+  const R = brRadius(match.t + 6);
+  let best = null, bd = 30;
+  for(const p of pickups){ if(p.type !== 'heal' || Math.hypot(p.x - BR.cx, p.z - BR.cz) > R - 2) continue; const d = Math.hypot(p.x - f.x, p.z - f.z); if(d < bd){ bd = d; best = p; } }
+  if(best) return { x:best.x, z:best.z };
+  const T = f.bot && f.bot.target;
+  let x = T ? f.x + (f.x - T.x) : BR.cx, z = T ? f.z + (f.z - T.z) : BR.cz;
+  const dx = x - BR.cx, dz = z - BR.cz, d = Math.hypot(dx, dz), lim = Math.max(3, R - 4);
+  if(d > lim){ x = BR.cx + dx / d * lim; z = BR.cz + dz / d * lim; }
+  return { x, z };
+}
+// bots: stay inside the circle, collect spores, then hunt
+function brGoal(f){
+  const R = brRadius(match.t + 12), d = Math.hypot(f.x - BR.cx, f.z - BR.cz);
+  if(d > R - 5){ const a = rand(0, TAU), rr = rand(0, Math.max(2, R * 0.4)); return { x:BR.cx + Math.cos(a) * rr, z:BR.cz + Math.sin(a) * rr }; }
+  let best = null, bd = 26;
+  for(const p of pickups){ if(Math.hypot(p.x - BR.cx, p.z - BR.cz) > R - 2) continue; if(p.type === 'heal' && f.hp > f.max * 0.8) continue; const dd = Math.hypot(p.x - f.x, p.z - f.z); if(dd < bd){ bd = dd; best = p; } }
+  if(best) return { x:best.x, z:best.z };
+  const inside = NAV.filter(n => Math.hypot(n.x - BR.cx, n.z - BR.cz) < R * 0.75);
+  const p = pick(inside.length ? inside : NAV); return { x:p.x + rand(-2, 2), z:p.z + rand(-2, 2) };
+}
+
 /* ================= post-processing ================= */
 let composer = null, bloomPass = null, usePost = false, postLoading = false;
 async function initPost(){
@@ -4376,7 +4551,7 @@ let countT = 0, lastCount = 0, cmsgT = 0, endT = 0;
 function clearMatch(){
   clearCombat();
   for(const f of fighters){ scene.remove(f.M.g); disposeModel(f.M); if(f.tag) f.tag.remove(); }
-  fighters = []; me = null;
+  fighters = []; me = null; clearPickups();
   for(const d of dmgEls) d.el.remove(); dmgEls.length = 0;
   for(const f of feed) f.el.remove(); feed.length = 0;
   for(const h of hdirs) h.t = 0;
@@ -4411,12 +4586,15 @@ function startMatch(sync){
 }
 function beginMatch(){
   clearMatch();
-  Object.assign(match, { mode:menuSel.mode, diff:menuSel.diff, limit:{ tdm:50, cap:150, duel:10 }[menuSel.mode] || 20, dur:menuSel.mode === 'duel' ? 300 : 480, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:false, attract:false, live:false, frozen:true });
+  Object.assign(match, { mode:menuSel.mode, diff:menuSel.diff, limit:{ tdm:50, cap:150, duel:10, br:1e9 }[menuSel.mode] || 20, dur:menuSel.mode === 'duel' || menuSel.mode === 'br' ? 300 : 480, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:false, attract:false, live:false, frozen:true });
   const pf = menuSel.fac;
   capReset(); applySky(pickSky()); applySeason(pickSeason());
   me = makeFighter({ name:'Ты', team:teamMode() ? pf : 'p0', fac:pf, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(pf, menuSel.arch)] || null });
   const used = new Set(), nameFor = fac => { const l = NAMES[fac].filter(n => !used.has(n)), n = pick(l.length ? l : NAMES[fac]); used.add(n); return n; };
-  if(match.mode === 'duel'){
+  if(match.mode === 'br'){
+    for(let i = 0; i < BR.n - 1; i++){ const fac = i % 2 ? pf : (pf === 'guard' ? 'rot' : 'guard'); const f = makeFighter({ name:nameFor(fac), team:'b' + i, fac, arch:pick(ARCHS), hat:botHat() }); f.bot = newBot(); }
+    const [cx, cz] = brPickCenter(); brStart(1 + Math.floor(Math.random() * 1e6), cx, cz);
+  } else if(match.mode === 'duel'){
     const other = pf === 'guard' ? 'rot' : 'guard', f = makeFighter({ name:nameFor(other), team:other, fac:other, arch:pick(ARCHS), hat:botHat() }); f.bot = newBot();
   } else if(teamMode()){
     const other = pf === 'guard' ? 'rot' : 'guard';
@@ -4442,6 +4620,7 @@ function countdown(dt){
   if(countT <= 0){ state = 'play'; match.frozen = false; match.live = true; txt($('cmsg'), 'В бой!'); SFX.beep(true); SFX.horn(); cmsgT = 1; updatePause(); }
 }
 function timeUp(){
+  if(isBR()) return brTimeUp();
   if(teamMode()){ const g = match.scores.guard, r = match.scores.rot; endMatch(g === r ? null : g > r ? 'guard' : 'rot'); }
   else { let top = null, tie = false; for(const f of fighters){ if(!top || f.kills > top.kills){ top = f; tie = false; } else if(f.kills === top.kills) tie = true; } endMatch(tie ? null : top); }
 }
@@ -4459,8 +4638,9 @@ function showEnd(){
   if(document.exitPointerLock && locked) document.exitPointerLock();
   $('hud').hidden = true; $('dead').hidden = true; $('board').hidden = true;
   const w = match.winner, won = w !== null && (teamMode() ? w === me.team : w === me);
-  $('e-title').textContent = w === null ? 'Ничья' : won ? 'Победа!' : 'Поражение';
+  $('e-title').textContent = w === null ? 'Ничья' : won ? 'Победа!' : isBR() ? (BR.place ? BR.place + '-е место' : 'Поражение') : 'Поражение';
   $('e-lead').textContent = MAP.name + '. ' + (teamMode() ? FACTIONS.guard.name + ' ' + match.scores.guard + ' : ' + match.scores.rot + ' ' + FACTIONS.rot.name
+    : isBR() ? (won ? 'Ты — последний гриб на поляне! Побед: ' + me.kills + ', сила ' + (me.power || 0) + '.' : (w ? w.name + ' — последний выживший.' : 'Никто не выжил.') + (BR.place ? ' Твоё место: ' + BR.place + ' из ' + brEntrants().length + '.' : ''))
     : (w ? (w === me ? 'Ты' : w.name) + ' — первое место, ' + w.kills + ' побед.' : 'Время вышло, лидеров несколько.'));
   const xp = awardXP(won, w === null);
   if(xp){ let t = ' +' + xp.gain + ' опыта.'; if(xp.after > xp.before) t += ' ' + clsOf(me.fac, me.arch).name + ': уровень ' + xp.after + '!'; if(xp.hats.length) t += ' Новая шапка: ' + xp.hats.map(h => HATS[h].name).join(', ') + '.'; $('e-lead').textContent += t; }
@@ -4507,7 +4687,7 @@ function tick(dt){
   if(state === 'play') match.t += dt;
   for(const f of fighters) if(f.bot) botThink(f, dt);
   for(const f of fighters) stepFighter(f, dt);
-  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateSmokes(dt); updateStations(dt); updateCaps(dt); updatePots(dt);
+  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateSmokes(dt); updateBR(dt); updateStations(dt); updateCaps(dt); updatePots(dt);
   for(const f of fighters) animFighter(f, dt);
   if(state === 'countdown') countdown(dt);
   if(cmsgT > 0){ cmsgT -= dt; if(cmsgT <= 0) $('cmsg').style.opacity = 0; }
@@ -4563,7 +4743,7 @@ window.__lv = {
     g.strokeStyle = 'rgba(255,255,255,.15)'; g.lineWidth = 1; for(let x = -40; x <= 40; x += 10){ g.beginPath(); g.moveTo(mx(x), 0); g.lineTo(mx(x), H); g.stroke(); } for(let z = -50; z <= 50; z += 10){ g.beginPath(); g.moveTo(0, my(z)); g.lineTo(W, my(z)); g.stroke(); }
     return c.toDataURL('image/png');
   },
-  path:(ax, az, bx, bz) => findPath(ax, az, bx, bz), navInfo:() => ({ nodes:NODES.length, edges:NODES.reduce((a, n) => a + n.nb.length / 2, 0) / 2 }),
+  path:(ax, az, bx, bz) => findPath(ax, az, bx, bz), br:() => ({ cx:BR.cx, cz:BR.cz, R:brRadius(match.t), picks:pickups.map(p => p.id + p.type[0]).sort().join(","), n:pickups.length }), navInfo:() => ({ nodes:NODES.length, edges:NODES.reduce((a, n) => a + n.nb.length / 2, 0) / 2 }),
   pads:() => PADS.map(p => ({ x:p.x, z:p.z, top:p.top, v:p.v, dx:p.dx, dz:p.dz })), ceil:(x, z, y) => ceilingH(x, z, y, 0.4), arch:a => ARCH[a],
   cam(a){ dbgCam = a || null; }, env(t, se){ applySky(t); applySeason(se); }, h:(x, z) => groundH(x, z), sup:(x, z, y) => supportH(x, z, y, 0.4),
   world:() => ({ ms:buildWorld.ms, obs:obstacles.length, nav:NAV.length, pads:PADS.length, ffa:SPAWNS.ffa.length, pots:POTS.length, calls:renderer.info.render.calls, tris:renderer.info.render.triangles, geos:renderer.info.memory.geometries, tex:renderer.info.memory.textures, progs:renderer.info.programs.length }),
