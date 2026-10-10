@@ -27,14 +27,16 @@ button{cursor:pointer}
 .scope::before,.scope::after{content:"";position:absolute;background:rgba(10,20,10,.85)}
 .scope::before{left:50%;top:calc(50% - 31vmin);width:2px;height:62vmin;margin-left:-1px}
 .scope::after{top:50%;left:calc(50% - 31vmin);height:2px;width:62vmin;margin-top:-1px}
-.xh{position:fixed;left:50%;top:50%;width:0;height:0;--g:7px;--c:#fff}
-.xh i{position:absolute;background:var(--c);box-shadow:0 0 0 1px rgba(0,0,0,.5);border-radius:1px}
-.xh .l{width:9px;height:2px;right:var(--g);top:-1px}
-.xh .r{width:9px;height:2px;left:var(--g);top:-1px}
-.xh .t{width:2px;height:9px;left:-1px;bottom:var(--g)}
-.xh .b{width:2px;height:9px;left:-1px;top:var(--g)}
-.xh u{position:absolute;left:-2px;top:-2px;width:4px;height:4px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1px rgba(0,0,0,.5)}
+.xh{position:fixed;left:50%;top:50%;width:0;height:0;--g:10px;--c:#F4FFF0;--sh:0 0 0 1px rgba(0,0,0,.45),0 0 6px rgba(0,0,0,.25);transition:opacity .15s}
+.xh b{position:absolute;left:calc(-1 * var(--g));top:calc(-1 * var(--g));width:calc(2 * var(--g));height:calc(2 * var(--g));box-sizing:border-box;border-radius:50%;border:1.5px solid var(--c);opacity:.5;box-shadow:var(--sh),inset 0 0 0 1px rgba(0,0,0,.25);transition:width .06s,height .06s,left .06s,top .06s}
+.xh i{position:absolute;background:var(--c);box-shadow:var(--sh);border-radius:2px}
+.xh .l{width:6px;height:2px;right:calc(var(--g) + 4px);top:-1px}
+.xh .r{width:6px;height:2px;left:calc(var(--g) + 4px);top:-1px}
+.xh .t{width:2px;height:6px;left:-1px;bottom:calc(var(--g) + 4px)}
+.xh .b{width:2px;height:6px;left:-1px;top:calc(var(--g) + 4px)}
+.xh u{position:absolute;left:-2px;top:-2px;width:4px;height:4px;border-radius:50%;background:var(--c);box-shadow:var(--sh)}
 .xh.foe{--c:var(--foe)}
+.xh.foe b{opacity:.85}
 .xh.off{opacity:0}
 .ring{position:fixed;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;transform:rotate(-90deg)}
 .ring circle{fill:none;stroke:var(--amber);stroke-width:3;stroke-linecap:round;stroke-dasharray:151;stroke-dashoffset:151;filter:drop-shadow(0 0 2px rgba(0,0,0,.6))}
@@ -275,6 +277,34 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
 @keyframes ryShine{0%{background-position:160% 0,0 0}55%,100%{background-position:-60% 0,0 0}}
 @keyframes ryFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.royale::before,.royale .ry-word{animation:none}}
+.medpop{position:fixed;left:50%;top:calc(50% + 58px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;opacity:0;z-index:6}
+.medpop.on{animation:mpIn 2.1s ease-out both}
+.medpop .mp-row{display:flex;align-items:center;gap:6px}
+.medpop .mp-m{width:84px;height:84px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+.medpop .mp-m.sm{width:56px;height:56px;animation:mpSm .5s .12s both}
+.medpop.t3 .mp-m:first-child{width:104px;height:104px}
+.medpop .mp-m svg,.medtray svg,.e-med svg{width:100%;height:100%;display:block;overflow:visible}
+.medpop .mp-n{margin-top:2px;font:700 22px/1.1 'Oswald','Arial Narrow',var(--font-display);text-transform:uppercase;letter-spacing:.03em;color:#FFF4D6;text-shadow:0 2px 0 rgba(40,20,0,.7),0 0 14px rgba(255,200,90,.45)}
+.medpop.t3 .mp-n{font-size:26px;color:#FFE27A}
+.medpop .mp-l{margin-top:2px;font:800 14px/1.2 var(--font-body);color:var(--ink-2);text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.medpop .mp-l em{font-style:normal;color:var(--amber)}
+@keyframes mpIn{0%{opacity:0;transform:translateX(-50%) scale(1.9)}12%{opacity:1;transform:translateX(-50%) scale(.94)}20%{transform:translateX(-50%) scale(1)}82%{opacity:1;transform:translateX(-50%) translateY(0)}100%{opacity:0;transform:translateX(-50%) translateY(40px) scale(.7)}}
+@keyframes mpSm{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+.medtray{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);display:flex;gap:6px;pointer-events:none;max-width:calc(100vw - 600px);flex-wrap:wrap-reverse;justify-content:center}
+.medtray .mt{position:relative;width:40px;height:40px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));animation:mpSm .35s both}
+.medtray .mt b,.e-med .mt b{position:absolute;right:-4px;bottom:-2px;font:700 13px/1 'Oswald','Arial Narrow',sans-serif;color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000}
+.e-med{display:flex;flex-wrap:wrap;gap:10px 14px;justify-content:center;margin:2px 0 14px}
+.e-med .mt{position:relative;width:54px;text-align:center}
+.e-med .mt svg{height:54px}
+.e-med .mt span{display:block;margin-top:2px;font:800 10.5px/1.15 var(--font-body);color:var(--ink-2)}
+.e-med .mt b{right:0;top:38px;bottom:auto}
+@media (pointer:coarse),(max-width:820px){
+  .medtray{bottom:auto;top:60px;max-width:70vw}
+  .medtray .mt{width:30px;height:30px}
+  .medpop{top:calc(50% + 40px)}
+  .medpop .mp-m{width:64px;height:64px}
+  .medpop.t3 .mp-m:first-child{width:78px;height:78px}
+}
 </style>
 
 <canvas id="c" aria-label="Лесная поляна, поле боя"></canvas>
@@ -284,7 +314,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
   <div class="vig" id="vig"></div>
   <div class="tags" id="tags"></div>
   <div class="scope" id="scope" hidden></div>
-  <div class="xh" id="xh"><i class="l"></i><i class="r"></i><i class="t"></i><i class="b"></i><u></u></div>
+  <div class="xh" id="xh"><b></b><i class="l"></i><i class="r"></i><i class="t"></i><i class="b"></i><u></u></div>
   <svg class="ring" id="ring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="24"/></svg>
   <div class="hitm" id="hitm"><i></i><i></i><i></i><i></i></div>
   <div class="hdir" id="hdir"></div>
@@ -293,6 +323,8 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
   <div class="feed" id="feed"></div>
   <div class="ann" id="ann"></div>
   <div class="kn" id="kn"></div>
+  <div class="medpop" id="medpop"></div>
+  <div class="medtray" id="medtray"></div>
   <div class="plantp" id="plantp" hidden></div>
   <div class="cmsg" id="cmsg"></div>
   <div class="mebox" id="me-box">
@@ -385,6 +417,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
     <div class="title" id="e-title" style="font-size:clamp(40px,8vw,64px)">Победа!</div>
     <p class="lead" id="e-lead"></p>
     <div class="res" id="e-res"></div>
+    <div id="e-medals"></div>
     <div id="e-board"></div>
     <div class="row"><button class="go alt" id="e-menu" style="flex:1">В меню</button><button class="go" id="e-again" style="flex:1">Ещё бой</button></div>
   </div>
@@ -1944,23 +1977,23 @@ function updateWorld(dt){
 /* ================= fighter data ================= */
 const ARCH = {
   soldier:{ hp:190, speed:7, rad:0.5, eye:1.55, h:2.0, body:[0.8, 0.56], head:[1.6, 0.64], headY:1.3, camD:4.3, camS:1.15,
-    w:{ kind:'auto', dmg:10, rate:7, mag:30, reload:1.7, speed:150, spread:0.0045, bloom:0.08, kick:[0.011, 0.0045], headMul:1.5, range:95 }, cdQ:12, cdE:9 },
+    w:{ kind:'auto', dmg:10, rate:7, mag:30, reload:1.7, speed:190, spread:0.004, bloom:0.035, kick:[0.0035, 0.0012], fat:0.14, headMul:1.5, range:95 }, cdQ:12, cdE:9 },
   tank:{ hp:305, speed:6.1, rad:0.66, eye:1.8, h:2.3, body:[0.95, 0.72], head:[1.85, 0.72], headY:1.5, camD:5.0, camS:1.5,
-    w:{ kind:'lob', dmg:36, splash:2.8, splashDmg:30, rate:1.55, mag:6, reload:2.0, speed:58, grav:12, spread:0.004, bloom:0, kick:[0.03, 0], headMul:1.25, range:110 }, cdQ:14, cdE:8 },
+    w:{ kind:'lob', dmg:36, splash:2.8, splashDmg:30, rate:1.55, mag:6, reload:2.0, speed:58, grav:12, spread:0.004, bloom:0, kick:[0.016, 0], headMul:1.25, range:110 }, cdQ:14, cdE:8 },
   scout:{ hp:165, speed:8.9, rad:0.45, eye:1.4, h:1.8, body:[0.75, 0.5], head:[1.45, 0.55], headY:1.18, camD:4.1, camS:1.1,
-    w:{ kind:'shot', pellets:8, dmg:13, rate:1.45, mag:6, reload:1.8, speed:140, spread:0.06, bloom:0, kick:[0.03, 0], headMul:1.3, falloff:[7, 0.25, 13], range:34, botRange:15 }, cdQ:5, cdE:12 },
+    w:{ kind:'shot', pellets:8, dmg:13, rate:1.45, mag:6, reload:1.8, speed:170, spread:0.06, bloom:0, kick:[0.014, 0], fat:0.08, headMul:1.3, falloff:[7, 0.25, 13], range:34, botRange:15 }, cdQ:5, cdE:12 },
   sniper:{ hp:140, speed:6.8, rad:0.45, eye:1.62, h:2.05, body:[0.8, 0.5], head:[1.62, 0.46], headY:1.35, camD:4.3, camS:1.1,
-    w:{ kind:'snipe', dmg:50, rate:0.75, mag:5, reload:2.1, speed:420, spread:0.02, scoped:0, bloom:0, kick:[0.05, 0], headMul:2.2, range:220 }, cdQ:10, cdE:12 }
+    w:{ kind:'snipe', dmg:50, rate:0.75, mag:5, reload:2.1, speed:520, spread:0.02, scoped:0, bloom:0, kick:[0.022, 0], fat:0.06, headMul:2.2, range:220 }, cdQ:10, cdE:12 }
 };
 ARCH.medic = { hp:180, speed:7.3, rad:0.5, eye:1.5, h:1.95, body:[0.85, 0.6], head:[1.5, 0.52], headY:1.25, camD:4.2, camS:1.1,
-  w:{ kind:'burst', dmg:11, rate:2.3, burst:3, mag:24, reload:1.5, speed:150, spread:0.0045, bloom:0.06, kick:[0.008, 0.003], headMul:1.5, range:85 }, cdQ:11, cdE:16 };
+  w:{ kind:'burst', dmg:11, rate:2.3, burst:3, mag:24, reload:1.5, speed:190, spread:0.004, bloom:0.03, kick:[0.003, 0.001], fat:0.14, headMul:1.5, range:85 }, cdQ:11, cdE:16 };
 ARCH.sentry = { hp:150, speed:0, rad:0.55, eye:1.15, h:1.45, body:[0.8, 0.5], head:[1.24, 0.34], headY:1.1, camD:4, camS:1,
-  w:{ kind:'auto', dmg:7, rate:4, mag:9999, reload:1, speed:110, spread:0.012, bloom:0, headMul:1.2, range:50 }, cdQ:999, cdE:999 };
+  w:{ kind:'auto', dmg:7, rate:4, mag:9999, reload:1, speed:140, spread:0.012, bloom:0, headMul:1.2, range:50 }, cdQ:999, cdE:999 };
 const ARCHS = ['soldier', 'tank', 'scout', 'sniper', 'medic'];
 // every fighter carries two grenades (G); they come back one at a time
 const GREN = { max:2, regen:14, dmg:60, r:4.2, name:{ guard:'Шишка-граната', rot:'Гнилое яйцо' } };
 const FACTIONS = {
-  guard:{ name:'Лесная стража', short:'Стража', color:'#7BE38F', tracer:[0.9, 1.6, 0.45], glow:'#D8FF6A',
+  guard:{ name:'Лесная стража', short:'Стража', color:'#7BE38F', tracer:[0.3, 1.6, 0.42], glow:'#D8FF6A',
     classes:{
       soldier:{ name:'Мухомор', role:'Боец', desc:'Споромёт-автомат. Надёжен на любой дистанции.', q:['Ядовитое облако', 'облако яда в точке прицела'], e:['Споровый прыжок', 'взлёт и удар о землю'] },
       tank:{ name:'Боровик', role:'Танк', desc:'Жёлудемёт бьёт навесом и взрывается. Очень крепкий.', q:['Шляпочный щит', 'почти без урона 4 секунды'], e:['Таран', 'рывок плечом, сбивает врагов'] },
@@ -1968,7 +2001,7 @@ const FACTIONS = {
       sniper:{ name:'Папоротник', role:'Снайпер', desc:'Тростниковая винтовка. ПКМ — прицел, в голову ×2.', q:['Скачок', 'прыжок назад и маскировка'], e:['Колючий капкан', 'держит и ранит врага'] },
       sentry:{ name:'Крапива', acc:'Крапиву', role:'Часовой', desc:'', q:['', ''], e:['', ''] },
       medic:{ name:'Дождевик', role:'Лекарь', desc:'Споровый пистолет бьёт очередями. Свои рядом с ним понемногу лечатся.', q:['Целебные споры', 'лечит себя и союзников рядом'], e:['Целебная грибница', 'грибница лечит всех рядом'] } } },
-  rot:{ name:'Гнилое войско', short:'Гниль', color:'#E07BFF', tracer:[1.6, 0.5, 1.5], glow:'#FF6AE6',
+  rot:{ name:'Гнилое войско', short:'Гниль', color:'#E07BFF', tracer:[1.05, 0.38, 1.8], glow:'#FF6AE6',
     classes:{
       soldier:{ name:'Слизень', role:'Боец', desc:'Слиземёт-автомат. Надёжен на любой дистанции.', q:['Кислотная лужа', 'лужа кислоты в точке прицела'], e:['Слизне-прыжок', 'взлёт и шлепок о землю'] },
       tank:{ name:'Жук-рогач', role:'Танк', desc:'Навесные слизевые бомбы. Толстый панцирь.', q:['Хитиновый панцирь', 'почти без урона 4 секунды'], e:['Рогатый таран', 'рывок рогами, сбивает врагов'] },
@@ -2479,7 +2512,7 @@ function weaponSpread(f){
   const sp = W.kind === 'snipe' ? (f.inp.scope ? W.scoped : W.spread) : W.spread * (f.inp.scope ? 0.6 : 1);
   if(W.pellets) return sp;
   const moving = Math.hypot(f.vx, f.vz) > 1.5;
-  return sp * (1 + f.spreadAcc) * (f.ground ? 1 : 1.35) * (moving ? (W.kind === 'snipe' ? 1.5 : 1.1) : 1);
+  return sp * (1 + f.spreadAcc) * (f.ground ? 1 : 1.2) * (moving && W.kind === 'snipe' ? 1.4 : 1);
 }
 function fireWeapon(f){
   const A = ARCH[f.arch], W = A.w;
@@ -2510,14 +2543,16 @@ function fireWeapon(f){
   if(f.ammo <= 0) startReload(f);
 }
 // nearest hit of segment a->b against hostile fighters (body/head spheres) and the world
-function traceSeg(owner, ax, ay, az, bx, by, bz){
+// fat: extra hit radius, so blaster bolts that graze a fighter still count
+function traceSeg(owner, ax, ay, az, bx, by, bz, fat){
+  fat = fat || 0;
   let best = 2, bf = null, head = false;
   const x0 = Math.min(ax, bx) - 1, x1 = Math.max(ax, bx) + 1, z0 = Math.min(az, bz) - 1, z1 = Math.max(az, bz) + 1;
   for(const g of fighters){
     if(!g.alive || !isEnemy(owner, g) || g.x < x0 || g.x > x1 || g.z < z0 || g.z > z1) continue;
     const A = ARCH[g.arch], hy = g.y + g.M.hover;
-    const tb = segSphere(ax, ay, az, bx, by, bz, g.x, hy + A.body[0], g.z, A.body[1]);
-    const th = segSphere(ax, ay, az, bx, by, bz, g.x, hy + A.head[0], g.z, A.head[1]);
+    const tb = segSphere(ax, ay, az, bx, by, bz, g.x, hy + A.body[0], g.z, A.body[1] + fat);
+    const th = segSphere(ax, ay, az, bx, by, bz, g.x, hy + A.head[0], g.z, A.head[1] + fat * 0.5);
     let t = tb; if(th >= 0 && (t < 0 || th < t)) t = th;
     if(t >= 0 && t < best){ best = t; bf = g; head = ay + (by - ay) * t >= hy + A.headY; }
   }
@@ -2635,7 +2670,7 @@ function updateShots(dt){
     const s = shots[i]; s.life -= dt;
     if(s.W.grav) s.vy -= s.W.grav * dt;
     const bx = s.x + s.vx * dt, by = s.y + s.vy * dt, bz = s.z + s.vz * dt;
-    const h = traceSeg(s.owner, s.x, s.y, s.z, bx, by, bz);
+    const h = traceSeg(s.owner, s.x, s.y, s.z, bx, by, bz, s.W.fat);
     if(h){
       const sp = Math.hypot(s.vx, s.vy, s.vz) || 1, back = 0.25 / sp;
       const px = s.x + (bx - s.x) * h.t - s.vx * back, py = s.y + (by - s.y) * h.t - s.vy * back, pz = s.z + (bz - s.z) * h.t - s.vz * back;
@@ -3223,6 +3258,7 @@ const SFX = {
   beep(hi){ if(!AC || muted) return; tn(master, AC.currentTime, 'sine', hi ? 1320 : 660, hi ? 1320 : 660, 0.2, hi ? 0.5 : 0.18); },
   horn(){ if(!AC || muted) return; const t = AC.currentTime; tn(master, t, 'sawtooth', 220, 220, 0.09, 0.9, 0.1); tn(master, t, 'sawtooth', 330, 330, 0.06, 0.9, 0.1); tn(master, t + 0.25, 'sawtooth', 440, 440, 0.07, 0.8, 0.1); },
   royale(){ if(!AC || muted) return; const t = AC.currentTime; [[392, 0], [523, 0.14], [659, 0.28], [784, 0.42], [1046, 0.62]].forEach(([f, d]) => { tn(master, t + d, 'triangle', f, f, 0.22, d > 0.5 ? 1.4 : 0.32); tn(master, t + d, 'square', f / 2, f / 2, 0.05, d > 0.5 ? 1.2 : 0.25); }); [1318, 1568].forEach((f, i) => tn(master, t + 0.62 + i * 0.02, 'sine', f, f, 0.1, 1.5)); },
+  medal(tier){ if(!AC || muted) return; const t = AC.currentTime, notes = tier >= 3 ? [784, 988, 1175, 1568] : tier === 2 ? [880, 1175, 1397] : [988, 1319]; notes.forEach((f, i) => { tn(master, t + i * 0.06, 'triangle', f, f, 0.1, 0.22); tn(master, t + i * 0.06, 'sine', f * 2, f * 2, 0.03, 0.18); }); },
   win(){ if(!AC || muted) return; const t = AC.currentTime; [523, 659, 784, 1046, 1318].forEach((f, i) => tn(master, t + i * 0.11, 'triangle', f, f, 0.2, 0.6)); },
   lose(){ if(!AC || muted) return; const t = AC.currentTime; [523, 466, 392, 311].forEach((f, i) => tn(master, t + i * 0.18, 'triangle', f, f * 0.98, 0.18, 0.6)); },
   streak(){ if(!AC || muted) return; const t = AC.currentTime; [784, 988, 1175].forEach((f, i) => tn(master, t + i * 0.07, 'square', f, f, 0.06, 0.2)); },
@@ -3421,7 +3457,7 @@ function updateCamera(dt){
   const fov = lerp(baseFov, snip ? 24 : 55, zoom);
   if(Math.abs(camera.fov - fov) > 0.01){ camera.fov = fov; camera.updateProjectionMatrix(); }
   // recoil climbs while the trigger is held and settles back once you let go
-  const rec = Math.exp(-dt * (me && match.t - me.firedT < 0.15 ? 3.5 : 10)); kickP *= rec; kickY *= rec;
+  const rec = Math.exp(-dt * (me && match.t - me.firedT < 0.15 ? 7 : 14)); kickP *= rec; kickY *= rec;
   let yaw = view.yaw + kickY, pitch = clamp(view.pitch + kickP, -1.25, 1.2), dist = lerp(A.camD, snip ? 0.35 : 2.6, zoom), side = lerp(A.camS, snip ? 0.22 : 0.85, zoom);
   if(!me.alive){
     const k = me.lastKiller && me.lastKiller.alive ? me.lastKiller : null;
@@ -3479,7 +3515,7 @@ function fxShot(f, W, m, d){
   emit('glow', m.x, m.y, m.z, W.kind === 'rapid' ? 2 : W.pellets ? 8 : 4, { dir:d, spd:W.kind === 'lob' ? 4 : 7, spread:W.pellets ? 1.2 : 0.6, size:W.kind === 'lob' || W.pellets ? 0.7 : 0.4, size1:0.05, life:0.09, lmin:0.05, col:c, g:0 });
   if(W.pellets) emit('soft', m.x, m.y, m.z, 4, { dir:d, spd:3, spread:0.6, size:0.4, size1:1.1, life:0.4, col:[0.8, 0.78, 0.7], g:0.4 });
   SFX.shot(f, W.kind);
-  if(f === me){ const K = W.kick || [0.005, 0]; kickP = Math.min(0.09, kickP + K[0]); kickY = clamp(kickY + K[1] * Math.sin(f.shotsF * 1.9), -0.03, 0.03); camShake = Math.max(camShake, W.kind === 'lob' || W.kind === 'snipe' || W.pellets ? 0.22 : 0.025); }
+  if(f === me){ const K = W.kick || [0.005, 0]; kickP = Math.min(0.03, kickP + K[0]); kickY = clamp(kickY + K[1] * Math.sin(f.shotsF * 1.9), -0.01, 0.01); camShake = Math.max(camShake, W.kind === 'lob' || W.kind === 'snipe' || W.pellets ? 0.22 : 0.025); }
 }
 function fxGrenadeThrow(f){
   SFX.toss(f);
@@ -3542,24 +3578,18 @@ function onKill(t, killer, o, info){
   feedAdd(killer, t, o.kind, o.head);
   if(info.first && killer) announce('Первая кровь!', esc(killer.name) + ' открывает счёт', 2);
   if(info.credit === me && killer !== me && !t.sentry) killNotice('<em>+' + (100 + (o.head ? 25 : 0)) + '</em> Твоя ' + esc(killer.name) + ' сразила ' + esc(t.name));
-  if(t.sentry && info.credit === me){ hitMarker('kill'); SFX.kill(); killNotice('<em>+50</em> Уничтожена ' + esc(t.name)); }
+  if(t.sentry && info.credit === me){ hitMarker('kill'); SFX.kill(); awardMedals(['weed'], 'Уничтожена ' + esc(t.name) + ' · <em>+50</em>'); }
   else if(killer === me){
     hitMarker('kill'); SFX.kill();
-    let txt = '<em>+' + (100 + (o.head ? 25 : 0)) + '</em> Сразил ' + esc(t.name);
-    if(o.head) txt += ' · <em>в голову!</em>';
-    if(info.revenge) txt += ' · <em>Месть!</em>';
-    killNotice(txt);
-    const s = me.streak, names = { 2:'Двойное!', 3:'Тройное!', 5:'Неудержимый!', 8:'Легенда леса!', 12:'Бог поляны!' };
-    if(names[s]){ announce(names[s], s + ' подряд без смерти', 1.8); SFX.streak(); }
+    awardMedals(killMedals(t, o, info), 'Сразил ' + esc(t.name) + ' · <em>+' + (100 + (o.head ? 25 : 0) + (info.ended ? 50 : 0)) + '</em>');
   } else if(killer && killer.streak >= 5 && killer.streak % 5 === 0) announce(esc(killer.name) + ' неудержим', killer.streak + ' подряд', 1.6);
-  if(info.ended && killer === me) killNotice('<em>+50</em> Прервал серию ' + esc(t.name));
-  if(t === me){ deathView.yaw = view.yaw; deathView.pitch = -0.35; me.deathTimer = 0; updatePause(); }
+  if(t === me){ medalsLifeReset(); deathView.yaw = view.yaw; deathView.pitch = -0.35; me.deathTimer = 0; updatePause(); }
 }
 function onHeal(t, amt, src, quiet){
   if(src === me || t === me){ healNumber(t, amt); if(!quiet) SFX.heal(); }
   if(Math.random() < 0.5) emit('glow', t.x, t.y + 1.2, t.z, 3, { spd:1, up:2, upMin:1, size:0.35, size1:0.05, life:0.8, col:[0.5, 1, 0.55], g:0.5, r:0.4 });
 }
-function onAssist(t){ me.score += 0; killNotice('<em>+50</em> Помощь: ' + esc(t.name)); }
+function onAssist(t){ awardMedals(['assist'], 'Помощь: ' + esc(t.name) + ' · <em>+50</em>'); }
 function onMeSpawn(){
   view.yaw = me.yaw; view.pitch = -0.05; camY = null; kickP = 0; kickY = 0;
   $('dead').hidden = true; renderMeBox(); renderAbil(true); updatePause();
@@ -3735,7 +3765,7 @@ function updateHud(dt){
   $('scope').hidden = !scoped;
   const xh = $('xh');
   const spread = weaponSpread(me);
-  xh.style.setProperty('--g', (5 + spread * 360 / Math.max(0.3, camera.fov / 70)).toFixed(1) + 'px');
+  xh.style.setProperty('--g', (8 + spread * 420 / Math.max(0.3, camera.fov / 70)).toFixed(1) + 'px');
   xh.classList.toggle('foe', !!aimFoe); xh.classList.toggle('off', !me.alive || scoped);
   const ring = $('ring').firstElementChild;
   ring.style.strokeDashoffset = me.reloadT > 0 ? (151 * me.reloadT / W.reload).toFixed(1) : '151';
@@ -4522,6 +4552,120 @@ function brGoal(f){
   const p = pick(inside.length ? inside : NAV); return { x:p.x + rand(-2, 2), z:p.z + rand(-2, 2) };
 }
 
+/* ================= medals: forest emblems for kills, Point Blank style ================= */
+// shape, two fill colours (light, dark), icon, tier (bigger tiers get a wreath and a ribbon)
+const MEDALS = {
+  kill:    { n:'Срезал',            sh:'circle', c:['#8CE59A', '#2D7A45'], ic:'leaf',   tier:1 },
+  head:    { n:'Прямо в шляпку',    sh:'shield', c:['#FFD866', '#B5760E'], ic:'cap',    tier:2 },
+  double:  { n:'Двойной урожай',    sh:'hex',    c:['#8ED8FF', '#2A6AA6'], ic:'two',    tier:2 },
+  triple:  { n:'Тройной урожай',    sh:'hex',    c:['#C9A2FF', '#6338B0'], ic:'three',  tier:3 },
+  multi:   { n:'Грибной дождь',     sh:'star',   c:['#FFB070', '#C2410C'], ic:'rain',   tier:3 },
+  streak5: { n:'Лесной ураган',     sh:'star',   c:['#FF9F6E', '#B4361A'], ic:'wind',   tier:3 },
+  streak8: { n:'Хозяин леса',       sh:'star',   c:['#FFE27A', '#B07C0A'], ic:'crown',  tier:3 },
+  streak12:{ n:'Бог поляны',        sh:'star',   c:['#FFFFFF', '#8E7BFF'], ic:'crown',  tier:3 },
+  first:   { n:'Первая кровь',      sh:'circle', c:['#FF8A8A', '#A11D2E'], ic:'drop',   tier:2 },
+  revenge: { n:'Месть',             sh:'shield', c:['#FF7A7A', '#7E1420'], ic:'thorn',  tier:2 },
+  breaker: { n:'Срубил серию',      sh:'shield', c:['#D7B48A', '#6B4422'], ic:'axe',    tier:2 },
+  grenade: { n:'Шишкой по лбу',     sh:'circle', c:['#E0B27A', '#7A4A1C'], ic:'cone',   tier:2 },
+  close:   { n:'В упор',            sh:'circle', c:['#FFC46B', '#A85A12'], ic:'burst',  tier:2 },
+  long:    { n:'Дальний выстрел',   sh:'hex',    c:['#9FF0D6', '#1F7A63'], ic:'target', tier:2 },
+  assist:  { n:'Подмога',           sh:'circle', c:['#BFE8B0', '#4D7A3E'], ic:'clover', tier:1 },
+  weed:    { n:'Прополка',          sh:'circle', c:['#C8E07A', '#5E7A1E'], ic:'weed',   tier:1 }
+};
+const MEDAL_ORDER = ['streak12', 'streak8', 'streak5', 'multi', 'triple', 'double', 'first', 'revenge', 'breaker', 'long', 'head', 'grenade', 'close', 'kill', 'weed', 'assist'];
+const MED_SHAPE = {
+  circle:'<circle cx="50" cy="50" r="38"/>',
+  shield:'<path d="M50 9 L84 20 V47 C84 70 68 84 50 92 C32 84 16 70 16 47 V20 Z"/>',
+  hex:'<path d="M50 8 L86 29 V71 L50 92 L14 71 V29 Z"/>',
+  star:(() => { let p = ''; for(let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2 - Math.PI / 2, r = i % 2 ? 33 : 43; p += (i ? 'L' : 'M') + (50 + Math.cos(a) * r).toFixed(1) + ' ' + (50 + Math.sin(a) * r).toFixed(1); } return '<path d="' + p + 'Z"/>'; })()
+};
+const MED_ICON = {
+  leaf:'<path d="M50 27 C68 35 71 57 51 73 C33 60 31 41 50 27 Z"/><path d="M50 31 V71" stroke="rgba(0,0,0,.28)" stroke-width="2.5" fill="none"/>',
+  cap:'<path d="M27 55 C27 33 73 33 73 55 Z"/><rect x="43" y="55" width="14" height="16" rx="4"/><circle cx="40" cy="46" r="3.2" fill="rgba(0,0,0,.22)"/><circle cx="56" cy="43" r="3.6" fill="rgba(0,0,0,.22)"/><circle cx="50" cy="50" r="21" fill="none" stroke="#fff" stroke-width="2.5" opacity=".75"/>',
+  two:'<path d="M24 54 C24 39 46 39 46 54 Z"/><rect x="31" y="54" width="8" height="12" rx="3"/><path d="M54 54 C54 39 76 39 76 54 Z"/><rect x="61" y="54" width="8" height="12" rx="3"/>',
+  three:'<path d="M20 58 C20 46 38 46 38 58 Z"/><rect x="26" y="58" width="6" height="10" rx="2"/><path d="M39 47 C39 33 61 33 61 47 Z"/><rect x="46" y="47" width="8" height="13" rx="3"/><path d="M62 58 C62 46 80 46 80 58 Z"/><rect x="68" y="58" width="6" height="10" rx="2"/>',
+  rain:'<path d="M30 46 C30 30 70 30 70 46 Z"/><rect x="46" y="46" width="8" height="10" rx="3"/><path d="M34 62 l-3 8 M50 64 l-3 8 M66 62 l-3 8" stroke="#fff" stroke-width="4" stroke-linecap="round"/>',
+  wind:'<path d="M28 42 H58 C68 42 68 30 59 30 M28 52 H70 C80 52 80 66 70 66 M28 62 H50" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/>',
+  crown:'<path d="M27 64 L30 38 L41 50 L50 33 L59 50 L70 38 L73 64 Z"/><rect x="27" y="64" width="46" height="6" rx="2"/>',
+  drop:'<path d="M50 25 C60 41 67 51 67 59 A17 17 0 0 1 33 59 C33 51 40 41 50 25 Z"/>',
+  thorn:'<path d="M50 24 L57 50 L50 76 L43 50 Z"/><path d="M28 44 L50 50 L28 56 Z"/><path d="M72 44 L50 50 L72 56 Z"/>',
+  axe:'<rect x="47" y="30" width="6" height="44" rx="2"/><path d="M53 31 C70 30 74 46 70 54 C62 50 57 48 53 48 Z"/>',
+  cone:'<ellipse cx="50" cy="52" rx="15" ry="21"/><path d="M38 44 Q50 50 62 44 M37 54 Q50 60 63 54 M40 63 Q50 68 60 63" stroke="rgba(0,0,0,.3)" stroke-width="2.5" fill="none"/><rect x="47" y="27" width="6" height="7" rx="2"/>',
+  burst:'<path d="M50 24 L56 42 L74 36 L62 51 L76 62 L57 60 L50 77 L43 60 L24 62 L38 51 L26 36 L44 42 Z"/>',
+  target:'<circle cx="50" cy="50" r="20" fill="none" stroke="#fff" stroke-width="4"/><circle cx="50" cy="50" r="10" fill="none" stroke="#fff" stroke-width="4"/><circle cx="50" cy="50" r="3.5"/>',
+  clover:'<circle cx="42" cy="44" r="9"/><circle cx="58" cy="44" r="9"/><circle cx="50" cy="58" r="9"/><path d="M50 60 Q52 70 58 76" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round"/>',
+  weed:'<path d="M50 74 V48 M50 56 C40 56 34 48 34 40 C44 40 50 46 50 56 M50 50 C60 50 66 42 66 34 C56 34 50 40 50 50" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M32 30 L68 70 M68 30 L32 70" stroke="#FFDDDD" stroke-width="4" stroke-linecap="round" opacity=".8"/>'
+};
+const medalSvgCache = {};
+function medalSvg(key){
+  if(medalSvgCache[key]) return medalSvgCache[key];
+  const M = MEDALS[key], id = 'mg_' + key, sh = MED_SHAPE[M.sh];
+  let wreath = '';
+  if(M.tier >= 3) for(const s of [-1, 1]) for(let i = 0; i < 5; i++){ const a = (100 + i * 17) * Math.PI / 180, x = 50 + s * Math.cos(a) * -46, y = 52 + Math.sin(a) * 40; wreath += '<ellipse cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" rx="3.6" ry="7.5" transform="rotate(' + (s * (i * 17 - 20)).toFixed(0) + ' ' + x.toFixed(1) + ' ' + y.toFixed(1) + ')" fill="#7DBB5A" stroke="#2E5A1E" stroke-width="1.2"/>'; }
+  const ribbon = M.tier >= 2 ? '<path d="M18 74 H82 L77 82 L82 90 H18 L23 82 Z" fill="' + M.c[1] + '" stroke="rgba(0,0,0,.45)" stroke-width="2"/><path d="M26 78 H74" stroke="rgba(255,255,255,.35)" stroke-width="2"/>' : '';
+  const svg = '<svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + M.c[0] + '"/><stop offset="1" stop-color="' + M.c[1] + '"/></linearGradient></defs>'
+    + wreath
+    + '<g fill="url(#' + id + ')" stroke="rgba(20,12,4,.65)" stroke-width="3">' + sh + '</g>'
+    + '<g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" transform="translate(50 50) scale(.84) translate(-50 -50)">' + sh + '</g>'
+    + '<g fill="#fff" stroke="none" style="filter:drop-shadow(0 2px 0 rgba(0,0,0,.35))">' + MED_ICON[M.ic] + '</g>'
+    + ribbon + '</svg>';
+  return medalSvgCache[key] = svg;
+}
+
+// what you have earned: this life (the tray along the bottom) and this match (the end screen)
+const MED = { life:{}, match:{}, lastKillT:-99, multi:0, queue:[], popT:0 };
+function medalsReset(){ MED.life = {}; MED.match = {}; MED.lastKillT = -99; MED.multi = 0; MED.queue.length = 0; MED.popT = 0; const p = $('medpop'); if(p) p.className = 'medpop'; renderMedalTray(); }
+function medalsLifeReset(){ MED.life = {}; MED.multi = 0; renderMedalTray(); }
+function awardMedals(keys, line){
+  if(!keys.length) return;
+  for(const k of keys){ MED.life[k] = (MED.life[k] || 0) + 1; MED.match[k] = (MED.match[k] || 0) + 1; }
+  keys.sort((a, b) => MEDAL_ORDER.indexOf(a) - MEDAL_ORDER.indexOf(b));
+  MED.queue.push({ keys:keys.slice(0, 3), line });
+  if(MED.queue.length > 3) MED.queue.shift();
+  if(MED.popT <= 0) nextMedalPop();
+  renderMedalTray();
+}
+function nextMedalPop(){
+  const q = MED.queue.shift(), el = $('medpop'); if(!q || !el) return;
+  const top = MEDALS[q.keys[0]];
+  el.innerHTML = '<div class="mp-row">' + q.keys.map((k, i) => '<div class="mp-m' + (i ? ' sm' : '') + '">' + medalSvg(k) + '</div>').join('') + '</div><div class="mp-n">' + top.n + '</div>' + (q.line ? '<div class="mp-l">' + q.line + '</div>' : '');
+  el.className = 'medpop'; void el.offsetWidth; el.className = 'medpop on t' + top.tier;
+  MED.popT = 2.1;
+  SFX.medal(top.tier);
+}
+function updateMedals(dt){
+  if(MED.popT > 0){ MED.popT -= dt; if(MED.popT <= 0){ if(MED.queue.length) nextMedalPop(); else $('medpop').className = 'medpop'; } }
+}
+function renderMedalTray(){
+  const el = $('medtray'); if(!el) return;
+  const keys = MEDAL_ORDER.filter(k => MED.life[k]).reverse();
+  html(el, keys.map(k => '<div class="mt" title="' + MEDALS[k].n + '">' + medalSvg(k) + (MED.life[k] > 1 ? '<b>×' + MED.life[k] + '</b>' : '') + '</div>').join(''));
+}
+function medalsEndHTML(){
+  const keys = MEDAL_ORDER.filter(k => MED.match[k]);
+  if(!keys.length) return '';
+  return '<div class="e-med">' + keys.map(k => '<div class="mt" title="' + MEDALS[k].n + '">' + medalSvg(k) + '<b>×' + MED.match[k] + '</b><span>' + MEDALS[k].n + '</span></div>').join('') + '</div>';
+}
+// decide which medals a kill earns
+function killMedals(t, o, info){
+  const keys = [];
+  const now = match.t;
+  MED.multi = now - MED.lastKillT < 4.5 ? MED.multi + 1 : 1; MED.lastKillT = now;
+  if(MED.multi === 2) keys.push('double'); else if(MED.multi === 3) keys.push('triple'); else if(MED.multi >= 4) keys.push('multi');
+  const s = me.streak;
+  if(s === 5) keys.push('streak5'); else if(s === 8) keys.push('streak8'); else if(s === 12) keys.push('streak12');
+  if(info.first) keys.push('first');
+  if(info.revenge) keys.push('revenge');
+  if(info.ended) keys.push('breaker');
+  if(o.head) keys.push('head');
+  if(o.kind === 'grenade') keys.push('grenade');
+  const d = Math.hypot(t.x - me.x, t.z - me.z);
+  if(o.kind === 'shot' && d < 4) keys.push('close');
+  if((o.kind === 'snipe' && d > 45) || d > 60) keys.push('long');
+  if(!keys.length || (keys.length === 1 && (keys[0] === 'double' || keys[0] === 'triple' || keys[0] === 'multi'))) keys.push('kill');
+  return keys;
+}
+
 /* ================= post-processing ================= */
 let composer = null, bloomPass = null, usePost = false, postLoading = false;
 async function initPost(){
@@ -4666,7 +4810,7 @@ let countT = 0, lastCount = 0, cmsgT = 0, endT = 0;
 function clearMatch(){
   clearCombat();
   for(const f of fighters){ scene.remove(f.M.g); disposeModel(f.M); if(f.tag) f.tag.remove(); }
-  fighters = []; me = null; clearPickups();
+  fighters = []; me = null; clearPickups(); medalsReset();
   for(const d of dmgEls) d.el.remove(); dmgEls.length = 0;
   for(const f of feed) f.el.remove(); feed.length = 0;
   for(const h of hdirs) h.t = 0;
@@ -4764,7 +4908,7 @@ function showEnd(){
   if(xp){ let t = ' +' + xp.gain + ' опыта.'; if(xp.after > xp.before) t += ' ' + clsOf(me.fac, me.arch).name + ': уровень ' + xp.after + '!'; if(xp.hats.length) t += ' Новая шапка: ' + xp.hats.map(h => HATS[h].name).join(', ') + '.'; $('e-lead').textContent += t; }
   const acc = me.shotsF ? Math.round(me.shotsH / me.shotsF * 100) : 0;
   $('e-res').innerHTML = [[me.kills, 'убийств'], [me.deaths, 'смертей'], [me.assists, 'помощь'], [acc + '%', 'точность']].map(r => '<div><b>' + r[0] + '</b><span>' + r[1] + '</span></div>').join('');
-  $('e-board').innerHTML = boardHTML();
+  $('e-board').innerHTML = boardHTML(); $('e-medals').innerHTML = medalsEndHTML();
   const client = NET.on && NET.role === 'client';
   $('e-again').disabled = client; $('e-again').textContent = client ? 'Ждём хозяина…' : 'Ещё бой';
   $('e-menu').textContent = NET.on ? 'Выйти из игры' : 'В меню';
@@ -4806,7 +4950,7 @@ function tick(dt){
   if(state === 'play') match.t += dt;
   for(const f of fighters) if(f.bot) botThink(f, dt);
   for(const f of fighters) stepFighter(f, dt);
-  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateSmokes(dt); updateBR(dt); updateStations(dt); updateCaps(dt); updatePots(dt);
+  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateSmokes(dt); updateBR(dt); updateMedals(dt); updateStations(dt); updateCaps(dt); updatePots(dt);
   for(const f of fighters) animFighter(f, dt);
   if(state === 'countdown') countdown(dt);
   if(cmsgT > 0){ cmsgT -= dt; if(cmsgT <= 0) $('cmsg').style.opacity = 0; }
@@ -4873,7 +5017,7 @@ window.__lv = {
   board:() => fighters.map(f => f.name + '[' + f.arch + ']:' + f.kills + '/' + f.deaths),
   get post(){ return { composer:!!composer, usePost }; },
   caps:() => CAPS.map(c => c.id + ':' + (c.owner ? c.owner[0] : '-') + Math.round(c.prog * 100) + '(' + c.g + 'v' + c.r + ')').join(' '),
-  post(v){ perfDone = true; usePost = !!v && !!composer; return usePost; }, shotsN:() => shots.length, shotsAt:() => shots.map(s => [s.x, s.y, s.z, s.vx, s.vz, s.W.kind]), freeze(v){ dbgFreeze = !!v; }, kill:f => killFighter(f || me, null, { kind:"fog" }), net:NET, host:() => netHost(), join:c => netJoin(c), leave:() => netLeave()
+  post(v){ perfDone = true; usePost = !!v && !!composer; return usePost; }, medals:(k, line) => awardMedals(k, line), shotsN:() => shots.length, shotsAt:() => shots.map(s => [s.x, s.y, s.z, s.vx, s.vz, s.W.kind]), freeze(v){ dbgFreeze = !!v; }, kill:f => killFighter(f || me, null, { kind:"fog" }), net:NET, host:() => netHost(), join:c => netJoin(c), leave:() => netLeave()
 };
 // a hidden tab gets no animation frames: keep a networked match (and the host's bots) ticking slowly
 setInterval(() => { if(document.hidden && NET.on){ lastT = performance.now(); tick(0.05); } }, 100);
