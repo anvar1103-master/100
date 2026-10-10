@@ -1761,6 +1761,47 @@ function disposeWorld(){
   scene.remove(world); world = new THREE.Group(); scene.add(world);
   for(const m of [...KEEP_MAT]) if(!PERSIST.has(m)) KEEP_MAT.delete(m);
 }
+// Split a big InstancedMesh into square chunks so the renderer (and the shadow pass) skips the ones
+// outside the view. The source keeps its arrays, reordered chunk by chunk; each chunk draws a view of them.
+const FAR_CHUNKS = [];
+const GRASS_FAR = 42;
+function chunkInstanced(im, cell, far){
+  const n = im.count, m = im.instanceMatrix.array, c = im.instanceColor ? im.instanceColor.array : null;
+  const buckets = new Map();
+  for(let i = 0; i < n; i++){ const k = Math.floor(m[i * 16 + 12] / cell) + ',' + Math.floor(m[i * 16 + 14] / cell); let b = buckets.get(k); if(!b) buckets.set(k, b = []); b.push(i); }
+  if(buckets.size < 2) return;
+  const nm = new Float32Array(n * 16), nc = c ? new Float32Array(n * 3) : null, runs = [];
+  let o = 0;
+  for(const idx of buckets.values()){ const s = o; for(const i of idx){ nm.set(m.subarray(i * 16, i * 16 + 16), o * 16); if(nc) nc.set(c.subarray(i * 3, i * 3 + 3), o * 3); o++; } runs.push([s, o - s]); }
+  m.set(nm); if(c) c.set(nc);
+  im.instanceMatrix.needsUpdate = true; if(c) im.instanceColor.needsUpdate = true;
+  const chunks = [];
+  for(const [s, len] of runs){
+    const ch = new THREE.InstancedMesh(im.geometry, im.material, len);
+    ch.instanceMatrix = new THREE.InstancedBufferAttribute(m.subarray(s * 16, (s + len) * 16), 16);
+    if(c) ch.instanceColor = new THREE.InstancedBufferAttribute(c.subarray(s * 3, (s + len) * 3), 3);
+    ch.count = len; ch.userData.full = len; ch.castShadow = im.castShadow; ch.receiveShadow = im.receiveShadow; ch.renderOrder = im.renderOrder;
+    ch.computeBoundingSphere(); ch.boundingSphere.radius += 1.5;   // room for the wind sway
+    if(far){ ch.userData.far = far; ch.userData.cx = ch.boundingSphere.center.x; ch.userData.cz = ch.boundingSphere.center.z; ch.userData.r = ch.boundingSphere.radius; FAR_CHUNKS.push(ch); }
+    world.add(ch); chunks.push(ch);
+  }
+  im.visible = false; im.userData.chunks = chunks;
+}
+function chunkWorld(){
+  FAR_CHUNKS.length = 0;
+  for(const o of world.children.slice()){
+    if(!o.isInstancedMesh || o.count < 300) continue;
+    const g = o.geometry, tris = (g.index ? g.index.count : g.attributes.position.count) / 3;
+    if(tris * o.count < 12000) continue;
+    const grass = o === VEG.grass;
+    chunkInstanced(o, grass ? 14 : 34, grass ? GRASS_FAR : 0);
+  }
+}
+// hide grass chunks too far away to make out anyway
+function cullChunks(){
+  const cx = camera.position.x, cz = camera.position.z;
+  for(const c of FAR_CHUNKS) c.visible = Math.hypot(c.userData.cx - cx, c.userData.cz - cz) < c.userData.far + c.userData.r;
+}
 function buildWorld(id){
   const def = MAPS[id] || MAPS.stream;
   disposeWorld();
@@ -1777,6 +1818,7 @@ function buildWorld(id){
     def.build(); lap();
     buildPots(def.pots);
     VEG.bush = K.bush; VEG.cones = K.cone; VEG.blobs = K.blob; VEG.lilyBig = K.lily; VEG.tall = K.tall;
+    chunkWorld();
     for(const k in VEG){ const v = VEG[k]; if(v && v.isInstancedMesh && v.instanceColor) v.userData.base = v.instanceColor.array.slice(); }
     mergeWorld(world); lap();
     buildSpawns(def); computeNav(); buildCaps(def.caps); lap();
@@ -1878,7 +1920,7 @@ const SKIES = {
 };
 let skyName = 'day', season = 'summer';
 const SEASONS = { summer:'Лето', autumn:'Осень', winter:'Зима' };
-function setGrassCount(){ const g = VEG.grass; if(g) g.count = Math.floor(g.userData.full * (settings.quality === 'high' ? 1 : 0.45) * (season === 'winter' ? 0.35 : 1)); }
+function setGrassCount(){ const g = VEG.grass; if(!g) return; const k = (settings.quality === 'high' ? 1 : 0.45) * (season === 'winter' ? 0.35 : 1); g.count = Math.floor(g.userData.full * k); if(g.userData.chunks) for(const c of g.userData.chunks) c.count = Math.floor(c.userData.full * k); }
 function applySeason(s){
   season = SEASONS[s] ? s : 'summer';
   const winter = season === 'winter';
@@ -1886,7 +1928,7 @@ function applySeason(s){
   groundH = winter ? iceH : terrainH; waterAt = winter ? () => NOWATER : rawWater;
   const C = new THREE.Color(), T = new THREE.Color(), SNOW = new THREE.Color('#EEF4F8');
   const AUT = ['#E8A33C', '#C8562A', '#D9C24A', '#B5452E', '#E07A2A'].map(h => new THREE.Color(h));
-  const recolor = (im, fn) => { if(!im) return; const base = im.userData.base; if(!base) return; const arr = im.instanceColor.array; for(let i = 0; i < arr.length / 3; i++){ C.setRGB(base[i * 3], base[i * 3 + 1], base[i * 3 + 2]); fn(C, i); arr[i * 3] = C.r; arr[i * 3 + 1] = C.g; arr[i * 3 + 2] = C.b; } im.instanceColor.needsUpdate = true; };
+  const recolor = (im, fn) => { if(!im) return; const base = im.userData.base; if(!base) return; const arr = im.instanceColor.array; for(let i = 0; i < arr.length / 3; i++){ C.setRGB(base[i * 3], base[i * 3 + 1], base[i * 3 + 2]); fn(C, i); arr[i * 3] = C.r; arr[i * 3 + 1] = C.g; arr[i * 3 + 2] = C.b; } im.instanceColor.needsUpdate = true; if(im.userData.chunks) for(const ch of im.userData.chunks) if(ch.instanceColor) ch.instanceColor.needsUpdate = true; };
   const id = () => {};
   if(season === 'autumn'){
     recolor(VEG.blobs, (c, i) => c.lerp(AUT[i % AUT.length], 0.85)); recolor(VEG.cones, c => c.multiplyScalar(0.85));
@@ -1937,6 +1979,7 @@ function applySky(n){
   envGnd.color.set(S.gnd); regenEnv();
 }
 function updateWorld(dt){
+  cullChunks();
   skyU.t.value = time; windU.value = time;
   waterN.offset.x = (waterN.offset.x + dt * 0.025) % 1; waterN.offset.y = Math.sin(time * 0.2) * 0.05;
   for(const s of shafts) s.material.opacity = (0.02 + Math.sin(time * 0.5 + s.userData.ph) * 0.01) * (s.userData.k === undefined ? 1 : s.userData.k);
@@ -2631,16 +2674,37 @@ const emberTex = (() => {
   x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c);
 })();
 const scorches = [];
+function newScorch(){
+  const burn = new THREE.Mesh(SCORCH_G, new THREE.MeshBasicMaterial({ map:scorchTex, transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2 }));
+  const ember = new THREE.Mesh(SCORCH_G, new THREE.MeshBasicMaterial({ map:emberTex, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false, polygonOffset:true, polygonOffsetFactor:-3, polygonOffsetUnits:-3 }));
+  burn.renderOrder = 2; ember.renderOrder = 3;
+  return { burn, ember };
+}
+// compile the combat effect shaders up front, so the first shots of a match don't stutter
+const WARM_KEEP = [];
+function warmShaders(){
+  const tmp = [], spare = [];
+  for(const fac of ['guard', 'rot']){
+    for(const k of ['auto', 'lob']){ const g = projMesh({ fac }, k); g.userData.shell.visible = true; g.userData.trail.scale.set(0.1, 0.1, 1); g.position.set(camera.position.x, camera.position.y - 200, camera.position.z); spare.push(g); }
+    const fl = new THREE.Mesh(GLOW_G, projMats(fac).flash); fl.frustumCulled = false; tmp.push(fl);
+  }
+  const S = newScorch(); tmp.push(S.burn, S.ember);
+  const zm = zoneMat(new THREE.Color(1, 1, 1)), zone = new THREE.Mesh(GLOW_G, zm); zone.frustumCulled = false; tmp.push(zone);
+  for(const o of tmp){ o.position.set(camera.position.x, camera.position.y - 200, camera.position.z); scene.add(o); }
+  // both variants: straight to the screen, and into the bloom composer's buffer
+  const prev = renderer.getRenderTarget();
+  try{ renderer.setRenderTarget(null); renderer.compile(scene, camera); if(composer){ renderer.setRenderTarget(composer.renderTarget1); renderer.compile(scene, camera); } } catch(e){}
+  renderer.setRenderTarget(prev);
+  for(const o of tmp) scene.remove(o);
+  // keep these materials alive: disposing them would release the programs we just compiled
+  WARM_KEEP.length = 0; WARM_KEEP.push(S.burn.material, S.ember.material, zm);
+  for(const g of spare){ g.userData.shell.visible = false; freeProj(g); }
+}
 function scorchAt(x, y, z, vx, vy, vz, kind){
   if(camera.position.distanceToSquared(V3.set(x, y, z)) > 4900) return;
   let S;
-  if(scorches.length >= 40) S = scorches.shift();
-  else {
-    const burn = new THREE.Mesh(SCORCH_G, new THREE.MeshBasicMaterial({ map:scorchTex, transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2 }));
-    const ember = new THREE.Mesh(SCORCH_G, new THREE.MeshBasicMaterial({ map:emberTex, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false, polygonOffset:true, polygonOffsetFactor:-3, polygonOffsetUnits:-3 }));
-    burn.renderOrder = 2; ember.renderOrder = 3;
-    S = { burn, ember };
-  }
+  if(scorches.length >= 24) S = scorches.shift();
+  else S = newScorch();
   const size = kind === 'snipe' ? 0.75 : kind === 'shot' ? 0.28 : 0.45;
   // the face that was hit: the ground if we're at it, otherwise the side facing the shooter
   const onGround = y - supportH(x, z, y + 0.3, 0) < 0.25;
@@ -2656,8 +2720,8 @@ function updateScorches(dt){
   for(let i = scorches.length - 1; i >= 0; i--){
     const S = scorches[i]; S.t += dt;
     S.ember.material.opacity = Math.max(0, 1 - S.t / 0.7);
-    S.burn.material.opacity = 0.85 * clamp(1 - (S.t - 5) / 2, 0, 1);
-    if(S.t > 7){ scene.remove(S.burn); scene.remove(S.ember); scorches.splice(i, 1); }
+    S.burn.material.opacity = 0.85 * clamp(1 - (S.t - 3.5) / 1.5, 0, 1);
+    if(S.t > 5){ scene.remove(S.burn); scene.remove(S.ember); scorches.splice(i, 1); }
   }
 }
 function clearScorches(){ for(const S of scorches){ scene.remove(S.burn); scene.remove(S.ember); } scorches.length = 0; }
@@ -2822,14 +2886,15 @@ function blink(f, dx, dz){
   fxBlink(f, x0, y0, z0);
 }
 const zoneGeoBase = 4.2;
+function zoneMat(col){ return new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, uniforms:{ t:{ value:0 }, col:{ value:col }, fade:{ value:0 } },
+    vertexShader:'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader:'uniform float t; uniform vec3 col; uniform float fade; varying vec2 vUv; void main(){ vec2 p = vUv * 2.0 - 1.0; float r = length(p); if(r > 1.0) discard; float a = atan(p.y, p.x); float sw = sin(a * 5.0 + r * 11.0 - t * 3.0) * 0.5 + 0.5; float b = sin(r * 26.0 - t * 5.0) * 0.5 + 0.5; float edge = (1.0 - smoothstep(0.9, 1.0, r)) * (0.3 + 0.7 * smoothstep(0.6, 1.0, r)); gl_FragColor = vec4(col * (0.5 + sw * 0.7 + b * 0.3), (0.16 + 0.22 * sw) * edge * fade); }' }); }
 function addZone(f, x, z){
   const y = Math.max(groundH(x, z), waterAt(x, z)), g = new THREE.PlaneGeometry(zoneGeoBase * 2, zoneGeoBase * 2, 14, 14); g.rotateX(-Math.PI / 2);
   const p = g.attributes.position;
   for(let i = 0; i < p.count; i++){ const gx = x + p.getX(i), gz = z + p.getZ(i); p.setY(i, Math.max(groundH(gx, gz), waterAt(gx, gz)) - y + 0.12); }
   const col = f.fac === 'guard' ? new THREE.Color(0.75, 1.3, 0.25) : new THREE.Color(1.1, 0.35, 1.3);
-  const mat = new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, uniforms:{ t:{ value:0 }, col:{ value:col }, fade:{ value:0 } },
-    vertexShader:'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader:'uniform float t; uniform vec3 col; uniform float fade; varying vec2 vUv; void main(){ vec2 p = vUv * 2.0 - 1.0; float r = length(p); if(r > 1.0) discard; float a = atan(p.y, p.x); float sw = sin(a * 5.0 + r * 11.0 - t * 3.0) * 0.5 + 0.5; float b = sin(r * 26.0 - t * 5.0) * 0.5 + 0.5; float edge = (1.0 - smoothstep(0.9, 1.0, r)) * (0.3 + 0.7 * smoothstep(0.6, 1.0, r)); gl_FragColor = vec4(col * (0.5 + sw * 0.7 + b * 0.3), (0.16 + 0.22 * sw) * edge * fade); }' });
+  const mat = zoneMat(col);
   const m = new THREE.Mesh(g, mat); m.position.set(x, y, z); m.renderOrder = 3; scene.add(m);
   if(NET.on && !f.remote && f.nid) netEv('z', f.nid, r2(x), r2(z));
   zones.push({ owner:f, x, z, y, r:zoneGeoBase, t:6, T:6, tick:0, m });
@@ -4002,7 +4067,7 @@ function clientStart(m){
   if(mode === 'br') brStart(num(m.ep), cl(m.zc && m.zc[0], -40, 40), cl(m.zc && m.zc[1], -50, 50));
   me.nid = 'p' + NET.myPeer; setOutline(me); respawn(me); me.prot = 1.5;
   renderScore(); renderMeBox(); renderAbil(true);
-  state = 'play'; endT = 0;
+  state = 'play'; endT = 0; warmShaders();
   $('menu').hidden = true; $('end').hidden = true; $('hud').hidden = false; $('dead').hidden = true; $('board').hidden = true;
   killNotice('Ты в игре <em>' + NET.code + '</em> · ' + MODE_NAMES[mode].toLowerCase() + ' · ' + MAP.name); knT = 4;
   requestLock(); updatePause(); lobbyPresence();
@@ -4708,7 +4773,7 @@ function applyQuality(){
   const sz = hi ? 2048 : 1024;
   if(sun.shadow.mapSize.x !== sz){ sun.shadow.mapSize.set(sz, sz); if(sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map = null; } }
   if(hi) initPost(); else usePost = false;
-  perfN = 0; perfSum = 0; perfDone = false;
+  perfN = 0; perfSum = 0; perfDone = false; perfCalm = 0; perfNoPost = false;
   resize();
 }
 
@@ -4878,6 +4943,7 @@ function beginMatch(){
   $('cmsg').style.opacity = 0;
   killNotice(TOUCH ? 'Левый палец: бег · правый: обзор · <em>Огонь</em> справа' : '<em>ЛКМ</em> огонь · <em>ПКМ</em> прицел · <em>Q / E</em> умения · <em>Tab</em> счёт'); knT = 5;
   requestLock(); updatePause();
+  warmShaders();
 }
 function countdown(dt){
   countT -= dt;
@@ -4970,17 +5036,18 @@ function tick(dt){
   sun.position.set(fx + SUN_DIR.x * 90, SUN_DIR.y * 90, fz + SUN_DIR.z * 90); sun.target.position.set(fx, 0, fz);
   sky.position.copy(camera.position);
 }
-let lastT = performance.now(), perfN = 0, perfSum = 0, perfDone = false;
+let lastT = performance.now(), perfN = 0, perfSum = 0, perfDone = false, perfCalm = 0, perfNoPost = false;
 function frame(now){
   const raw = (now - lastT) / 1000; lastT = now;
   let dt = Math.min(0.05, raw);
   if(state === 'end' && endT < 2.2) dt *= 0.4;
-  if(!perfDone && raw < 0.5 && state !== 'load'){
+  // keep the frame rate up all match long: drop bloom first, then resolution; win resolution back when there's headroom
+  if(!perfDone && raw < 0.5 && state !== 'load' && !document.hidden){
     perfN++; perfSum += raw;
-    if(perfN >= 120){
-      const avg = perfSum / perfN; perfN = 0; perfSum = 0;
-      if(avg > 0.027){ if(PR > 1){ PR = Math.max(1, PR * 0.75); renderer.setPixelRatio(PR); resize(); } else if(usePost){ usePost = false; } else perfDone = true; }
-      else perfDone = true;
+    if(perfN >= 90){
+      const avg = perfSum / perfN, maxPR = Math.min(settings.quality === 'high' ? 2 : 1.25, devicePixelRatio || 1); perfN = 0; perfSum = 0;
+      if(avg > 0.0195){ perfCalm = 0; if(usePost){ usePost = false; perfNoPost = true; } else if(PR > 0.7){ PR = Math.max(0.7, PR * 0.85); renderer.setPixelRatio(PR); resize(); } }
+      else if(avg < 0.0125 && ++perfCalm >= 3){ perfCalm = 0; if(PR < maxPR){ PR = Math.min(maxPR, PR * 1.12); renderer.setPixelRatio(PR); resize(); } else if(!usePost && composer && settings.quality === 'high' && !perfNoPost) usePost = true; }
     }
   }
   tick(dt);
