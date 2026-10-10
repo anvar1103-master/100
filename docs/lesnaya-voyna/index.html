@@ -378,6 +378,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
           <button data-v="cap">Захват полян<small>3 поляны, до 150 очков</small></button>
           <button data-v="duel">Дуэль<small>1 на 1 на арене, до 10 побед</small></button>
           <button data-v="br">Последний гриб<small>10 бойцов, одна жизнь, туман</small></button>
+          <button data-v="sd">Споровая бомба<small>5 на 5, раунды, до 7 побед</small></button>
         </div></div>
         <div class="grp"><span class="lbl">Локация</span><div class="seg map" id="m-map">
           <button data-v="rand">Любая</button><button data-v="stream">Ручей</button><button data-v="swamp">Болото</button><button data-v="hills">Холмы</button><button data-v="clearing">Вырубка</button>
@@ -536,6 +537,11 @@ const EN = {
   'Срезал':'Cut Down', 'Прямо в шляпку':'Right in the Cap', 'Двойной урожай':'Double Harvest', 'Тройной урожай':'Triple Harvest', 'Грибной дождь':'Mushroom Rain', 'Лесной ураган':'Forest Storm', 'Хозяин леса':'Lord of the Forest', 'Бог поляны':'God of the Glade',
   'Первая кровь':'First Blood', 'Месть':'Revenge', 'Срубил серию':'Streak Breaker', 'Шишкой по лбу':'Cone to the Face', 'В упор':'Point Blank', 'Дальний выстрел':'Long Shot', 'Подмога':'Backup', 'Прополка':'Weeding',
   'Грибы и папоротники против слизней и жуков. Выбери сторону, бойца и лесную локацию — и в бой!':'Mushrooms and ferns against slugs and beetles. Pick a side, a fighter and a forest map, and charge in!',
+  'Споровая бомба':'Spore Bomb', '5 на 5, раунды, до 7 побед':'5 vs 5, rounds, first to 7', 'Лесной форт':'Forest Fort', 'Форт':'Fort',
+  'Старый форт в чаще: длинный проход к точке A, центр с воротами и тропа к точке B вдоль полого бревна.':'An old fort deep in the woods: a long corridor to site A, gated mid and a path to site B along a hollow log.',
+  'Раунд':'Round', 'атака ·':'attack ·', 'защита ·':'defense ·', 'Раунд наш!':'Round won!', 'Раунд проигран':'Round lost', 'бомба взорвалась':'the bomb went off', 'бомба обезврежена':'the bomb was defused', 'время вышло':'time ran out', 'защита уничтожена':'defenders eliminated', 'атака уничтожена':'attackers eliminated',
+  'У тебя':'You have the', 'споровая бомба':'spore bomb', 'споровую бомбу':'spore bomb', '— заложи её на точке A или B':'— plant it on site A or B', 'Ты подобрал':'You picked up the', 'Закладываем бомбу…':'Planting the bomb…', 'Обезвреживаем…':'Defusing…', '— отменить':'— cancel',
+  'Бомба заложена':'Bomb planted', 'точка':'site', 'секунд':'seconds', 'Закладываем':'Planting', 'Обезвреживаем':'Defusing', 'заложить бомбу':'plant the bomb', 'обезвредить бомбу':'defuse the bomb', 'У тебя бомба · неси на точку A или B':'You have the bomb · take it to site A or B', 'Бомба на точке':'Bomb on site', 'Ждём следующего раунда':'Waiting for the next round',
   '×2 опыта за рекламу':'×2 XP for watching an ad', 'Вернуться в бой · реклама':'Back to battle · watch an ad', 'опыта получено':'XP received', 'Снова в бою!':'Back in the fight!', 'вторая жизнь':'second life'
 };
 const RU_RX = /[А-Яа-яЁё]/;
@@ -1545,7 +1551,7 @@ const pondLevel = P => clearBase(P[0], P[1]) - 0.55;
 
 const MAPS = {
   arena:{
-    name:'Лесная арена', short:'Арена', seed:55, duel:true, X:20, Z:26, baseZ:24, water:'#2F6E78',
+    name:'Лесная арена', short:'Арена', seed:55, only:'duel', X:20, Z:26, baseZ:24, water:'#2F6E78',
     desc:'Маленькая поляна для дуэли: руины в центре, два фланга, гриб с батутом на каждой стороне.',
     caps:[[-9, 9], [0, 0], [9, -9]], pots:[[-7, 18]],
     spawns:[[-4, 22], [0, 23], [4, 22], [-8, 21], [8, 21]],
@@ -1574,6 +1580,49 @@ const MAPS = {
       ruin(0, 0, 0.785, 7, 7);
       boundaryForest(240, ['pine', 'pine', 'pine', 'oak', 'oak', 'birch', 'birch']);
       coverGrass({}); coverFerns({ p:() => 0.2 }); coverFlowers({ patches:40 }); coverMushrooms((x, z) => z < -8, 0.8); coverBushes(60);
+    }
+  },
+  fort:{
+    name:'Лесной форт', short:'Форт', seed:77, only:'sd', X:30, Z:40, baseZ:37,
+    desc:'Старый форт в чаще: длинный проход к точке A, центр с воротами и тропа к точке B вдоль полого бревна.',
+    sites:{ A:[-17, 19], B:[17, 21] },
+    caps:[[-17, 19], [0, 4], [17, 21]], pots:[],
+    spawns:[[-4, 35], [0, 36.5], [4, 35], [-8, 34], [8, 34]],
+    ffa:[[-24, 30], [24, 32], [0, 8], [-22, -10], [22, -12]],
+    lanes:lanesOf([[0, -36], [-21, -29], [-21, 6], [-17, 19], [-6, 31], [0, 36]], [[0, -36], [21, -29], [21, 6], [17, 21], [6, 31], [0, 36]], [[0, -36], [0, 8], [-9, 12], [-17, 19]], [[0, 8], [9, 13], [17, 21]]),
+    h(x, z){
+      let h = 0.3 * Math.sin(x * 0.13) * Math.sin(z * 0.11) + 0.25 * Math.cos(x * 0.09 + z * 0.07);
+      h += 0.5 * sstep(28, 40, z) + 0.5 * sstep(-28, -40, z);
+      return h + edgeRise(x, z);
+    },
+    color(c, x, z, h){
+      c.copy(TC.g1).lerp(TC.g2, clamp(0.5 + Math.sin(x * 0.2) * Math.sin(z * 0.17) * 0.6, 0, 1));
+      for(const s of [[-17, 19], [17, 21]]){ const d = Math.hypot(x - s[0], z - s[1]); if(d < 5.5) c.lerp(TC.dirt, 0.35 * (1 - d / 5.5) + 0.2); }
+      tintCommon(c, x, z, h); tintEdge(c, x, z);
+    },
+    build(){
+      // the walls between the three lanes
+      stoneWall(-14, -26, -14, 4, 2.8, 0.1); stoneWall(14, -26, 14, 4, 2.8, 0.1);
+      // long A: doors halfway up
+      palisade([[-29, -6], [-22.5, -6]]); palisade([[-18.5, -6], [-14.5, -6]]);
+      addRock(-25, -17, 1.4, 1.3); addRock(-17.5, 0, 1.2, 1.1); logPile(-24, 4, 1.57, 4, 2);
+      // mid: gates in a wall, cover on both sides
+      stoneWall(-13.5, -2, -2.6, -2, 2.6, 0.2); stoneWall(2.6, -2, 13.5, -2, 2.6, 0.2);
+      logPile(-6, -15, 0, 4.5, 2); addRock(6, -12, 1.5, 1.4); addRock(-3, 5, 1.1, 1); thicket(7, 7, 2.2);
+      // B lane: a giant hollow log down the middle, a path on each side
+      hollowLog(21, -18, 0, 2.6); addRock(16.5, -22, 1.2, 1.1); addRock(26.5, 3, 1.3, 1.2);
+      // site A: in front of a ruined chapel
+      ruin(-21, 27, 0, 10, 6); logPile(-13, 16, 0.4, 3.6, 2); addRock(-20.5, 14.5, 1.4, 1.3); stumpBig(-11, 23, 1.5, 1.3);
+      stoneWall(-8, 8, -8, 15, 2.6, 0.3);
+      // site B: under a giant fly agaric with a trampoline
+      const g = giantMushroomTop(23, 26, 'agaric', terrainH(23, 26) + 4.6, 3.2, 0.7); bouncePad(18.5, 28.5, g.top, g.x, g.z);
+      logPile(13, 18, 1.2, 3.6, 2); addRock(19.5, 16, 1.3, 1.2); hedgeWall([[9, 27], [13, 31]]);
+      stoneWall(8, 8, 8, 15, 2.6, 0.3);
+      // the defenders' yard between the sites and the attackers' camp
+      mushroomHouse(0, 24, '#B9542B'); thicket(-6, 30, 2); thicket(7, 30, 2);
+      stumpHouse(-20, -34); stumpHouse(20, -34); logPile(0, -27, 0, 5, 2);
+      boundaryForest(240, ['pine', 'pine', 'pine', 'oak', 'oak', 'birch', 'birch']);
+      coverGrass({}); coverFerns({ p:() => 0.2 }); coverFlowers({ patches:30 }); coverMushrooms((x, z) => z < -8, 0.6); coverBushes(40);
     }
   },
   stream:{
@@ -1782,7 +1831,7 @@ const MAPS = {
     }
   }
 };
-const MAP_IDS = Object.keys(MAPS).filter(k => !MAPS[k].duel);
+const MAP_IDS = Object.keys(MAPS).filter(k => !MAPS[k].only);
 function tintEdge(c, x, z){ const e = Math.max(Math.abs(x) - MAP_X, Math.abs(z) - MAP_Z); if(e > -2) c.lerp(TC.forest, clamp((e + 2) / 10, 0, 0.85)); }
 // a giant mushroom whose cap top lands at an absolute height
 function giantMushroomTop(x, z, kind, top, R, stemR){
@@ -2609,7 +2658,7 @@ function stepFighter(f, dt){
     if(inp.fire && f.fireT <= 0 && !match.frozen){ fireWeapon(f); f.ammo = 9999; f.fireT += 1 / W.rate; }
     return;
   }
-  if(!f.alive){ if(match.mode === 'br' && f.life > 0) return; f.respawnT -= dt; if(f.respawnT <= 0 && match.live && !match.over) respawn(f); return; }
+  if(!f.alive){ if((match.mode === 'br' && f.life > 0) || match.mode === 'sd') return; f.respawnT -= dt; if(f.respawnT <= 0 && match.live && !match.over) respawn(f); return; }
   f.cdQ = Math.max(0, f.cdQ - dt); f.cdE = Math.max(0, f.cdE - dt);
   f.shieldT = Math.max(0, f.shieldT - dt); f.invisT = Math.max(0, f.invisT - dt); f.slowT = Math.max(0, f.slowT - dt); f.rootT = Math.max(0, f.rootT - dt); f.prot = Math.max(0, f.prot - dt);
   f.hurtT += dt; if(match.t - f.firedT > 0.16) f.spreadAcc = Math.max(0, f.spreadAcc - dt * 5);
@@ -2622,7 +2671,7 @@ function stepFighter(f, dt){
   if(inp.q){ inp.q = false; useAbility(f, 'q'); }
   if(inp.e){ inp.e = false; useAbility(f, 'e'); }
   if(inp.reload){ inp.reload = false; startReload(f); }
-  if(inp.plant){ inp.plant = false; tryPlant(f); }
+  if(inp.plant){ inp.plant = false; if(match.mode === 'sd') sdUse(f); else tryPlant(f); }
   if(f.gren < GREN.max){ f.grenT += dt; if(f.grenT >= GREN.regen){ f.gren++; f.grenT = 0; } }
   if(inp.gren){ inp.gren = false; if(f.gren > 0 && !match.frozen && f.dashT <= 0){ f.gren--; f.prot = 0; throwGrenade(f); fxGrenadeThrow(f); } }
   let mx = inp.f * fx + inp.s * rx, mz = inp.f * fz + inp.s * rz;
@@ -3225,13 +3274,16 @@ function botPerceive(f, D){
 }
 function botGoal(f){
   const B = f.bot;
-  if(B.lastSeen && match.t - B.lastSeenT < 7 && f.arch !== 'sniper') return { x:B.lastSeen.x + rand(-3, 3), z:B.lastSeen.z + rand(-3, 3) };
+  const holding = match.mode === 'sd' && f.team === SD_DEF && !SD.bomb;   // defenders hold their site instead of chasing
+  if(B.lastSeen && match.t - B.lastSeenT < (holding ? 2 : 7) && f.arch !== 'sniper') return { x:B.lastSeen.x + rand(-3, 3), z:B.lastSeen.z + rand(-3, 3) };
   let heard = null, hd = 46;
   for(const g of fighters) if(g.alive && isEnemy(f, g) && match.t - g.firedT < 2){ const d = Math.hypot(g.x - f.x, g.z - f.z); if(d < hd){ hd = d; heard = g; } }
   if(isBR() && (brOutside(f, 6) || Math.random() < (match.t < 50 ? 0.9 : 0.55))) return brGoal(f);
+  if(match.mode === 'sd' && (holding || Math.random() < 0.85)) return sdGoal(f);
   if(heard && Math.random() < 0.7 && f.arch !== 'sniper') return { x:heard.x + rand(-5, 5), z:heard.z + rand(-5, 5) };
   if(match.mode === 'cap') return capGoal(f);
   if(isBR()) return brGoal(f);
+  if(match.mode === 'sd') return sdGoal(f);
   if(teamMode() && match.mode !== 'duel'){
     if(me && me.alive && !isEnemy(me, f) && Math.random() < 0.3) return { x:clamp(me.x + rand(-6, 6), -MAP_X + 2, MAP_X - 2), z:clamp(me.z + rand(-6, 6), -MAP_Z + 2, MAP_Z - 2) };
     const side = f.team === 'guard' ? 1 : -1, want = f.arch === 'sniper' ? rand(-8, 16) : rand(-32, 10);
@@ -3947,6 +3999,7 @@ function updateHud(dt){
   const pp = $('plantp'), cp = me.alive && !me.sentry && !!nearPot(me);
   if(cp){ const ready = canPlant(me); html(pp, ready ? (TOUCH ? '' : '<b>F</b> ') + 'посадить ' + FACTIONS[me.fac].classes.sentry.acc : hasSentry(me) ? 'Твоя ' + FACTIONS[me.fac].classes.sentry.name + ' уже растёт' : 'Горшок через ' + Math.ceil(me.plantCd) + ' с'); }
   pp.hidden = !cp; if(TOUCH) $('t-plant').hidden = !(cp && canPlant(me));
+  if(isSD()) sdHud(pp);
   if(TOUCH){ for(const k of ['q', 'e']){ const cd = k === 'q' ? me.cdQ : me.cdE; html($('t-' + k), cd > 0 ? '<small>' + Math.ceil(cd) + '</small>' : k.toUpperCase()); } }
   const scoped = me.alive && me.inp.scope && me.arch === 'sniper' && zoom > 0.6;
   $('scope').hidden = !scoped;
@@ -3966,7 +4019,7 @@ function updateHud(dt){
   if(teamMode()){ txt($('sc-g'), String(match.scores.guard)); txt($('sc-r'), String(match.scores.rot)); updateCapBadges(); }
   else if(isBR()){ txt($('sc-alive'), String(brAliveList().length)); txt($('sc-pow'), String(me.power || 0)); const t = match.t, sh = BR.grace + BR.shrink; txt($('sc-fog'), t < BR.grace ? 'туман через ' + Math.ceil(BR.grace - t) : t < sh ? 'туман сужается' : 'последний круг'); }
   else { let top = null; for(const f of fighters) if(f !== me && (!top || f.kills > top.kills)) top = f; txt($('sc-me'), String(me.kills)); if(top){ txt($('sc-ln'), top.name); txt($('sc-l'), String(top.kills)); } }
-  txt($('clock'), fmtTime(match.dur - match.t));
+  txt($('clock'), isSD() ? sdClock() : fmtTime(match.dur - match.t));
   hurtFlash = Math.max(0, hurtFlash - dt * 1.6);
   const low = me.alive && me.hp < me.max * 0.3 ? 0.22 + Math.sin(time * 6) * 0.06 : 0;
   $('vig').style.boxShadow = 'inset 0 0 ' + (120 + hurtFlash * 80).toFixed(0) + 'px rgba(255,30,40,' + Math.min(0.75, hurtFlash * 0.6 + low).toFixed(2) + ')';
@@ -3995,7 +4048,7 @@ function updateHud(dt){
   if(!me.alive){
     me.deathTimer = (me.deathTimer || 0) + dt;
     if(me.deathTimer > 0.8 && $('dead').hidden && state === 'play') showDead();
-    if(!$('dead').hidden) txt($('d-resp'), isBR() ? 'Место: ' + (BR.place || '—') + ' · смотри, кто победит' : 'Возрождение через ' + Math.max(1, Math.ceil(me.respawnT)));
+    if(!$('dead').hidden) txt($('d-resp'), isSD() ? 'Ждём следующего раунда' : isBR() ? 'Место: ' + (BR.place || '—') + ' · смотри, кто победит' : 'Возрождение через ' + Math.max(1, Math.ceil(me.respawnT)));
   }
 }
 function showDead(){
@@ -4025,7 +4078,7 @@ function showBoard(on){ if(on && inGame() && me){ $('board-c').innerHTML = board
    A shooter decides its hits and sends them to the target's owner, who applies the damage
    and reports the kill. Transports: claude.ai room (artifact), PeerJS (web), BroadcastChannel (tests). */
 const NET_V = 5;
-const MODE_NAMES = { tdm:'Командный бой', ffa:'Каждый сам за себя', cap:'Захват полян', duel:'Дуэль', br:'Последний гриб' };
+const MODE_NAMES = { tdm:'Командный бой', ffa:'Каждый сам за себя', cap:'Захват полян', duel:'Дуэль', br:'Последний гриб', sd:'Споровая бомба' };
 const NET = { kind:null, roomNs:null, lobby:null, room:null, on:false, role:null, code:null, myPeer:null, waiting:false,
   nick:'', seq:0, events:[], info:new Map(), lastObj:new Map(), remote:new Map(), sendT:0, lobbyT:0, balT:1, epoch:0,
   hostPeer:null, hostSeen:0, botSeq:0, trapSeq:0, busy:false };
@@ -4950,6 +5003,186 @@ $('d-revive').addEventListener('click', () => {
 });
 yaInit();
 
+/* ================= «Споровая бомба»: rounds, one life each, plant or defuse =================
+   The rot attacks, the guard defends. One attacker carries the spore bomb and plants it on site A or B;
+   a planted bomb blows after 35 s unless a defender defuses it. A round is won by wiping the other side,
+   by the bomb going off, by defusing it, or (defenders) by running the clock out. First to 7 rounds. */
+const SD = { toWin:7, freeze:5, roundT:105, bombT:35, plantT:3.2, defuseT:5, post:4, R:4.6,
+  round:0, phase:'off', t:0, carrier:null, drop:null, bomb:null, act:null, plan:'A', beepT:0, winner:null, marks:null };
+const isSD = () => match.mode === 'sd';
+const SD_ATK = 'rot', SD_DEF = 'guard';
+const sdSites = () => (MAP && MAP.sites) || { A:[-17, 19], B:[17, 21] };
+const sdAlive = team => fighters.filter(f => f.alive && !f.sentry && f.team === team);
+
+/* ---- the bomb and the site markers ---- */
+const sdBombG = new THREE.Group();
+{
+  const pod = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 1), new THREE.MeshStandardMaterial({ color:'#5E2A78', emissive:'#B23CFF', emissiveIntensity:0.6, roughness:0.5, flatShading:true }));
+  pod.scale.set(1, 1.25, 1); pod.position.y = 0.5; sdBombG.add(pod);
+  const spikeG = new THREE.ConeGeometry(0.07, 0.3, 5), spikeM = new THREE.MeshStandardMaterial({ color:'#E7C6FF', emissive:'#B23CFF', emissiveIntensity:0.4 });
+  for(let i = 0; i < 10; i++){ const s = new THREE.Mesh(spikeG, spikeM), a = i / 10 * TAU, up = i % 2 ? 0.25 : -0.05; s.position.set(Math.cos(a) * 0.4, 0.5 + up, Math.sin(a) * 0.4); s.lookAt(Math.cos(a) * 2, 0.5 + up * 3, Math.sin(a) * 2); s.rotateX(Math.PI / 2); sdBombG.add(s); }
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.7, 32), new THREE.MeshBasicMaterial({ color:new THREE.Color(1.4, 0.5, 1.8), transparent:true, opacity:0.7, depthWrite:false, side:THREE.DoubleSide, toneMapped:false }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; sdBombG.add(ring);
+  sdBombG.visible = false; scene.add(sdBombG);
+}
+function sdLetter(ch){
+  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
+  x.font = '900 96px Nunito, Arial Black, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.lineWidth = 12; x.strokeStyle = 'rgba(20,10,30,.85)'; x.strokeText(ch, 64, 70); x.fillStyle = '#FFE27A'; x.fillText(ch, 64, 70);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map:new THREE.CanvasTexture(c), transparent:true, depthWrite:false, depthTest:false }));
+  s.scale.set(1.6, 1.6, 1); s.renderOrder = 9; return s;
+}
+function sdBuildMarks(){
+  if(SD.marks) for(const m of SD.marks) scene.remove(m);
+  SD.marks = [];
+  for(const [k, p] of Object.entries(sdSites())){
+    const y = groundH(p[0], p[1]);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(SD.R - 0.18, SD.R, 64), new THREE.MeshBasicMaterial({ color:new THREE.Color(1.3, 1.0, 0.35), transparent:true, opacity:0.45, depthWrite:false, side:THREE.DoubleSide, toneMapped:false }));
+    ring.rotation.x = -Math.PI / 2; ring.position.set(p[0], y + 0.08, p[1]);
+    const L = sdLetter(k); L.position.set(p[0], y + 3.4, p[1]);
+    scene.add(ring, L); SD.marks.push(ring, L);
+  }
+}
+function sdClearMarks(){ if(SD.marks) for(const m of SD.marks) scene.remove(m); SD.marks = null; sdBombG.visible = false; }
+
+/* ---- match and round flow ---- */
+function sdStart(){
+  SD.round = 0; SD.winner = null; sdBuildMarks(); sdNewRound(true);
+}
+function sdNewRound(first){
+  SD.round++; SD.phase = 'freeze'; SD.t = SD.freeze; SD.bomb = null; SD.drop = null; SD.act = null; SD.beepT = 0;
+  sdBombG.visible = false;
+  if(!first){ clearCombat(); for(const f of fighters) if(!f.sentry) respawn(f); }
+  for(const f of fighters) if(!f.sentry){ f.rootT = SD.freeze; f.prot = 0; }
+  const atk = sdAlive(SD_ATK);
+  SD.carrier = atk.length ? pick(atk) : null;
+  SD.plan = Math.random() < 0.5 ? 'A' : 'B';
+  // the defenders split between the two sites
+  sdAlive(SD_DEF).forEach((f, i) => { if(f.bot) f.bot.sdSite = i % 2 ? 'B' : 'A'; });
+  for(const f of atk) if(f.bot) f.bot.sdSite = SD.plan;
+  const g = match.scores.guard, r = match.scores.rot;
+  if(me) announce('Раунд ' + SD.round, (me.team === SD_ATK ? 'атака · ' : 'защита · ') + g + ' : ' + r, 2.4);
+  if(me && SD.carrier === me) killNotice('У тебя <em>споровая бомба</em> — заложи её на точке A или B (<em>F</em>)');
+  renderScore();
+}
+function sdRoundWin(team, why){
+  if(SD.phase === 'post' || match.over) return;
+  SD.phase = 'post'; SD.t = SD.post; SD.act = null;
+  match.scores[team]++;
+  const mine = me && me.team === team;
+  announce(mine ? 'Раунд наш!' : 'Раунд проигран', why, 2.6);
+  (mine ? SFX.win : SFX.lose)();
+  checkWin();
+}
+function sdClock(){
+  const t = Math.max(0, SD.bomb ? SD.bomb.t : SD.t);
+  return SD.phase === 'freeze' ? '0:0' + Math.ceil(t) : fmtTime(t);
+}
+
+/* ---- planting and defusing ---- */
+function sdSiteAt(x, z){ for(const [k, p] of Object.entries(sdSites())) if(Math.hypot(x - p[0], z - p[1]) < SD.R) return k; return null; }
+function sdCanPlant(f){ return SD.phase === 'live' && !SD.bomb && f === SD.carrier && f.alive && f.ground && !!sdSiteAt(f.x, f.z); }
+function sdCanDefuse(f){ return SD.phase === 'live' && !!SD.bomb && f.alive && f.team === SD_DEF && Math.hypot(f.x - SD.bomb.x, f.z - SD.bomb.z) < 2; }
+function sdUse(f){
+  if(SD.act && SD.act.f === f){ SD.act = null; return; }
+  if(SD.act) return;
+  if(sdCanPlant(f)) SD.act = { f, kind:'plant', t:0, need:SD.plantT, x:f.x, z:f.z };
+  else if(sdCanDefuse(f)) SD.act = { f, kind:'defuse', t:0, need:SD.defuseT, x:f.x, z:f.z };
+  if(SD.act){ SFX.plant(f.x, f.y, f.z); if(f === me) killNotice(SD.act.kind === 'plant' ? 'Закладываем бомбу… (<em>F</em> — отменить)' : 'Обезвреживаем… (<em>F</em> — отменить)'); }
+}
+function sdPlanted(f){
+  const site = sdSiteAt(f.x, f.z) || SD.plan;
+  SD.bomb = { x:f.x, z:f.z, y:groundH(f.x, f.z), site, t:SD.bombT }; SD.carrier = null; SD.drop = null;
+  sdBombG.position.set(SD.bomb.x, SD.bomb.y, SD.bomb.z); sdBombG.visible = true;
+  announce('Бомба заложена', 'точка ' + site + ' · ' + SD.bombT + ' секунд', 2.4); SFX.horn();
+  for(const g of fighters) if(g.bot && g.team === SD_DEF) g.bot.goalT = 0;
+}
+function sdExplode(){
+  const B = SD.bomb; SD.bomb = null; sdBombG.visible = false;
+  fxExplosion(B.x, B.y + 0.6, B.z, 9, 'grenade', { fac:'rot', x:B.x, z:B.z });
+  emit('glow', B.x, B.y + 1, B.z, 80, { spd:16, up:1, size:1.4, size1:0.1, life:0.9, col:[1.2, 0.5, 1.6], g:-3 });
+  for(const f of fighters) if(f.alive && !f.sentry && Math.hypot(f.x - B.x, f.z - B.z) < 9) killFighter(f, null, { kind:'grenade' });
+  if(me){ const d = Math.hypot(me.x - B.x, me.z - B.z); camShake = Math.max(camShake, clamp(1.4 - d / 30, 0.3, 1.4)); }
+  sdRoundWin(SD_ATK, 'бомба взорвалась');
+}
+
+/* ---- every frame ---- */
+function updateSD(dt){
+  if(!isSD() || match.attract){ if(SD.marks && !isSD()) sdClearMarks(); return; }
+  if(state !== 'play' || match.over) return;
+  SD.t -= dt;
+  if(SD.phase === 'freeze'){ if(SD.t <= 0){ SD.phase = 'live'; SD.t = SD.roundT; for(const f of fighters) f.rootT = 0; txt($('cmsg'), 'В бой!'); $('cmsg').style.opacity = 1; cmsgT = 1; SFX.horn(); } return; }
+  if(SD.phase === 'post'){ if(SD.t <= 0 && !match.over) sdNewRound(false); return; }
+  // the bomb on its way: a dead carrier drops it, an attacker walking over picks it up
+  if(!SD.bomb){
+    if(SD.carrier && !SD.carrier.alive){ SD.drop = { x:SD.carrier.x, z:SD.carrier.z }; SD.carrier = null; sdBombG.position.set(SD.drop.x, groundH(SD.drop.x, SD.drop.z), SD.drop.z); sdBombG.visible = true; }
+    if(SD.drop) for(const f of sdAlive(SD_ATK)) if(Math.hypot(f.x - SD.drop.x, f.z - SD.drop.z) < 1.4){ SD.carrier = f; SD.drop = null; sdBombG.visible = false; if(f === me) killNotice('Ты подобрал <em>споровую бомбу</em>'); break; }
+  }
+  // planting / defusing in progress: stand still, don't shoot
+  const A = SD.act;
+  if(A){
+    const f = A.f;
+    if(!f.alive || match.t - f.firedT < 0.05 || Math.hypot(f.x - A.x, f.z - A.z) > 0.8 || (A.kind === 'plant' ? !sdCanPlant(f) : !sdCanDefuse(f))) SD.act = null;
+    else {
+      f.rootT = Math.max(f.rootT, 0.15); A.t += dt;
+      if(A.t >= A.need){ SD.act = null; if(A.kind === 'plant') sdPlanted(f); else { SD.bomb = null; sdBombG.visible = false; SFX.reloaded(); sdRoundWin(SD_DEF, 'бомба обезврежена'); return; } }
+    }
+  }
+  // bots get on with the job when nobody is shooting at them
+  for(const f of fighters){
+    if(!f.bot || !f.alive || SD.act) continue;
+    if(f.bot.target && match.t - f.bot.lastSeenT < 1.5) continue;
+    if(sdCanPlant(f) || sdCanDefuse(f)) sdUse(f);
+  }
+  // the clock and the planted bomb
+  if(SD.bomb){
+    SD.bomb.t -= dt; SD.beepT -= dt;
+    const k = clamp(SD.bomb.t / SD.bombT, 0, 1);
+    sdBombG.children[0].material.emissiveIntensity = 0.6 + 0.8 * Math.max(0, Math.sin(time * (4 + (1 - k) * 18)));
+    sdBombG.rotation.y += dt * (1 + (1 - k) * 4);
+    if(SD.beepT <= 0){ SD.beepT = 0.15 + k * 0.85; SFX.beep(false); }
+    if(SD.bomb.t <= 0) return sdExplode();
+  } else if(SD.t <= 0) return sdRoundWin(SD_DEF, 'время вышло');
+  else if(SD.drop) sdBombG.rotation.y += dt;
+  // wipes
+  const atk = sdAlive(SD_ATK).length, def = sdAlive(SD_DEF).length;
+  if(def === 0) return sdRoundWin(SD_ATK, 'защита уничтожена');
+  if(atk === 0 && !SD.bomb) return sdRoundWin(SD_DEF, 'атака уничтожена');
+}
+
+/* ---- where bots want to be ---- */
+function sdGoal(f){
+  const S = sdSites(), jit = r => rand(-r, r);
+  if(f.team === SD_ATK){
+    if(SD.bomb) return { x:SD.bomb.x + jit(6), z:SD.bomb.z + jit(6) };
+    if(SD.drop) return { x:SD.drop.x, z:SD.drop.z };
+    const k = f.bot.sdSite || SD.plan, s = S[k];
+    // take the lane that leads to the site (long A or the hollow-log path to B), then go in
+    const laneX = s[0] < 0 ? -21 : 21;
+    if(f.z < 3 && Math.abs(f.x - laneX) > 5) return { x:laneX + jit(2), z:clamp(f.z + 12, -24, 0) };
+    if(f.z < 3) return { x:laneX + jit(2), z:6 };
+    if(f === SD.carrier) return { x:s[0] + jit(1.5), z:s[1] + jit(1.5) };
+    // the rest of the team pushes the same site, a little ahead of the bomb
+    return { x:s[0] + jit(5), z:s[1] + jit(5) };
+  }
+  if(SD.bomb) return { x:SD.bomb.x + jit(1), z:SD.bomb.z + jit(1) };
+  const s = S[f.bot.sdSite || 'A'];
+  return { x:s[0] + jit(5), z:s[1] - 3 + jit(4) };
+}
+
+/* ---- the prompt at the bottom of the screen ---- */
+function sdHud(pp){
+  if(!me || !me.alive || SD.phase !== 'live'){ pp.hidden = true; return; }
+  let t = '';
+  if(SD.act && SD.act.f === me) t = (SD.act.kind === 'plant' ? 'Закладываем' : 'Обезвреживаем') + ' · ' + Math.round(SD.act.t / SD.act.need * 100) + '%';
+  else if(sdCanPlant(me)) t = (TOUCH ? '' : '<b>F</b> ') + 'заложить бомбу';
+  else if(sdCanDefuse(me)) t = (TOUCH ? '' : '<b>F</b> ') + 'обезвредить бомбу';
+  else if(me === SD.carrier) t = 'У тебя бомба · неси на точку A или B';
+  else if(SD.bomb && me.team === SD_DEF) t = 'Бомба на точке ' + SD.bomb.site + ' · ' + Math.ceil(SD.bomb.t) + ' с';
+  if(t){ html(pp, t); pp.hidden = false; } else pp.hidden = true;
+  if(TOUCH) $('t-plant').hidden = !(sdCanPlant(me) || sdCanDefuse(me) || (SD.act && SD.act.f === me));
+}
+
 /* ================= post-processing ================= */
 let composer = null, bloomPass = null, usePost = false, postLoading = false;
 async function initPost(){
@@ -4993,8 +5226,8 @@ function applyQuality(){
 const shuffle = a => { for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 function renderMenu(){
   for(const [id, key] of [['m-mode', 'mode'], ['m-fac', 'fac'], ['m-diff', 'diff'], ['m-map', 'map']]) for(const b of $(id).querySelectorAll('button')) b.classList.toggle('sel', b.dataset.v === menuSel[key]);
-  const duel = menuSel.mode === 'duel', md = MAPS[duel ? 'arena' : menuSel.map];
-  $('m-map').classList.toggle('dim', duel);
+  const special = menuSel.mode === 'duel' ? 'arena' : menuSel.mode === 'sd' ? 'fort' : null, md = MAPS[special || menuSel.map];
+  $('m-map').classList.toggle('dim', !!special);
   $('m-mapd').innerHTML = md ? '<b>' + md.name + '.</b> ' + md.desc : 'Каждый бой — случайная из четырёх локаций.';
   $('classes').innerHTML = ARCHS.map(a => { const C = clsOf(menuSel.fac, a); return '<button class="tile' + (a === menuSel.arch ? ' sel' : '') + '" data-a="' + a + '" aria-pressed="' + (a === menuSel.arch) + '">' + icon(menuSel.fac, a) + '<b>' + C.name + '</b><small>' + C.role + '</small></button>'; }).join('');
   const C = clsOf(menuSel.fac, menuSel.arch), A = ARCH[menuSel.arch], W = A.w;
@@ -5013,9 +5246,9 @@ for(const [id, key] of [['m-mode', 'mode'], ['m-fac', 'fac'], ['m-diff', 'diff']
 $('m-map').addEventListener('click', e => {
   const b = e.target.closest('[data-v]'); if(!b) return;
   menuSel.map = b.dataset.v; store.set('map', b.dataset.v); renderMenu();
-  if(menuSel.mode !== 'duel' && MAPS[menuSel.map] && MAP.id !== menuSel.map && state === 'menu'){ $('m-mapd').innerHTML += ' <i>Загружаем…</i>'; const want = menuSel.map; setTimeout(() => { if(state === 'menu' && menuSel.map === want && MAP.id !== want){ buildWorld(want); startAttract(); renderMenu(); } }, 30); }
+  if(menuSel.mode !== 'duel' && menuSel.mode !== 'sd' && MAPS[menuSel.map] && MAP.id !== menuSel.map && state === 'menu'){ $('m-mapd').innerHTML += ' <i>Загружаем…</i>'; const want = menuSel.map; setTimeout(() => { if(state === 'menu' && menuSel.map === want && MAP.id !== want){ buildWorld(want); startAttract(); renderMenu(); } }, 30); }
 });
-const pickMap = () => menuSel.mode === 'duel' ? 'arena' : MAPS[menuSel.map] && !MAPS[menuSel.map].duel ? menuSel.map : pick(MAP_IDS);
+const pickMap = () => menuSel.mode === 'duel' ? 'arena' : menuSel.mode === 'sd' ? 'fort' : MAPS[menuSel.map] && !MAPS[menuSel.map].only ? menuSel.map : pick(MAP_IDS);
 $('classes').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if(!b) return; menuSel.arch = b.dataset.a; store.set('arch', b.dataset.a); renderMenu(); });
 $('classes').addEventListener('dblclick', e => { if(e.target.closest('[data-a]')) startMatch(); });
 $('sens').addEventListener('input', e => { settings.sens = +e.target.value; store.set('sens', settings.sens); });
@@ -5102,7 +5335,7 @@ function clearMatch(){
   NET.remote.clear(); NET.lastObj.clear();
 }
 function startAttract(){
-  if(!MAP || MAP.duel) buildWorld(MAPS[menuSel.map] && !MAPS[menuSel.map].duel ? menuSel.map : pick(MAP_IDS));
+  if(!MAP || MAP.only) buildWorld(MAPS[menuSel.map] && !MAPS[menuSel.map].only ? menuSel.map : pick(MAP_IDS));
   clearMatch();
   capReset(); applySky(pick(['day', 'day', 'dusk', 'night'])); applySeason(pick(['summer', 'summer', 'autumn', 'winter']));
   Object.assign(match, { mode:Math.random() < 0.5 ? 'cap' : 'tdm', diff:'normal', limit:1e9, dur:1e9, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:true, attract:true, live:true, frozen:false });
@@ -5120,6 +5353,7 @@ function showMenu(){
 // a new map is built behind a loading card; `sync` builds it right away (tests, rejoin)
 function startMatch(sync){
   audio();
+  if(NET.on && menuSel.mode === 'sd') menuSel.mode = 'tdm';   // rounds are offline only for now
   const id = pickMap();
   if(MAP && MAP.id === id){ beginMatch(); return; }
   if(sync){ buildWorld(id); beginMatch(); return; }
@@ -5129,7 +5363,7 @@ function startMatch(sync){
 }
 function beginMatch(){
   clearMatch();
-  Object.assign(match, { mode:menuSel.mode, diff:menuSel.diff, limit:{ tdm:50, cap:150, duel:10, br:1e9 }[menuSel.mode] || 20, dur:menuSel.mode === 'duel' || menuSel.mode === 'br' ? 300 : 480, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:false, attract:false, live:false, frozen:true });
+  Object.assign(match, { mode:menuSel.mode, diff:menuSel.diff, limit:{ tdm:50, cap:150, duel:10, br:1e9, sd:SD.toWin }[menuSel.mode] || 20, dur:menuSel.mode === 'sd' ? 1e6 : menuSel.mode === 'duel' || menuSel.mode === 'br' ? 300 : 480, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:false, attract:false, live:false, frozen:true });
   const pf = menuSel.fac;
   capReset(); applySky(pickSky()); applySeason(pickSeason());
   me = makeFighter({ name:'Ты', team:teamMode() ? pf : 'p0', fac:pf, arch:menuSel.arch, isPlayer:true, hat:PROF.hat[clsKey(pf, menuSel.arch)] || null });
@@ -5137,6 +5371,11 @@ function beginMatch(){
   if(match.mode === 'br'){
     for(let i = 0; i < BR.n - 1; i++){ const fac = i % 2 ? pf : (pf === 'guard' ? 'rot' : 'guard'); const f = makeFighter({ name:nameFor(fac), team:'b' + i, fac, arch:pick(ARCHS), hat:botHat() }); f.bot = newBot(); }
     const [cx, cz] = brPickCenter(); brStart(1 + Math.floor(Math.random() * 1e6), cx, cz);
+  } else if(match.mode === 'sd'){
+    // 5 against 5: you and four teammates, every class once on the other side
+    const other = pf === 'guard' ? 'rot' : 'guard';
+    for(const a of shuffle(ARCHS.slice()).slice(0, 4)){ const f = makeFighter({ name:nameFor(pf), team:pf, fac:pf, arch:a, hat:botHat() }); f.bot = newBot(); }
+    for(const a of shuffle(ARCHS.slice())){ const f = makeFighter({ name:nameFor(other), team:other, fac:other, arch:a, hat:botHat() }); f.bot = newBot(); }
   } else if(match.mode === 'duel'){
     const other = pf === 'guard' ? 'rot' : 'guard', f = makeFighter({ name:nameFor(other), team:other, fac:other, arch:pick(ARCHS), hat:botHat() }); f.bot = newBot();
   } else if(teamMode()){
@@ -5148,6 +5387,7 @@ function beginMatch(){
   }
   for(const f of fighters){ setOutline(f); makeTag(f); respawn(f); f.prot = 0; }
   if(NET.on && NET.role === 'host') netHostStarted();
+  if(match.mode === 'sd') sdStart();
   renderScore(); renderMeBox(); renderAbil(true);
   state = 'countdown'; countT = 3; lastCount = 0; endT = 0; YA.revived = false;
   announce(MAP.name, MODE_NAMES[match.mode] + ' · ' + SKIES[skyName].name.toLowerCase() + ', ' + SEASONS[season].toLowerCase(), 2.6);
@@ -5236,7 +5476,7 @@ function tick(dt){
   if(state === 'play') match.t += dt;
   for(const f of fighters) if(f.bot) botThink(f, dt);
   for(const f of fighters) stepFighter(f, dt);
-  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateSmokes(dt); updateBR(dt); updateMedals(dt); updateStations(dt); updateCaps(dt); updatePots(dt);
+  updateShots(dt); updateZones(dt); updateTraps(dt); updateGrenades(dt); updateSmokes(dt); updateBR(dt); updateSD(dt); updateMedals(dt); updateStations(dt); updateCaps(dt); updatePots(dt);
   for(const f of fighters) animFighter(f, dt);
   if(state === 'countdown') countdown(dt);
   if(cmsgT > 0){ cmsgT -= dt; if(cmsgT <= 0) $('cmsg').style.opacity = 0; }
@@ -5276,7 +5516,7 @@ netInit();
 $('load').hidden = true;
 window.__lv = {
   start(o){ Object.assign(menuSel, o || {}); startMatch(true); },
-  map(id){ buildWorld(id); if(!MAP.duel) startAttract(); else { clearMatch(); applySky('day'); applySeason('summer'); } }, maps:() => MAP_IDS, get mapId(){ return MAP && MAP.id; },
+  map(id){ buildWorld(id); if(!MAP.only) startAttract(); else { clearMatch(); applySky('day'); applySeason('summer'); } }, maps:() => MAP_IDS, get mapId(){ return MAP && MAP.id; },
   obsSig:() => obstacles.length + ':' + obstacles.reduce((a, o) => a + o.x * 3.1 + o.z * 1.7 + o.r * 5 + (o.base + o.h) * 0.3, 0).toFixed(2),
   plot(nav){
     const S = 9, W = MAP_X * 2 * S, H = MAP_Z * 2 * S, c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -5304,7 +5544,7 @@ window.__lv = {
   board:() => fighters.map(f => f.name + '[' + f.arch + ']:' + f.kills + '/' + f.deaths),
   get post(){ return { composer:!!composer, usePost }; },
   caps:() => CAPS.map(c => c.id + ':' + (c.owner ? c.owner[0] : '-') + Math.round(c.prog * 100) + '(' + c.g + 'v' + c.r + ')').join(' '),
-  post(v){ perfDone = true; usePost = !!v && !!composer; return usePost; }, medals:(k, line) => awardMedals(k, line), dbg:() => ({ paused, manualPause, countT, dbgFreeze, endT, BRwin:BR.win, attract:match.attract, over:match.over }), shotsN:() => shots.length, shotsAt:() => shots.map(s => [s.x, s.y, s.z, s.vx, s.vz, s.W.kind]), freeze(v){ dbgFreeze = !!v; }, kill:f => killFighter(f || me, null, { kind:"fog" }), net:NET, host:() => netHost(), join:c => netJoin(c), leave:() => netLeave()
+  post(v){ perfDone = true; usePost = !!v && !!composer; return usePost; }, medals:(k, line) => awardMedals(k, line), sdGive(){ SD.carrier = me; SD.drop = null; }, sd:() => ({ round:SD.round, phase:SD.phase, t:+SD.t.toFixed(1), bomb:SD.bomb ? SD.bomb.site + ":" + SD.bomb.t.toFixed(0) : null, drop:!!SD.drop, carrier:SD.carrier ? SD.carrier.name : null, act:SD.act ? SD.act.kind : null, sc:match.scores.guard + ":" + match.scores.rot }), dbg:() => ({ paused, manualPause, countT, dbgFreeze, endT, BRwin:BR.win, attract:match.attract, over:match.over }), shotsN:() => shots.length, shotsAt:() => shots.map(s => [s.x, s.y, s.z, s.vx, s.vz, s.W.kind]), freeze(v){ dbgFreeze = !!v; }, kill:f => killFighter(f || me, null, { kind:"fog" }), net:NET, host:() => netHost(), join:c => netJoin(c), leave:() => netLeave()
 };
 // a hidden tab gets no animation frames: keep a networked match (and the host's bots) ticking slowly
 setInterval(() => { if(document.hidden && NET.on){ lastT = performance.now(); tick(0.05); } }, 100);
