@@ -356,6 +356,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
     <small id="d-label">Тебя сразил</small>
     <div class="who" id="d-who">—</div>
     <div class="resp" id="d-resp">Возрождение через 5</div>
+    <button class="go" id="d-revive" hidden style="margin:10px auto 2px;display:block">Вернуться в бой · реклама</button>
     <div class="swap" id="swap"></div>
     <small>Можно сменить бойца: он появится при возрождении</small>
   </div>
@@ -417,6 +418,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
     <div class="res" id="e-res"></div>
     <div id="e-medals"></div>
     <div id="e-board"></div>
+    <div class="row" id="e-x2row"><button class="go" id="e-x2" hidden style="flex:1;background:linear-gradient(180deg,#7FE0FF,#2F86C8);color:#06223A">×2 опыта за рекламу</button></div>
     <div class="row"><button class="go alt" id="e-menu" style="flex:1">В меню</button><button class="go" id="e-again" style="flex:1">Ещё бой</button></div>
   </div>
 </div>
@@ -447,6 +449,126 @@ const menuSel = { map:store.get('map', 'rand'), mode:store.get('mode', 'tdm'), f
 let state = 'load', me = null, time = 0, muted = false;
 const view = { yaw:0, pitch:0 };
 const V1 = new THREE.Vector3(), V2 = new THREE.Vector3(), V3 = new THREE.Vector3();
+
+/* ================= language: Russian source text, English on the fly ================= */
+// LANG is 'ru' or 'en'. The game is written in Russian; in English every text node that appears on screen
+// goes through a phrase dictionary (whole words only, longest phrase first).
+const RU_LANGS = ['ru', 'be', 'kk', 'uk', 'uz', 'ky', 'tg', 'hy', 'az'];
+let LANG = (() => {
+  try{ const q = new URLSearchParams(location.search).get('lang'); if(q) return RU_LANGS.includes(q.slice(0, 2)) ? 'ru' : 'en'; }catch(e){}
+  const n = (navigator.language || 'ru').slice(0, 2).toLowerCase();
+  return RU_LANGS.includes(n) ? 'ru' : 'en';
+})();
+const EN = {
+  // title and menu
+  'Лесная война':'Forest War', 'Лесная':'Forest', 'война':'War', 'Лесная поляна, поле боя':'Forest glade, battlefield',
+  'Грибы и папоротники против слизней и жуков. Выбери сторону, бойца и лесную локацию — и в бой: с ботами или с друзьями.':'Mushrooms and ferns against slugs and beetles. Pick a side, a fighter and a forest map, and charge in: with bots or with friends.',
+  'Сторона':'Side', 'Боец':'Soldier', 'Режим':'Mode', 'Локация':'Map', 'Боты':'Bots', 'Время':'Time', 'Сезон':'Season', 'Графика':'Graphics', 'Мышь':'Mouse', 'звук':'sound', 'Музыка':'Music',
+  'Лёгкие':'Easy', 'Обычные':'Normal', 'Сложные':'Hard', 'Красивая':'Pretty', 'Быстрая':'Fast', 'Любая':'Any', 'Случайно':'Random',
+  'День':'Day', 'Закат':'Sunset', 'Ночь':'Night', 'Лето':'Summer', 'Осень':'Autumn', 'Зима':'Winter',
+  'грибы и папоротник':'mushrooms and fern', 'слизни и жуки':'slugs and beetles',
+  'Каждый бой — случайная из четырёх локаций.':'Every match picks one of the four maps at random.',
+  'Командный бой':'Team Battle', 'Каждый сам за себя':'Free for All', 'Захват полян':'Capture the Glades', 'Дуэль':'Duel', 'Последний гриб':'Last Mushroom',
+  '6 на 6, до 50 побед':'6 vs 6, first to 50', '8 бойцов, до 20':'8 fighters, first to 20', '3 поляны, до 150 очков':'3 glades, first to 150', '1 на 1 на арене, до 10 побед':'1 vs 1 in the arena, first to 10', '10 бойцов, одна жизнь, туман':'10 fighters, one life, closing fog',
+  'В бой':'Fight', 'В бой!':'Fight!', 'С друзьями':'With friends', 'Уровень':'Level', 'ур.':'lv.', 'опыта · общий уровень':'XP · total level', 'Без шапки':'No hat', 'Откроется на общем уровне':'Unlocks at total level',
+  'Огонь, Q, E, прицел':'Fire, Q, E, aim', 'Пробел':'Space', 'прыжок':'jump', 'спринт':'sprint', 'прицеливание':'aiming', 'перезарядка':'reload', 'Гранаты (G)':'Grenades (G)', 'посадить в горшок':'plant in a pot',
+  'Поляна у ручья':'Brook Glade', 'Гнилое болото':'Rotten Bog', 'Грибные холмы':'Mushroom Hills', 'Старая вырубка':'Old Clearing', 'Лесная арена':'Forest Arena',
+  'Ручей':'Brook', 'Болото':'Bog', 'Холмы':'Hills', 'Вырубка':'Clearing', 'Арена':'Arena',
+  'Ручей делит поляну пополам: брод по камням, бревно-мост и три тропы.':'A brook splits the glade: stepping stones, a log bridge and three trails.',
+  'Топь с островками. В воде вязнешь: держись мостков, бревён и кувшинок-великанов.':'A swamp of islets. Water slows you down: keep to the boardwalks, logs and giant lily pads.',
+  'Холмы и грибы-великаны с плоскими шляпками. Дождевики-батуты подбрасывают прямо наверх.':'Hills and giant flat-capped mushrooms. Puffball trampolines bounce you right on top.',
+  'Пни, штабеля брёвен и два полых ствола: внутри тоннель, сверху тропа для снайпера.':'Stumps, log piles and two hollow trunks: a tunnel inside, a sniper path on top.',
+  'Маленькая поляна для дуэли: руины в центре, два фланга, гриб с батутом на каждой стороне.':'A small duel glade: ruins in the middle, two flanks, a trampoline mushroom on each side.',
+  // multiplayer panel
+  'Ник':'Nick', 'Код игры':'Game code', 'КОД':'CODE', 'Создать игру':'Create game', 'Войти по коду':'Join by code', 'Войти':'Join', 'Создаём игру…':'Creating game…', 'Подключаемся к игре':'Connecting',
+  'Ждём хозяина игры':'Waiting for the host', 'Ждём хозяина…':'Waiting for host…', 'Хозяин покинул игру.':'The host left the game.', 'Код — четыре буквы.':'The code is four letters.', 'не найдена.':'not found.',
+  'Открытых игр пока нет.':'No open games yet.', 'Тест: игра между вкладками этого браузера.':'Test: a game between tabs of this browser.',
+  'Создай игру и отправь другу ссылку на эту страницу и код.':'Create a game and send a friend the link to this page and the code.',
+  'Играть могут те, с кем ты поделился этой страницей в claude.ai. Создай игру — она появится у друзей в списке.':'Anyone you shared this page with on claude.ai can play. Create a game and it shows up in their list.',
+  'Не удалось создать игру. Проверь интернет и попробуй ещё раз.':'Could not create the game. Check your connection and try again.',
+  'Не удалось загрузить 3D-движок. Проверь интернет и обнови страницу.':'Could not load the 3D engine. Check your connection and reload the page.',
+  'Ты в игре':'You joined', 'Новый бой!':'New match!', 'хозяин начал снова':'the host restarted', 'Бой продолжается без паузы':'The match keeps going, no pause', 'Игра на паузе':'Game paused', 'Пауза':'Pause', 'Игрок':'Player', 'игрок':'player', '· игроков:':'· players:', 'Грибник':'Shroomer', 'Выйти из игры':'Leave game', 'Выйти':'Leave',
+  // factions, classes, abilities
+  'Лесная стража':'Forest Guard', 'Стража':'Guard', 'Гнилое войско':'Rot Legion', 'Гниль':'Rot',
+  'Мухомор':'Fly Agaric', 'Боровик':'Porcini', 'Лисичка':'Chanterelle', 'Папоротник':'Fern', 'Дождевик':'Puffball', 'Крапива':'Nettle', 'Крапиву':'Nettle',
+  'Слизень':'Slimer', 'Жук-рогач':'Stag Beetle', 'Оса':'Wasp', 'Богомол':'Mantis', 'Гнилушка':'Rotling', 'Гнилушку':'Rotling', 'Светлячок':'Firefly',
+  'Танк':'Tank', 'Разведчик':'Scout', 'Снайпер':'Sniper', 'Лекарь':'Medic', 'Часовой':'Sentry',
+  'Споромёт-автомат. Надёжен на любой дистанции.':'Auto spore rifle. Reliable at any range.', 'Слиземёт-автомат. Надёжен на любой дистанции.':'Auto slime rifle. Reliable at any range.',
+  'Жёлудемёт бьёт навесом и взрывается. Очень крепкий.':'Acorn launcher lobs exploding shots. Very tough.', 'Навесные слизевые бомбы. Толстый панцирь.':'Lobbed slime bombs. Thick shell.',
+  'Колючий дробовик: вблизи разносит любого. Быстрая и вёрткая.':'Thorn shotgun: shreds anyone up close. Fast and nimble.', 'Жальный дробовик: вблизи разносит любого. Быстрая и вёрткая.':'Stinger shotgun: shreds anyone up close. Fast and nimble.',
+  'Тростниковая винтовка. ПКМ — прицел, в голову ×2.':'Reed rifle. RMB to scope, headshots ×2.', 'Шипомёт дальнего боя. ПКМ — прицел, в голову ×2.':'Long-range spine rifle. RMB to scope, headshots ×2.',
+  'Споровый пистолет бьёт очередями. Свои рядом с ним понемногу лечатся.':'Spore pistol fires bursts. Nearby allies slowly heal.', 'Искромёт бьёт очередями. Свои рядом с ним понемногу лечатся.':'Spark gun fires bursts. Nearby allies slowly heal.',
+  'Ядовитое облако':'Poison Cloud', 'облако яда в точке прицела':'poison cloud where you aim', 'Споровый прыжок':'Spore Leap', 'взлёт и удар о землю':'leap up and slam down',
+  'Шляпочный щит':'Cap Shield', 'почти без урона 4 секунды':'almost no damage for 4 seconds', 'Таран':'Ram', 'рывок плечом, сбивает врагов':'shoulder charge, knocks enemies down',
+  'Рывок':'Dash', 'мгновенный рывок, неуязвимость':'instant dash, invulnerable', 'Споровая завеса':'Spore Veil', 'облако спор: враги тебя не видят':'spore cloud: enemies can’t see you',
+  'Скачок':'Hop', 'прыжок назад и маскировка':'hop back and camouflage', 'Колючий капкан':'Thorn Trap', 'держит и ранит врага':'holds and hurts the enemy',
+  'Целебные споры':'Healing Spores', 'лечит себя и союзников рядом':'heals you and allies nearby', 'Целебная грибница':'Healing Mycelium', 'грибница лечит всех рядом':'mycelium heals everyone nearby',
+  'Кислотная лужа':'Acid Puddle', 'лужа кислоты в точке прицела':'acid puddle where you aim', 'Слизне-прыжок':'Slime Leap', 'взлёт и шлепок о землю':'leap up and splat down',
+  'Хитиновый панцирь':'Chitin Shell', 'Рогатый таран':'Horn Ram', 'рывок рогами, сбивает врагов':'horn charge, knocks enemies down',
+  'Рой мошкары':'Gnat Swarm', 'туча мошкары закрывает обзор':'a cloud of gnats blocks the view', 'Липкая ловушка':'Sticky Trap',
+  'Тёплый свет':'Warm Glow', 'Фонарик':'Lantern', 'фонарь лечит всех рядом':'the lantern heals everyone nearby',
+  'Шишка-граната':'Cone Grenade', 'Гнилое яйцо':'Rotten Egg', 'Грана­та':'Gre­nade', 'Грана':'Gre', 'та':'nade',
+  // hats
+  'Жёлудь-каска':'Acorn Helmet', 'Кленовый лист':'Maple Leaf', 'Ромашка':'Daisy', 'Ракушка':'Snail Shell', 'Земляничка':'Strawberry', 'Вертолётик':'Maple Seed', 'Гриб-фонарик':'Mushroom Lamp', 'Шишечная корона':'Cone Crown', 'Новая шапка:':'New hat:',
+  // bot names
+  'Груздь':'Milkcap', 'Опёнок':'Honeycap', 'Сморчок':'Morel', 'Рыжик':'Saffron', 'Маслёнок':'Butterball', 'Волнушка':'Woolly', 'Строчок':'Brainy', 'Белянка':'Whitey', 'Подосиновик':'Redcap', 'Ежовик':'Hedgehog', 'Дубовик':'Oakcap', 'Говорушка':'Funnel', 'Вешенка':'Oyster', 'Шампиньон':'Champignon',
+  'Плесень':'Mold', 'Тля':'Aphid', 'Короед':'Bark Beetle', 'Слизняк':'Slug', 'Долгоносик':'Weevil', 'Медведка':'Mole Cricket', 'Клоп':'Stinkbug', 'Трутовик':'Bracket', 'Шершень':'Hornet', 'Жужелица':'Ground Beetle', 'Гусеница':'Caterpillar', 'Червяк':'Worm', 'Щелкун':'Clicker', 'Мокрица':'Woodlouse', 'Бот':'Bot',
+  // HUD
+  'Ты':'You', 'вы':'you', 'до':'to', 'из':'of', 'м':'m', 'с':'s', 'Здоровье':'Health', 'Обойма':'Clip', 'Скорость':'Speed', 'Урон в секунду':'Damage per second', 'Сила':'Power', 'Живых':'Alive', 'Лидер':'Leader', 'Очки':'Score', 'Игра':'Game',
+  'ЛКМ':'LMB', 'ПКМ':'RMB', 'огонь':'fire', 'огонь ·':'fire ·', 'прицел':'aim', 'прицел ·':'aim ·', 'умения':'abilities', 'умения ·':'abilities ·', 'счёт':'score', 'Прицел':'Aim', 'Огонь':'Fire', 'Прыг':'Jump', 'Сажать':'Plant', 'бег':'move', 'обзор':'look', 'справа':'on the right', 'кнопки справа':'buttons on the right',
+  'Левый палец: бег · правый: обзор ·':'Left thumb: move · right: look ·', 'Левый палец':'Left thumb', 'Правый палец':'Right thumb',
+  'Лес просыпается…':'The forest wakes up…', 'Загружаем:':'Loading:', 'Загружаем…':'Loading…',
+  'посадить':'plant', 'Посажена':'Planted', ': она стреляет сама':': it shoots on its own', 'уже растёт':'is already growing', 'Горшок через':'Pot ready in', 'Твоя':'Your',
+  'Тебя сразил':'Killed by', 'Возрождение через':'Respawn in', 'Возрождение через 5':'Respawn in 5', 'Можно сменить бойца: он появится при возрождении':'You can switch fighters: the new one appears when you respawn', 'Ты пал в бою':'You fell in battle',
+  'Сразил':'Killed', 'сразила':'killed', 'Уничтожена':'Destroyed', 'Помощь':'Assist', 'Помощь:':'Assist:', 'летит! Осталось:':'away! Left:',
+  'Первая кровь!':'First blood!', 'открывает счёт':'opens the score', 'неудержим':'is unstoppable', 'подряд':'in a row', 'побеждает':'wins', 'побед':'wins', 'побед.':'wins.',
+  'Поляна':'Glade', 'наша!':'is ours!', 'Враг взял поляну':'The enemy took glade', 'Мы теряем поляну':'We are losing glade', 'берёт поляну':'takes the glade',
+  'очередь':'burst', 'иглы':'needles', 'дробь':'buckshot', 'бомба':'bomb', 'выстрел':'shot', 'отрава':'poison', 'граната':'grenade', 'таран':'ram', 'ловушка':'trap', 'туман':'fog', 'в голову':'headshot',
+  // end of match
+  'Победа!':'Victory!', 'Поражение':'Defeat', 'Ничья':'Draw', 'Время вышло':'Time is up', 'Время вышло, лидеров несколько.':'Time is up, several leaders.', '— первое место,':'— first place,',
+  'Ещё бой':'Play again', 'В меню':'Menu', 'Убийства':'Kills', 'Смерти':'Deaths', 'убийств':'kills', 'смертей':'deaths', 'помощь':'assists', 'точность':'accuracy', 'опыта.':'XP.', ': уровень':': level',
+  // battle royale
+  'Спора силы':'Power Spore', 'Лечебный гриб':'Healing Mushroom', 'Туман наступает!':'The fog is coming!', 'держись внутри круга':'stay inside the circle', 'туман через':'fog in', 'туман сужается':'fog closing in', 'последний круг':'final circle',
+  'Осталось бойцов:':'Fighters left:', 'Ты выбыл':'You are out', 'бойцов · побед:':'fighters · kills:', '-е место':'th place', 'Место:':'Place:', 'Твоё место:':'Your place:', 'Никто не выжил.':'Nobody survived.', '— последний выживший.':'— the last survivor.',
+  'Грибная победа':'Mushroom Royale', 'Ты — последний гриб на поляне! Побед:':'You are the last mushroom standing! Kills:', 'Ты — последний гриб на поляне · побед:':'You are the last mushroom standing · kills:', ', сила':', power', '· сила':'· power',
+  '· смотри, кто победит':'· watch who wins',
+  // medals
+  'Срезал':'Cut Down', 'Прямо в шляпку':'Right in the Cap', 'Двойной урожай':'Double Harvest', 'Тройной урожай':'Triple Harvest', 'Грибной дождь':'Mushroom Rain', 'Лесной ураган':'Forest Storm', 'Хозяин леса':'Lord of the Forest', 'Бог поляны':'God of the Glade',
+  'Первая кровь':'First Blood', 'Месть':'Revenge', 'Срубил серию':'Streak Breaker', 'Шишкой по лбу':'Cone to the Face', 'В упор':'Point Blank', 'Дальний выстрел':'Long Shot', 'Подмога':'Backup', 'Прополка':'Weeding',
+  'Грибы и папоротники против слизней и жуков. Выбери сторону, бойца и лесную локацию — и в бой!':'Mushrooms and ferns against slugs and beetles. Pick a side, a fighter and a forest map, and charge in!',
+  '×2 опыта за рекламу':'×2 XP for watching an ad', 'Вернуться в бой · реклама':'Back to battle · watch an ad', 'опыта получено':'XP received', 'Снова в бою!':'Back in the fight!', 'вторая жизнь':'second life'
+};
+const RU_RX = /[А-Яа-яЁё]/;
+let EN_RX = null;
+function trText(s){
+  if(LANG !== 'en' || !s || !RU_RX.test(s)) return s;
+  if(!EN_RX){
+    const keys = Object.keys(EN).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    EN_RX = new RegExp('(?<![А-Яа-яЁё])(?:' + keys.join('|') + ')(?![А-Яа-яЁё])', 'g');
+  }
+  return s.replace(EN_RX, m => EN[m]);
+}
+function trNode(n){
+  if(n.nodeType === 3){ const v = n.nodeValue; if(RU_RX.test(v)){ const t = trText(v); if(t !== v) n.nodeValue = t; } return; }
+  if(n.nodeType !== 1) return;
+  if(n.title && RU_RX.test(n.title)) n.title = trText(n.title);
+  if(n.placeholder && RU_RX.test(n.placeholder)) n.placeholder = trText(n.placeholder);
+  if(n.getAttribute && n.getAttribute('aria-label') && RU_RX.test(n.getAttribute('aria-label'))) n.setAttribute('aria-label', trText(n.getAttribute('aria-label')));
+  for(let c = n.firstChild; c; c = c.nextSibling) trNode(c);
+}
+let trObs = null, langSet = false;
+function applyLang(){
+  langSet = true;
+  document.documentElement.lang = LANG;
+  if(LANG !== 'en'){ if(trObs){ trObs.disconnect(); trObs = null; } return; }
+  document.title = trText(document.title);
+  trNode(document.body);
+  if(!trObs){
+    trObs = new MutationObserver(list => { for(const m of list){ if(m.type === 'characterData') trNode(m.target); else for(const n of m.addedNodes) trNode(n); } });
+    trObs.observe(document.body, { subtree:true, childList:true, characterData:true });
+  }
+}
+if(!window.YaGames) applyLang(); else setTimeout(() => { if(!langSet) applyLang(); }, 3000);
 
 /* ================= renderer & scene ================= */
 const canvas = $('c');
@@ -3880,7 +4002,7 @@ function showDead(){
   const k = me.lastKiller;
   $('d-label').textContent = k ? 'Тебя сразил' : 'Ты пал в бою';
   $('d-who').textContent = k ? (k.sentry ? k.name + (k.master ? ' (' + k.master.name + ')' : '') : k.name + ' · ' + clsOf(k.fac, k.arch).name) : '';
-  renderSwap(); $('dead').hidden = false;
+  renderSwap(); $('dead').hidden = false; yaDead();
   const br = isBR(); $('swap').hidden = br; $('dead').querySelector('.deadcard > small:last-child').hidden = br;
 }
 function renderSwap(){
@@ -3974,6 +4096,7 @@ async function peerRoom(code, host){
 }
 async function netInit(){
   const qs = new URLSearchParams(location.search);
+  if(onYandex()){ NET.kind = null; renderNet(); return; }   // no outside servers on Yandex Games
   if(qs.get('net') === 'local'){ NET.kind = 'local'; NET.lobby = bcRoom('lobby'); renderNet(); return; }
   try{
     if(window.claude && typeof window.claude.use === 'function'){
@@ -4738,6 +4861,95 @@ function killMedals(t, o, info){
   return keys;
 }
 
+/* ================= Yandex Games: SDK, language, ads and rewarded videos =================
+   Active only when the page is served by Yandex Games (their /sdk.js defines YaGames).
+   Fullscreen ad between matches, two rewarded videos (×2 XP after a match, one revive in «Последний гриб»),
+   the game pauses and goes silent during any ad and while the tab is hidden. */
+const YA = { sdk:null, ready:false, adOn:false, playing:false, revived:false, xp:null };
+const onYandex = () => !!window.YaGames;
+function yaInit(){
+  if(!onYandex()) return;
+  // no friends' games here (no outside servers), so the menu promises bots only
+  const lead = document.querySelector('#menu .lead'); if(lead) lead.textContent = 'Грибы и папоротники против слизней и жуков. Выбери сторону, бойца и лесную локацию — и в бой!';
+  const done = () => { if(!langSet) applyLang(); if(window.__lvReady) yaLoaded(); };
+  window.YaGames.init().then(sdk => {
+    YA.sdk = sdk;
+    try{ const l = String(sdk.environment.i18n.lang || '').slice(0, 2); if(l) LANG = RU_LANGS.includes(l) ? 'ru' : 'en'; }catch(e){}
+    done();
+  }).catch(done);
+}
+// the game has loaded: tell Yandex so it can hide its own loader
+function yaLoaded(){ if(YA.sdk && !YA.ready){ YA.ready = true; try{ YA.sdk.features.LoadingAPI.ready(); }catch(e){} } }
+// report when real gameplay starts and stops (menus, pause, end screen, ads don't count)
+function yaTick(){
+  if(!YA.sdk) return;
+  const on = !YA.adOn && !paused && !document.hidden && (state === 'play' || state === 'countdown') && !match.attract;
+  if(on === YA.playing) return;
+  YA.playing = on;
+  try{ const G = YA.sdk.features.GameplayAPI; on ? G.start() : G.stop(); }catch(e){}
+}
+function yaSilence(on){ if(!AC) return; try{ on ? AC.suspend() : AC.resume(); }catch(e){} }
+function yaAdStart(){ YA.adOn = true; yaSilence(true); mouse.l = mouse.r = false; if(document.exitPointerLock && locked) document.exitPointerLock(); }
+function yaAdEnd(){ YA.adOn = false; if(!document.hidden) yaSilence(false); }
+// fullscreen ad (Yandex itself keeps them at least a minute apart)
+function yaInterstitial(then){
+  if(!YA.sdk){ if(then) then(); return; }
+  let fin = false; const end = () => { if(fin) return; fin = true; yaAdEnd(); if(then) then(); };
+  try{
+    YA.sdk.adv.showFullscreenAdv({ callbacks:{ onOpen:yaAdStart, onClose:end, onError:end, onOffline:end } });
+  }catch(e){ end(); }
+}
+// rewarded video: reward() runs only if the player watched it through
+function yaRewarded(reward){
+  if(!YA.sdk) return;
+  let got = false;
+  try{
+    YA.sdk.adv.showRewardedVideo({ callbacks:{ onOpen:yaAdStart, onRewarded:() => { got = true; }, onClose:() => { yaAdEnd(); if(got) reward(); }, onError:() => yaAdEnd() } });
+  }catch(e){ yaAdEnd(); }
+}
+addEventListener('visibilitychange', () => { if(!YA.adOn) yaSilence(document.hidden); });
+
+// ---- end of match: a fullscreen ad, and «×2 XP» for a rewarded video
+function yaEnd(xp){
+  YA.xp = xp;
+  const b = $('e-x2');
+  b.hidden = !(YA.sdk && xp && xp.gain > 0);
+  b.disabled = false;
+  if(YA.sdk) setTimeout(() => yaInterstitial(), 400);
+}
+$('e-x2').addEventListener('click', () => {
+  const xp = YA.xp; if(!xp) return;
+  yaRewarded(() => {
+    const key = clsKey(me ? me.fac : menuSel.fac, me ? me.arch : menuSel.arch);
+    PROF.xp[key] = (PROF.xp[key] || 0) + xp.gain; saveProf();
+    const b = $('e-x2'); b.disabled = true; b.textContent = '+' + xp.gain + ' опыта получено';
+    YA.xp = null;
+  });
+});
+
+// ---- «Последний гриб»: one revive per match for a rewarded video
+function yaDead(){
+  const b = $('d-revive');
+  b.hidden = !(YA.sdk && isBR() && !YA.revived && !match.over && brAliveList().length >= 2);
+}
+$('d-revive').addEventListener('click', () => {
+  if(!isBR() || YA.revived || match.over) return;
+  yaRewarded(() => {
+    if(!me || me.alive || match.over || !isBR()) return;
+    YA.revived = true; BR.place = 0; royaleHide();
+    const pw = me.power || 0;
+    respawn(me);
+    me.power = pw; me.max += 15 * pw; me.hp = me.max;
+    // back in somewhere safe inside the circle
+    const R = brRadius(match.t + 10), inside = NAV.filter(n => Math.hypot(n.x - BR.cx, n.z - BR.cz) < R * 0.6);
+    const far = inside.map(n => { let d = 1e9; for(const g of fighters) if(g.alive && g !== me && !g.sentry) d = Math.min(d, Math.hypot(g.x - n.x, g.z - n.z)); return { n, d }; }).sort((a, b) => b.d - a.d)[0];
+    if(far){ me.x = far.n.x; me.z = far.n.z; me.y = groundH(me.x, me.z) + 0.05; me.M.g.position.set(me.x, me.y, me.z); }
+    me.prot = 3; $('dead').hidden = true; $('d-revive').hidden = true;
+    announce('Снова в бою!', 'вторая жизнь', 2);
+  });
+});
+yaInit();
+
 /* ================= post-processing ================= */
 let composer = null, bloomPass = null, usePost = false, postLoading = false;
 async function initPost(){
@@ -4937,7 +5149,7 @@ function beginMatch(){
   for(const f of fighters){ setOutline(f); makeTag(f); respawn(f); f.prot = 0; }
   if(NET.on && NET.role === 'host') netHostStarted();
   renderScore(); renderMeBox(); renderAbil(true);
-  state = 'countdown'; countT = 3; lastCount = 0; endT = 0;
+  state = 'countdown'; countT = 3; lastCount = 0; endT = 0; YA.revived = false;
   announce(MAP.name, MODE_NAMES[match.mode] + ' · ' + SKIES[skyName].name.toLowerCase() + ', ' + SEASONS[season].toLowerCase(), 2.6);
   $('menu').hidden = true; $('end').hidden = true; $('hud').hidden = false; $('dead').hidden = true; $('board').hidden = true;
   $('cmsg').style.opacity = 0;
@@ -4977,7 +5189,7 @@ function showEnd(){
   $('e-lead').textContent = MAP.name + '. ' + (teamMode() ? FACTIONS.guard.name + ' ' + match.scores.guard + ' : ' + match.scores.rot + ' ' + FACTIONS.rot.name
     : isBR() ? (won ? 'Ты — последний гриб на поляне! Побед: ' + me.kills + ', сила ' + (me.power || 0) + '.' : (w ? w.name + ' — последний выживший.' : 'Никто не выжил.') + (BR.place ? ' Твоё место: ' + BR.place + ' из ' + brEntrants().length + '.' : ''))
     : (w ? (w === me ? 'Ты' : w.name) + ' — первое место, ' + w.kills + ' побед.' : 'Время вышло, лидеров несколько.'));
-  const xp = awardXP(won, w === null);
+  const xp = awardXP(won, w === null); yaEnd(xp);
   if(xp){ let t = ' +' + xp.gain + ' опыта.'; if(xp.after > xp.before) t += ' ' + clsOf(me.fac, me.arch).name + ': уровень ' + xp.after + '!'; if(xp.hats.length) t += ' Новая шапка: ' + xp.hats.map(h => HATS[h].name).join(', ') + '.'; $('e-lead').textContent += t; }
   const acc = me.shotsF ? Math.round(me.shotsH / me.shotsF * 100) : 0;
   $('e-res').innerHTML = [[me.kills, 'убийств'], [me.deaths, 'смертей'], [me.assists, 'помощь'], [acc + '%', 'точность']].map(r => '<div><b>' + r[0] + '</b><span>' + r[1] + '</span></div>').join('');
@@ -5017,7 +5229,8 @@ function tick(dt){
   time += dt;
   netTick(dt);
   const pn = performance.now(); if(pn > netUiT){ netUiT = pn + 1000; if(state === 'menu') renderNet(); lobbyPresence(); }
-  if(paused){ updateWorld(0); return; }
+  yaTick();
+  if(paused || YA.adOn){ updateWorld(0); return; }
   if(me && me.bot){ view.yaw = me.inp.yaw; view.pitch = me.inp.pitch; }
   if(me && !me.bot && state !== 'end') playerInput(dt);
   if(state === 'play') match.t += dt;
@@ -5095,6 +5308,6 @@ window.__lv = {
 };
 // a hidden tab gets no animation frames: keep a networked match (and the host's bots) ticking slowly
 setInterval(() => { if(document.hidden && NET.on){ lastT = performance.now(); tick(0.05); } }, 100);
-window.__lvReady = true;
+window.__lvReady = true; yaLoaded();
 requestAnimationFrame(frame);
 </script>
