@@ -1944,18 +1944,18 @@ function updateWorld(dt){
 /* ================= fighter data ================= */
 const ARCH = {
   soldier:{ hp:190, speed:7, rad:0.5, eye:1.55, h:2.0, body:[0.8, 0.56], head:[1.6, 0.64], headY:1.3, camD:4.3, camS:1.15,
-    w:{ kind:'auto', dmg:10, rate:7, mag:30, reload:1.7, speed:85, spread:0.014, bloom:0.055, headMul:1.5, range:95 }, cdQ:12, cdE:9 },
+    w:{ kind:'auto', dmg:10, rate:7, mag:30, reload:1.7, speed:150, spread:0.0045, bloom:0.08, kick:[0.011, 0.0045], headMul:1.5, range:95 }, cdQ:12, cdE:9 },
   tank:{ hp:305, speed:6.1, rad:0.66, eye:1.8, h:2.3, body:[0.95, 0.72], head:[1.85, 0.72], headY:1.5, camD:5.0, camS:1.5,
-    w:{ kind:'lob', dmg:36, splash:2.8, splashDmg:30, rate:1.55, mag:6, reload:2.0, speed:58, grav:12, spread:0.004, bloom:0, headMul:1.25, range:110 }, cdQ:14, cdE:8 },
+    w:{ kind:'lob', dmg:36, splash:2.8, splashDmg:30, rate:1.55, mag:6, reload:2.0, speed:58, grav:12, spread:0.004, bloom:0, kick:[0.03, 0], headMul:1.25, range:110 }, cdQ:14, cdE:8 },
   scout:{ hp:165, speed:8.9, rad:0.45, eye:1.4, h:1.8, body:[0.75, 0.5], head:[1.45, 0.55], headY:1.18, camD:4.1, camS:1.1,
-    w:{ kind:'shot', pellets:8, dmg:13, rate:1.45, mag:6, reload:1.8, speed:110, spread:0.07, bloom:0, headMul:1.3, falloff:[7, 0.25, 13], range:34, botRange:15 }, cdQ:5, cdE:12 },
+    w:{ kind:'shot', pellets:8, dmg:13, rate:1.45, mag:6, reload:1.8, speed:140, spread:0.06, bloom:0, kick:[0.03, 0], headMul:1.3, falloff:[7, 0.25, 13], range:34, botRange:15 }, cdQ:5, cdE:12 },
   sniper:{ hp:140, speed:6.8, rad:0.45, eye:1.62, h:2.05, body:[0.8, 0.5], head:[1.62, 0.46], headY:1.35, camD:4.3, camS:1.1,
-    w:{ kind:'snipe', dmg:50, rate:0.75, mag:5, reload:2.1, speed:320, grav:6, spread:0.03, scoped:0.0012, bloom:0, headMul:2.2, range:220 }, cdQ:10, cdE:12 }
+    w:{ kind:'snipe', dmg:50, rate:0.75, mag:5, reload:2.1, speed:420, spread:0.02, scoped:0, bloom:0, kick:[0.05, 0], headMul:2.2, range:220 }, cdQ:10, cdE:12 }
 };
 ARCH.medic = { hp:180, speed:7.3, rad:0.5, eye:1.5, h:1.95, body:[0.85, 0.6], head:[1.5, 0.52], headY:1.25, camD:4.2, camS:1.1,
-  w:{ kind:'burst', dmg:11, rate:2.3, burst:3, mag:24, reload:1.5, speed:85, spread:0.013, bloom:0.03, headMul:1.5, range:85 }, cdQ:11, cdE:16 };
+  w:{ kind:'burst', dmg:11, rate:2.3, burst:3, mag:24, reload:1.5, speed:150, spread:0.0045, bloom:0.06, kick:[0.008, 0.003], headMul:1.5, range:85 }, cdQ:11, cdE:16 };
 ARCH.sentry = { hp:150, speed:0, rad:0.55, eye:1.15, h:1.45, body:[0.8, 0.5], head:[1.24, 0.34], headY:1.1, camD:4, camS:1,
-  w:{ kind:'auto', dmg:7, rate:4, mag:9999, reload:1, speed:75, spread:0.02, bloom:0, headMul:1.2, range:50 }, cdQ:999, cdE:999 };
+  w:{ kind:'auto', dmg:7, rate:4, mag:9999, reload:1, speed:110, spread:0.012, bloom:0, headMul:1.2, range:50 }, cdQ:999, cdE:999 };
 const ARCHS = ['soldier', 'tank', 'scout', 'sniper', 'medic'];
 // every fighter carries two grenades (G); they come back one at a time
 const GREN = { max:2, regen:14, dmg:60, r:4.2, name:{ guard:'Шишка-граната', rot:'Гнилое яйцо' } };
@@ -2416,7 +2416,7 @@ function stepFighter(f, dt){
   if(!f.alive){ if(match.mode === 'br' && f.life > 0) return; f.respawnT -= dt; if(f.respawnT <= 0 && match.live && !match.over) respawn(f); return; }
   f.cdQ = Math.max(0, f.cdQ - dt); f.cdE = Math.max(0, f.cdE - dt);
   f.shieldT = Math.max(0, f.shieldT - dt); f.invisT = Math.max(0, f.invisT - dt); f.slowT = Math.max(0, f.slowT - dt); f.rootT = Math.max(0, f.rootT - dt); f.prot = Math.max(0, f.prot - dt);
-  f.hurtT += dt; f.spreadAcc = Math.max(0, f.spreadAcc - dt * 2.4);
+  f.hurtT += dt; if(match.t - f.firedT > 0.16) f.spreadAcc = Math.max(0, f.spreadAcc - dt * 5);
   if(f.hurtT > 5 && f.hp < f.max) f.hp = Math.min(f.max, f.hp + 16 * dt);
   // a medic quietly patches up everyone around
   if(f.arch === 'medic' && !match.frozen){ f.auraT = (f.auraT || 0) + dt; if(f.auraT >= 1){ f.auraT = 0; for(const g of fighters) if(g.alive && !g.sentry && !isEnemy(f, g) && g.hp < g.max && Math.hypot(g.x - f.x, g.z - f.z) < 7 && Math.abs(g.y - f.y) < 3) heal(g, g === f ? 3 : 8, f, true); } }
@@ -2473,6 +2473,14 @@ function startReload(f){
 
 /* ================= shooting ================= */
 const MZ = new THREE.Vector3(), DIR = new THREE.Vector3();
+// current cone half-angle: tight on the first shot, opens while you hold the trigger, a little wider on the move or in the air
+function weaponSpread(f){
+  const W = ARCH[f.arch].w;
+  const sp = W.kind === 'snipe' ? (f.inp.scope ? W.scoped : W.spread) : W.spread * (f.inp.scope ? 0.6 : 1);
+  if(W.pellets) return sp;
+  const moving = Math.hypot(f.vx, f.vz) > 1.5;
+  return sp * (1 + f.spreadAcc) * (f.ground ? 1 : 1.35) * (moving ? (W.kind === 'snipe' ? 1.5 : 1.1) : 1);
+}
 function fireWeapon(f){
   const A = ARCH[f.arch], W = A.w;
   f.ammo--; f.prot = 0; f.firedT = match.t; f.shotsF++;
@@ -2481,13 +2489,16 @@ function fireWeapon(f){
   DIR.set(f.inp.tx - MZ.x, f.inp.ty - MZ.y, f.inp.tz - MZ.z);
   const dl = DIR.length();
   if(dl < 1.2 || (DIR.x * vx + DIR.y * vy + DIR.z * vz) / dl < 0.4) DIR.set(vx, vy, vz); else DIR.multiplyScalar(1 / dl);
-  let sp = W.kind === 'snipe' ? (f.inp.scope ? W.scoped : W.spread) : W.spread * (f.inp.scope ? 0.6 : 1);
-  const moving = Math.hypot(f.vx, f.vz) > 1.5;
-  sp *= (1 + f.spreadAcc) * (f.ground ? 1 : 1.6) * (moving ? (W.kind === 'snipe' ? 1.8 : 1.25) : 1);
+  const sp = weaponSpread(f);
   f.spreadAcc = Math.min(1.5, f.spreadAcc + (W.bloom || 0));
   if(W.pellets){
-    const bx = DIR.x, by = DIR.y, bz = DIR.z;
-    for(let i = 0; i < W.pellets; i++){ DIR.set(bx + tri() * sp, by + tri() * sp, bz + tri() * sp).normalize(); spawnShot(f, MZ, DIR, W); }
+    // a fixed choke: one pellet dead centre, the rest on two rings, the pattern turned a little each shot
+    const bx = DIR.x, by = DIR.y, bz = DIR.z, hl = Math.hypot(bx, bz) || 1, rx = -bz / hl, rz = bx / hl;
+    const ux = -rz * by, uy = rz * bx - rx * bz, uz = rx * by, rot = Math.random() * TAU;
+    for(let i = 0; i < W.pellets; i++){
+      const a = rot + i * TAU / (W.pellets - 1), rr = i === 0 ? 0 : sp * (i % 2 ? 1 : 0.55), ca = Math.cos(a) * rr, sa = Math.sin(a) * rr;
+      DIR.set(bx + rx * ca + ux * sa, by + uy * sa, bz + rz * ca + uz * sa).normalize(); spawnShot(f, MZ, DIR, W);
+    }
     DIR.set(bx, by, bz);
   } else {
     DIR.x += tri() * sp; DIR.y += tri() * sp; DIR.z += tri() * sp; DIR.normalize();
@@ -2528,15 +2539,15 @@ function applyHit(owner, h, px, py, pz, W, dist){
 /* ---- projectiles: a glowing spore / acid drop with a tapered trail ---- */
 // glow: a camera-facing quad with a hot white core and a coloured halo (reads well even without bloom)
 const GLOW_G = new THREE.PlaneGeometry(1, 1);
-const TRAIL_G = new THREE.CylinderGeometry(1, 0.12, 1, 8, 1, true); TRAIL_G.rotateX(Math.PI / 2); TRAIL_G.translate(0, 0, -0.5);
+const TRAIL_G = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true); TRAIL_G.rotateX(Math.PI / 2); TRAIL_G.translate(0, 0, -0.5);
 const SHELL_G = new THREE.SphereGeometry(1, 12, 8);
 keep(GLOW_G, TRAIL_G, SHELL_G);
 const glowMat = c => new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false, fog:false, uniforms:{ c:{ value:new THREE.Vector3(c[0], c[1], c[2]) } },
   vertexShader:'varying vec2 vU; void main(){ vU = uv - 0.5; float s = length(modelMatrix[0].xyz); vec4 mv = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0); mv.xy += position.xy * s; gl_Position = projectionMatrix * mv; }',
   fragmentShader:'uniform vec3 c; varying vec2 vU; void main(){ float d = length(vU) * 2.0; if(d >= 1.0) discard; float core = 1.0 - smoothstep(0.0, 0.42, d); float halo = pow(clamp(1.0 - d, 0.0, 1.0), 2.2); vec3 col = mix(c * halo, vec3(1.25), core); gl_FragColor = vec4(clamp(col, 0.0, 4.0), clamp(max(halo, core), 0.0, 1.0));\n#include <colorspace_fragment>\n}' });
 const trailMat = c => new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false, fog:false, side:THREE.DoubleSide, uniforms:{ c:{ value:new THREE.Vector3(c[0], c[1], c[2]) } },
-  vertexShader:'varying float vA; void main(){ vA = uv.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-  fragmentShader:'uniform vec3 c; varying float vA; void main(){ float a = pow(clamp(vA, 0.0, 1.0), 1.7); gl_FragColor = vec4(clamp(c * (0.55 + 0.9 * a), 0.0, 4.0), a * 0.85);\n#include <colorspace_fragment>\n}' });
+  vertexShader:'varying float vA; varying float vE; void main(){ vA = uv.y; vec4 mv = modelViewMatrix * vec4(position, 1.0); vec3 n = normalize(normalMatrix * normal); vE = abs(dot(n, normalize(-mv.xyz))); gl_Position = projectionMatrix * mv; }',
+  fragmentShader:'uniform vec3 c; varying float vA; varying float vE; void main(){ float e = clamp(vE, 0.0, 1.0), a = clamp(vA, 0.0, 1.0); float tail = smoothstep(0.0, 0.45, a); float core = pow(e, 7.0); vec3 col = c * pow(e, 1.4) * 1.2 + vec3(1.0) * core * 1.4; gl_FragColor = vec4(clamp(col * tail, 0.0, 4.0), clamp(tail * (0.15 + 0.85 * e), 0.0, 1.0));\n#include <colorspace_fragment>\n}' });
 const PMAT = {};
 function projMats(fac){
   if(PMAT[fac]) return PMAT[fac];
@@ -2544,7 +2555,7 @@ function projMats(fac){
   return PMAT[fac] = { glow:glowMat(core), trail:trailMat([t[0] * 0.8, t[1] * 0.8, t[2] * 0.8]), flash:glowMat([t[0] * 0.6 + 0.6, t[1] * 0.6 + 0.6, t[2] * 0.6 + 0.6]), shell:new THREE.MeshBasicMaterial({ color:new THREE.Color(t[0] * 1.2, t[1] * 1.2, t[2] * 1.2), toneMapped:false }) };
 }
 // size of the glow, trail radius and trail length per weapon kind
-const PROJ = { auto:[0.46, 0.055, 3.4], burst:[0.48, 0.06, 3.2], rapid:[0.34, 0.04, 2.6], shot:[0.32, 0.04, 1.7], snipe:[0.7, 0.08, 9], lob:[1.1, 0.14, 2.4] };
+const PROJ = { auto:[0.3, 0.075, 2.4], burst:[0.3, 0.075, 2.2], rapid:[0.24, 0.05, 1.8], shot:[0.2, 0.05, 1.1], snipe:[0.5, 0.11, 6.5], lob:[1.1, 0.14, 2.4] };
 const projPool = [];
 function projMesh(f, kind){
   let g = projPool.pop();
@@ -2570,6 +2581,51 @@ function flashAt(f, x, y, z, size, life){
   m.material = projMats(f.fac).flash; m.position.set(x, y, z); m.scale.setScalar(size); scene.add(m);
   flashes.push({ m, t:life, T:life, s:size });
 }
+// scorch marks where bolts hit the world: a glowing ember that cools into a dark burn and fades
+const SCORCH_G = new THREE.PlaneGeometry(1, 1); keep(SCORCH_G);
+const scorchTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(16,10,6,0.92)'); g.addColorStop(0.4, 'rgba(28,18,10,0.7)'); g.addColorStop(0.75, 'rgba(36,24,14,0.25)'); g.addColorStop(1, 'rgba(36,24,14,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c);
+})();
+const emberTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  const g = x.createRadialGradient(32, 32, 0, 32, 32, 30);
+  g.addColorStop(0, 'rgba(255,240,200,1)'); g.addColorStop(0.3, 'rgba(255,170,60,0.85)'); g.addColorStop(0.7, 'rgba(200,60,10,0.25)'); g.addColorStop(1, 'rgba(120,20,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c);
+})();
+const scorches = [];
+function scorchAt(x, y, z, vx, vy, vz, kind){
+  if(camera.position.distanceToSquared(V3.set(x, y, z)) > 4900) return;
+  let S;
+  if(scorches.length >= 40) S = scorches.shift();
+  else {
+    const burn = new THREE.Mesh(SCORCH_G, new THREE.MeshBasicMaterial({ map:scorchTex, transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2 }));
+    const ember = new THREE.Mesh(SCORCH_G, new THREE.MeshBasicMaterial({ map:emberTex, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false, polygonOffset:true, polygonOffsetFactor:-3, polygonOffsetUnits:-3 }));
+    burn.renderOrder = 2; ember.renderOrder = 3;
+    S = { burn, ember };
+  }
+  const size = kind === 'snipe' ? 0.75 : kind === 'shot' ? 0.28 : 0.45;
+  // the face that was hit: the ground if we're at it, otherwise the side facing the shooter
+  const onGround = y - supportH(x, z, y + 0.3, 0) < 0.25;
+  if(onGround) V1.set(0, 1, 0); else { const l = Math.hypot(vx, vz) || 1; V1.set(-vx / l, 0, -vz / l); }
+  for(const m of [S.burn, S.ember]){
+    m.position.set(x + V1.x * 0.04, y + V1.y * 0.04, z + V1.z * 0.04); m.lookAt(m.position.x + V1.x, m.position.y + V1.y, m.position.z + V1.z);
+    m.rotateZ(Math.random() * TAU); m.scale.setScalar(size * (m === S.ember ? 0.75 : 1)); scene.add(m);
+  }
+  S.t = 0; S.burn.material.opacity = 0.85; S.ember.material.opacity = 1;
+  scorches.push(S);
+}
+function updateScorches(dt){
+  for(let i = scorches.length - 1; i >= 0; i--){
+    const S = scorches[i]; S.t += dt;
+    S.ember.material.opacity = Math.max(0, 1 - S.t / 0.7);
+    S.burn.material.opacity = 0.85 * clamp(1 - (S.t - 5) / 2, 0, 1);
+    if(S.t > 7){ scene.remove(S.burn); scene.remove(S.ember); scorches.splice(i, 1); }
+  }
+}
+function clearScorches(){ for(const S of scorches){ scene.remove(S.burn); scene.remove(S.ember); } scorches.length = 0; }
 function spawnShot(f, m, d, W, vis){
   shots.push({ vis:!!vis, owner:f, x:m.x, y:m.y, z:m.z, vx:d.x * W.speed, vy:d.y * W.speed, vz:d.z * W.speed, W, life:W.range / W.speed + (W.kind === 'lob' ? 2.5 : 0), sx:m.x, sy:m.y, sz:m.z, mesh:projMesh(f, W.kind), wz:false });
 }
@@ -2585,6 +2641,7 @@ function updateShots(dt){
       const px = s.x + (bx - s.x) * h.t - s.vx * back, py = s.y + (by - s.y) * h.t - s.vy * back, pz = s.z + (bz - s.z) * h.t - s.vz * back;
       if(s.vis){ fxImpact(px, py, pz, h.f, s.W, s.owner, false); if(s.W.splash) fxExplosion(px, py, pz, s.W.splash, 'lob', s.owner); }
       else applyHit(s.owner, h, px, py, pz, s.W, Math.hypot(px - s.sx, pz - s.sz));
+      if(!h.f && s.W.kind !== 'lob') scorchAt(px, py, pz, s.vx, s.vy, s.vz, s.W.kind);
       freeProj(s.mesh); shots.splice(i, 1); continue;
     }
     // an enemy round passing close by cracks past your ear
@@ -2603,6 +2660,7 @@ function updateShots(dt){
     u.trail.scale.set(r, r, Math.max(0.01, L)); u.trail.lookAt(s.x + s.vx, s.y + s.vy, s.z + s.vz);
     if(s.W.kind === 'lob' && Math.random() < 0.6) emit('glow', s.x, s.y, s.z, 1, { spd:0.3, size:0.35, size1:0.02, life:0.35, col:fcol(s.owner), g:0 });
   }
+  updateScorches(dt);
   for(let i = flashes.length - 1; i >= 0; i--){
     const fl = flashes[i]; fl.t -= dt;
     if(fl.t <= 0){ scene.remove(fl.m); flashPool.push(fl.m); flashes.splice(i, 1); continue; }
@@ -2896,7 +2954,7 @@ function updateStations(dt){
 function clearCombat(){
   for(const s of stations) scene.remove(s.G); stations = [];
   for(const s of shots) freeProj(s.mesh);
-  for(const fl of flashes){ scene.remove(fl.m); flashPool.push(fl.m); } flashes.length = 0;
+  for(const fl of flashes){ scene.remove(fl.m); flashPool.push(fl.m); } flashes.length = 0; clearScorches();
   for(const z of zones){ scene.remove(z.m); z.m.geometry.dispose(); z.m.material.dispose(); }
   for(const t of traps) scene.remove(t.mesh);
   for(const g of grenades){ scene.remove(g.m); g.m.material.dispose(); }
@@ -3139,12 +3197,14 @@ const SFX = {
     const mine = f === me; if(!mine && !ok('s' + kind, 40)) return;
     const o = spot(mine ? undefined : f.x, f.y, f.z); if(!o) return;
     const t = AC.currentTime, v = mine ? 1 : 0.55;
-    if(kind === 'auto'){ nz(o, t, 'bandpass', 1500, 1.1, 0.3 * v, 0.09, 500); tn(o, t, 'triangle', 430, 160, 0.15 * v, 0.08); }
-    else if(kind === 'burst'){ nz(o, t, 'bandpass', 2000, 1.3, 0.26 * v, 0.07, 700); tn(o, t, 'sine', 640, 300, 0.12 * v, 0.07); }
-    else if(kind === 'rapid'){ nz(o, t, 'bandpass', 2700, 2, 0.2 * v, 0.05); tn(o, t, 'square', 900, 480, 0.04 * v, 0.04); }
-    else if(kind === 'shot'){ nz(o, t, 'lowpass', 2600, 0.7, 0.6 * v, 0.16, 300); nz(o, t, 'highpass', 3000, 0.8, 0.25 * v, 0.05); tn(o, t, 'sine', 120, 45, 0.4 * v, 0.14); nz(o, t + 0.32, 'bandpass', 1800, 4, 0.12 * v, 0.04); nz(o, t + 0.42, 'bandpass', 1300, 4, 0.12 * v, 0.05); }
+    // blaster bolts: a bright descending «pew» on a short noise crack and a soft thump; the rot sounds a little higher
+    const hi = f.fac === 'rot' ? 1.14 : 1;
+    if(kind === 'auto'){ tn(o, t, 'sawtooth', 1650 * hi, 230 * hi, 0.075 * v, 0.12); tn(o, t, 'sine', 980 * hi, 170 * hi, 0.17 * v, 0.14); nz(o, t, 'bandpass', 3000, 1.6, 0.11 * v, 0.035); tn(o, t, 'sine', 120, 55, 0.13 * v, 0.07); }
+    else if(kind === 'burst'){ tn(o, t, 'square', 1900 * hi, 360 * hi, 0.05 * v, 0.09); tn(o, t, 'sine', 1250 * hi, 260 * hi, 0.15 * v, 0.1); nz(o, t, 'bandpass', 3400, 1.8, 0.09 * v, 0.03); }
+    else if(kind === 'rapid'){ tn(o, t, 'sine', 1500 * hi, 420 * hi, 0.1 * v, 0.06); nz(o, t, 'bandpass', 3200, 2, 0.08 * v, 0.03); }
+    else if(kind === 'shot'){ tn(o, t, 'sawtooth', 820 * hi, 85, 0.16 * v, 0.2); tn(o, t, 'sine', 560 * hi, 70, 0.22 * v, 0.22); nz(o, t, 'lowpass', 2200, 0.7, 0.42 * v, 0.17, 260); tn(o, t, 'sine', 115, 42, 0.38 * v, 0.15); nz(o, t + 0.32, 'bandpass', 1800, 4, 0.1 * v, 0.04); nz(o, t + 0.42, 'bandpass', 1300, 4, 0.1 * v, 0.05); }
     else if(kind === 'lob'){ nz(o, t, 'lowpass', 700, 0.8, 0.5 * v, 0.22, 120); tn(o, t, 'sine', 150, 55, 0.5 * v, 0.2); }
-    else { nz(o, t, 'highpass', 1800, 0.7, 0.45 * v, 0.06); nz(o, t + 0.01, 'lowpass', 900, 0.7, 0.4 * v, 0.55, 180); tn(o, t, 'sawtooth', 240, 60, 0.16 * v, 0.25); }
+    else { tn(o, t, 'sawtooth', 2800 * hi, 120, 0.13 * v, 0.4); tn(o, t, 'sine', 1500 * hi, 85, 0.24 * v, 0.45); nz(o, t, 'highpass', 2600, 0.7, 0.3 * v, 0.05); nz(o, t + 0.01, 'lowpass', 1000, 0.7, 0.32 * v, 0.5, 150); tn(o, t, 'sine', 90, 38, 0.3 * v, 0.3); }
   },
   hit(head){ if(!AC || muted || !ok('hit', 35)) return; const t = AC.currentTime; if(head){ tn(master, t, 'sine', 1500, 1900, 0.16, 0.08); tn(master, t + 0.035, 'sine', 2400, 2400, 0.09, 0.09); } else tn(master, t, 'triangle', 980, 1150, 0.11, 0.05); },
   kill(){ if(!AC || muted) return; const t = AC.currentTime; tn(master, t, 'triangle', 660, 660, 0.16, 0.1); tn(master, t + 0.08, 'triangle', 990, 990, 0.17, 0.2); },
@@ -3152,7 +3212,7 @@ const SFX = {
   death(x, y, z){ const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'lowpass', 1400, 3, 0.45, 0.35, 160); tn(o, t, 'sine', 380, 70, 0.28, 0.35); },
   boom(x, y, z, big){ const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'lowpass', 1600, 0.7, big ? 0.85 : 0.55, big ? 0.9 : 0.5, 60); tn(o, t, 'sine', 95, 30, big ? 0.75 : 0.45, 0.5); },
   whiz(x, y, z, kind){ if(!ok('whiz', 70)) return; const o = spot(x, y, z); if(!o) return; const t = AC.currentTime, big = kind === 'snipe'; nz(o, t, 'bandpass', big ? 4200 : 3400, 5, big ? 0.32 : 0.16, big ? 0.16 : 0.1, big ? 700 : 1100); if(big) tn(o, t, 'sine', 1900, 500, 0.05, 0.14); },
-  impact(x, y, z){ if(!ok('imp', 70)) return; const o = spot(x, y, z); if(!o) return; nz(o, AC.currentTime, 'bandpass', 2400, 3, 0.07, 0.04); },
+  impact(x, y, z){ if(!ok('imp', 70)) return; const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'bandpass', 3800, 2.5, 0.08, 0.07, 1600); tn(o, t, 'sine', 2300, 800, 0.025, 0.05); },
   reload(){ if(!AC || muted) return; const t = AC.currentTime; nz(master, t, 'bandpass', 3000, 4, 0.14, 0.05); nz(master, t + 0.22, 'bandpass', 2000, 4, 0.15, 0.06); },
   reloaded(){ if(!AC || muted) return; nz(master, AC.currentTime, 'bandpass', 3600, 5, 0.17, 0.04); },
   empty(){ if(!AC || muted || !ok('empty', 220)) return; tn(master, AC.currentTime, 'square', 300, 300, 0.05, 0.04); },
@@ -3307,7 +3367,7 @@ function playerInput(dt){
     for(const g of fighters){ if(!g.alive || !isEnemy(me, g)) continue; const dx = g.x - me.x, dz = g.z - me.z, a = Math.abs(angDiff(view.yaw, Math.atan2(-dx, -dz))); if(a < ba && Math.hypot(dx, dz) < 45){ ba = a; best = g; } }
     if(best) view.yaw += clamp(angDiff(view.yaw, Math.atan2(-(best.x - me.x), -(best.z - me.z))), -dt * 0.9, dt * 0.9);
   }
-  inp.yaw = view.yaw; inp.pitch = clamp(view.pitch + kickP, -1.25, 1.2);
+  inp.yaw = view.yaw + kickY; inp.pitch = clamp(view.pitch + kickP, -1.25, 1.2);
   inp.tx = aimPt.x; inp.ty = aimPt.y; inp.tz = aimPt.z;
 }
 if(TOUCH){
@@ -3352,7 +3412,7 @@ if(TOUCH){
 
 /* ================= camera & aim ================= */
 const aimPt = new THREE.Vector3(0, 0, -100), FWD = new THREE.Vector3();
-let aimFoe = null, camShake = 0, baseFov = 70, camY = null, zoom = 0, kickP = 0;
+let aimFoe = null, camShake = 0, baseFov = 70, camY = null, zoom = 0, kickP = 0, kickY = 0;
 const deathView = { yaw:0, pitch:-0.3 };
 function updateCamera(dt){
   if(!me) return;
@@ -3360,8 +3420,9 @@ function updateCamera(dt){
   zoom += ((scoped ? 1 : 0) - zoom) * (1 - Math.exp(-dt * 16));
   const fov = lerp(baseFov, snip ? 24 : 55, zoom);
   if(Math.abs(camera.fov - fov) > 0.01){ camera.fov = fov; camera.updateProjectionMatrix(); }
-  kickP *= Math.exp(-dt * 9);
-  let yaw = view.yaw, pitch = clamp(view.pitch + kickP, -1.25, 1.2), dist = lerp(A.camD, snip ? 0.35 : 2.6, zoom), side = lerp(A.camS, snip ? 0.22 : 0.85, zoom);
+  // recoil climbs while the trigger is held and settles back once you let go
+  const rec = Math.exp(-dt * (me && match.t - me.firedT < 0.15 ? 3.5 : 10)); kickP *= rec; kickY *= rec;
+  let yaw = view.yaw + kickY, pitch = clamp(view.pitch + kickP, -1.25, 1.2), dist = lerp(A.camD, snip ? 0.35 : 2.6, zoom), side = lerp(A.camS, snip ? 0.22 : 0.85, zoom);
   if(!me.alive){
     const k = me.lastKiller && me.lastKiller.alive ? me.lastKiller : null;
     if(k && me.deathT > 0.9){
@@ -3418,7 +3479,7 @@ function fxShot(f, W, m, d){
   emit('glow', m.x, m.y, m.z, W.kind === 'rapid' ? 2 : W.pellets ? 8 : 4, { dir:d, spd:W.kind === 'lob' ? 4 : 7, spread:W.pellets ? 1.2 : 0.6, size:W.kind === 'lob' || W.pellets ? 0.7 : 0.4, size1:0.05, life:0.09, lmin:0.05, col:c, g:0 });
   if(W.pellets) emit('soft', m.x, m.y, m.z, 4, { dir:d, spd:3, spread:0.6, size:0.4, size1:1.1, life:0.4, col:[0.8, 0.78, 0.7], g:0.4 });
   SFX.shot(f, W.kind);
-  if(f === me){ kickP += W.kind === 'snipe' ? 0.03 : W.kind === 'lob' || W.pellets ? 0.024 : W.kind === 'rapid' ? 0.0025 : 0.005; camShake = Math.max(camShake, W.kind === 'lob' || W.kind === 'snipe' || W.pellets ? 0.25 : 0.06); }
+  if(f === me){ const K = W.kick || [0.005, 0]; kickP = Math.min(0.09, kickP + K[0]); kickY = clamp(kickY + K[1] * Math.sin(f.shotsF * 1.9), -0.03, 0.03); camShake = Math.max(camShake, W.kind === 'lob' || W.kind === 'snipe' || W.pellets ? 0.22 : 0.025); }
 }
 function fxGrenadeThrow(f){
   SFX.toss(f);
@@ -3427,7 +3488,7 @@ function fxGrenadeThrow(f){
 function fxImpact(x, y, z, hitF, W, owner, head){
   if(W.kind !== 'lob') flashAt(owner, x, y, z, hitF ? (head ? 1.25 : 0.85) : W.pellets ? 0.45 : W.kind === 'snipe' ? 1.1 : 0.7, hitF ? 0.12 : 0.09);
   if(hitF){ emit('soft', x, y, z, head ? 12 : 6, { spd:4, up:1, size:0.22, size1:0.05, life:0.45, col:gooCol(hitF), g:-9 }); if(head) emit('glow', x, y, z, 6, { spd:3, size:0.4, size1:0.05, life:0.25, col:[1, 0.85, 0.3], g:0 }); }
-  else if(W.kind !== 'lob'){ emit('soft', x, y, z, 4, { spd:2.5, up:1.2, size:0.16, size1:0.05, life:0.4, col:[0.55, 0.45, 0.32], g:-9 }); emit('glow', x, y, z, 2, { spd:1, size:0.3, size1:0.05, life:0.12, col:fcol(owner), g:0 }); SFX.impact(x, y, z); }
+  else if(W.kind !== 'lob'){ emit('glow', x, y, z, W.pellets ? 2 : W.kind === 'snipe' ? 8 : 4, { spd:W.kind === 'snipe' ? 6 : 4.5, up:1.2, size:0.1, size1:0.02, life:0.3, lmin:0.12, col:[1, 0.55, 0.18], g:-14 }); emit('soft', x, y, z, 4, { spd:2.5, up:1.2, size:0.16, size1:0.05, life:0.4, col:[0.55, 0.45, 0.32], g:-9 }); emit('glow', x, y, z, 2, { spd:1, size:0.3, size1:0.05, life:0.12, col:fcol(owner), g:0 }); SFX.impact(x, y, z); }
 }
 function fxExplosion(x, y, z, r, kind, owner){
   const c = fcol(owner);
@@ -3500,7 +3561,7 @@ function onHeal(t, amt, src, quiet){
 }
 function onAssist(t){ me.score += 0; killNotice('<em>+50</em> Помощь: ' + esc(t.name)); }
 function onMeSpawn(){
-  view.yaw = me.yaw; view.pitch = -0.05; camY = null; kickP = 0;
+  view.yaw = me.yaw; view.pitch = -0.05; camY = null; kickP = 0; kickY = 0;
   $('dead').hidden = true; renderMeBox(); renderAbil(true); updatePause();
 }
 
@@ -3673,7 +3734,7 @@ function updateHud(dt){
   const scoped = me.alive && me.inp.scope && me.arch === 'sniper' && zoom > 0.6;
   $('scope').hidden = !scoped;
   const xh = $('xh');
-  const spread = (W.kind === 'snipe' ? (me.inp.scope ? W.scoped : W.spread) : W.spread * (me.inp.scope ? 0.6 : 1)) * (1 + me.spreadAcc) * (me.ground ? 1 : 1.6) * (Math.hypot(me.vx, me.vz) > 1.5 ? 1.25 : 1);
+  const spread = weaponSpread(me);
   xh.style.setProperty('--g', (5 + spread * 360 / Math.max(0.3, camera.fov / 70)).toFixed(1) + 'px');
   xh.classList.toggle('foe', !!aimFoe); xh.classList.toggle('off', !me.alive || scoped);
   const ring = $('ring').firstElementChild;
@@ -3739,7 +3800,7 @@ function showBoard(on){ if(on && inGame() && me){ $('board-c').innerHTML = board
    The host also simulates the bots and owns the match clock and team score.
    A shooter decides its hits and sends them to the target's owner, who applies the damage
    and reports the kill. Transports: claude.ai room (artifact), PeerJS (web), BroadcastChannel (tests). */
-const NET_V = 4;
+const NET_V = 5;
 const MODE_NAMES = { tdm:'Командный бой', ffa:'Каждый сам за себя', cap:'Захват полян', duel:'Дуэль', br:'Последний гриб' };
 const NET = { kind:null, roomNs:null, lobby:null, room:null, on:false, role:null, code:null, myPeer:null, waiting:false,
   nick:'', seq:0, events:[], info:new Map(), lastObj:new Map(), remote:new Map(), sendT:0, lobbyT:0, balT:1, epoch:0,
