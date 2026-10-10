@@ -27,16 +27,14 @@ button{cursor:pointer}
 .scope::before,.scope::after{content:"";position:absolute;background:rgba(10,20,10,.85)}
 .scope::before{left:50%;top:calc(50% - 31vmin);width:2px;height:62vmin;margin-left:-1px}
 .scope::after{top:50%;left:calc(50% - 31vmin);height:2px;width:62vmin;margin-top:-1px}
-.xh{position:fixed;left:50%;top:50%;width:0;height:0;--g:10px;--c:#F4FFF0;--sh:0 0 0 1px rgba(0,0,0,.45),0 0 6px rgba(0,0,0,.25);transition:opacity .15s}
-.xh b{position:absolute;left:calc(-1 * var(--g));top:calc(-1 * var(--g));width:calc(2 * var(--g));height:calc(2 * var(--g));box-sizing:border-box;border-radius:50%;border:1.5px solid var(--c);opacity:.5;box-shadow:var(--sh),inset 0 0 0 1px rgba(0,0,0,.25);transition:width .06s,height .06s,left .06s,top .06s}
-.xh i{position:absolute;background:var(--c);box-shadow:var(--sh);border-radius:2px}
-.xh .l{width:6px;height:2px;right:calc(var(--g) + 4px);top:-1px}
-.xh .r{width:6px;height:2px;left:calc(var(--g) + 4px);top:-1px}
-.xh .t{width:2px;height:6px;left:-1px;bottom:calc(var(--g) + 4px)}
-.xh .b{width:2px;height:6px;left:-1px;top:calc(var(--g) + 4px)}
-.xh u{position:absolute;left:-2px;top:-2px;width:4px;height:4px;border-radius:50%;background:var(--c);box-shadow:var(--sh)}
-.xh.foe{--c:var(--foe)}
-.xh.foe b{opacity:.85}
+.xh{position:fixed;left:50%;top:50%;width:0;height:0;--c:#F1FFEE;transition:opacity .15s}
+.xh svg{position:absolute;left:-50px;top:-50px;width:100px;height:100px;overflow:visible;filter:drop-shadow(0 0 1px rgba(0,0,0,.85)) drop-shadow(0 1px 3px rgba(0,0,0,.35))}
+.xh .xr{fill:none;stroke:var(--c);stroke-width:1.2;opacity:.38;transition:opacity .15s}
+.xh .xt{fill:var(--c)}
+.xh u{position:absolute;left:-2.5px;top:-2.5px;width:5px;height:5px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.2px rgba(0,0,0,.6),0 0 6px rgba(255,255,255,.35)}
+.xh.foe{--c:#FF5A5A}
+.xh.foe .xr{opacity:.75}
+.xh.foe u{box-shadow:0 0 0 1.2px rgba(0,0,0,.6),0 0 8px rgba(255,80,80,.7)}
 .xh.off{opacity:0}
 .ring{position:fixed;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;transform:rotate(-90deg)}
 .ring circle{fill:none;stroke:var(--amber);stroke-width:3;stroke-linecap:round;stroke-dasharray:151;stroke-dashoffset:151;filter:drop-shadow(0 0 2px rgba(0,0,0,.6))}
@@ -314,7 +312,7 @@ td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right
   <div class="vig" id="vig"></div>
   <div class="tags" id="tags"></div>
   <div class="scope" id="scope" hidden></div>
-  <div class="xh" id="xh"><b></b><i class="l"></i><i class="r"></i><i class="t"></i><i class="b"></i><u></u></div>
+  <div class="xh" id="xh"><svg viewBox="-50 -50 100 100" aria-hidden="true"><circle class="xr" id="xh-r" r="10"/><path class="xt" id="xh-t"/></svg><u></u></div>
   <svg class="ring" id="ring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="24"/></svg>
   <div class="hitm" id="hitm"><i></i><i></i><i></i><i></i></div>
   <div class="hdir" id="hdir"></div>
@@ -2543,6 +2541,8 @@ function fireWeapon(f){
   if(f.ammo <= 0) startReload(f);
 }
 // nearest hit of segment a->b against hostile fighters (body/head spheres) and the world
+// global weapon damage scale: higher means a shorter time to kill
+const DMG_MUL = 1.4;
 // fat: extra hit radius, so blaster bolts that graze a fighter still count
 function traceSeg(owner, ax, ay, az, bx, by, bz, fat){
   fat = fat || 0;
@@ -2562,7 +2562,7 @@ function traceSeg(owner, ax, ay, az, bx, by, bz, fat){
 }
 function applyHit(owner, h, px, py, pz, W, dist){
   if(h.f){
-    let dmg = W.dmg * (1 + 0.1 * (owner.power || 0)) * (isBR() ? BR.dmg : 1);
+    let dmg = W.dmg * DMG_MUL * (1 + 0.1 * (owner.power || 0)) * (isBR() ? BR.dmg : 1);
     if(W.falloff && dist > W.falloff[0]) dmg *= Math.max(W.falloff[1], 1 - (dist - W.falloff[0]) / (W.falloff[2] || 40));
     if(h.head) dmg *= W.headMul;
     owner.shotsH += 1 / (W.pellets || 1);
@@ -2763,7 +2763,7 @@ function explode(x, y, z, r, dmg, owner, kind, except){
     if(d > r) continue;
     if(segWorld(x, y + 0.2, z, g.x, cy, g.z) >= 0) continue;
     const k = clamp(1 - Math.max(0, d) / r, 0.3, 1);
-    damage(g, dmg * k * (1 + 0.1 * (owner.power || 0)) * (isBR() ? BR.dmg : 1), owner, { kind, x, z, kb:9 * k, splash:true });
+    damage(g, dmg * k * DMG_MUL * (1 + 0.1 * (owner.power || 0)) * (isBR() ? BR.dmg : 1), owner, { kind, x, z, kb:9 * k, splash:true });
   }
   fxExplosion(x, y, z, r, kind, owner);
 }
@@ -3612,7 +3612,7 @@ function healNumber(t, amt){
   const el = document.createElement('div'); el.className = 'dmg heal'; el.textContent = '+' + amt; $('hud').appendChild(el);
   dmgEls.push({ el, f:null, v:amt, head:false, t:0, p:new THREE.Vector3(t.x + rand(-0.3, 0.3), t.y + t.M.hover + ARCH[t.arch].h + 0.4, t.z + rand(-0.3, 0.3)) });
 }
-let hitT = 0;
+let hitT = 0, xhG = -1;
 function hitMarker(kind){ const h = $('hitm'); h.className = 'hitm' + (kind === 'hit' ? '' : ' ' + kind); h.style.opacity = 1; h.style.transform = kind === 'kill' ? 'scale(1.35)' : kind === 'head' ? 'scale(1.15)' : ''; hitT = kind === 'kill' ? 0.35 : 0.14; }
 const hdirs = [];
 function hurtDir(x, z){
@@ -3765,7 +3765,14 @@ function updateHud(dt){
   $('scope').hidden = !scoped;
   const xh = $('xh');
   const spread = weaponSpread(me);
-  xh.style.setProperty('--g', (8 + spread * 420 / Math.max(0.3, camera.fov / 70)).toFixed(1) + 'px');
+  const g = Math.round((9 + spread * 420 / Math.max(0.3, camera.fov / 70)) * 2) / 2;
+  if(g !== xhG){
+    xhG = g; $('xh-r').setAttribute('r', g);
+    // four blades pointing in: wide at the outer end, sharp at the ring
+    let d = '';
+    for(const [ux, uy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const px = -uy, py = ux, o = g + 10, n = g + 1.5, P = (r, w) => (ux * r + px * w).toFixed(2) + ' ' + (uy * r + py * w).toFixed(2); d += 'M' + P(o, 1.7) + 'L' + P(n, 0.35) + 'L' + P(n, -0.35) + 'L' + P(o, -1.7) + 'Z'; }
+    $('xh-t').setAttribute('d', d);
+  }
   xh.classList.toggle('foe', !!aimFoe); xh.classList.toggle('off', !me.alive || scoped);
   const ring = $('ring').firstElementChild;
   ring.style.strokeDashoffset = me.reloadT > 0 ? (151 * me.reloadT / W.reload).toFixed(1) : '151';
@@ -4395,7 +4402,7 @@ function updatePots(dt){
 }
 
 /* ================= «Последний гриб»: ten fighters, one life, a closing rot fog ================= */
-const BR = { ryT:0, win:false, n:10, dmg:0.5, grace:20, shrink:120, r0:72, rMin:5, cx:0, cz:0, place:0, alive:0, lastAlive:0, fogT:0, warned:false };
+const BR = { ryT:0, win:false, n:10, dmg:0.3, grace:20, shrink:120, r0:72, rMin:5, cx:0, cz:0, place:0, alive:0, lastAlive:0, fogT:0, warned:false };
 const isBR = () => match.mode === 'br';
 // radius of the safe circle at match time t
 function brRadius(t){ const u = clamp((t - BR.grace) / BR.shrink, 0, 1); return lerp(BR.r0, BR.rMin, u * u * (3 - 2 * u)); }
@@ -5017,7 +5024,7 @@ window.__lv = {
   board:() => fighters.map(f => f.name + '[' + f.arch + ']:' + f.kills + '/' + f.deaths),
   get post(){ return { composer:!!composer, usePost }; },
   caps:() => CAPS.map(c => c.id + ':' + (c.owner ? c.owner[0] : '-') + Math.round(c.prog * 100) + '(' + c.g + 'v' + c.r + ')').join(' '),
-  post(v){ perfDone = true; usePost = !!v && !!composer; return usePost; }, medals:(k, line) => awardMedals(k, line), shotsN:() => shots.length, shotsAt:() => shots.map(s => [s.x, s.y, s.z, s.vx, s.vz, s.W.kind]), freeze(v){ dbgFreeze = !!v; }, kill:f => killFighter(f || me, null, { kind:"fog" }), net:NET, host:() => netHost(), join:c => netJoin(c), leave:() => netLeave()
+  post(v){ perfDone = true; usePost = !!v && !!composer; return usePost; }, medals:(k, line) => awardMedals(k, line), dbg:() => ({ paused, manualPause, countT, dbgFreeze, endT, BRwin:BR.win, attract:match.attract, over:match.over }), shotsN:() => shots.length, shotsAt:() => shots.map(s => [s.x, s.y, s.z, s.vx, s.vz, s.W.kind]), freeze(v){ dbgFreeze = !!v; }, kill:f => killFighter(f || me, null, { kind:"fog" }), net:NET, host:() => netHost(), join:c => netJoin(c), leave:() => netLeave()
 };
 // a hidden tab gets no animation frames: keep a networked match (and the host's bots) ticking slowly
 setInterval(() => { if(document.hidden && NET.on){ lastT = performance.now(); tick(0.05); } }, 100);
