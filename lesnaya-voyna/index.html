@@ -1944,18 +1944,18 @@ function updateWorld(dt){
 /* ================= fighter data ================= */
 const ARCH = {
   soldier:{ hp:190, speed:7, rad:0.5, eye:1.55, h:2.0, body:[0.8, 0.56], head:[1.6, 0.64], headY:1.3, camD:4.3, camS:1.15,
-    w:{ kind:'auto', dmg:10, rate:7, mag:30, reload:1.7, speed:125, spread:0.014, bloom:0.055, headMul:1.5, range:95 }, cdQ:12, cdE:9 },
+    w:{ kind:'auto', dmg:10, rate:7, mag:30, reload:1.7, speed:85, spread:0.014, bloom:0.055, headMul:1.5, range:95 }, cdQ:12, cdE:9 },
   tank:{ hp:305, speed:6.1, rad:0.66, eye:1.8, h:2.3, body:[0.95, 0.72], head:[1.85, 0.72], headY:1.5, camD:5.0, camS:1.5,
     w:{ kind:'lob', dmg:36, splash:2.8, splashDmg:30, rate:1.55, mag:6, reload:2.0, speed:58, grav:12, spread:0.004, bloom:0, headMul:1.25, range:110 }, cdQ:14, cdE:8 },
   scout:{ hp:165, speed:8.9, rad:0.45, eye:1.4, h:1.8, body:[0.75, 0.5], head:[1.45, 0.55], headY:1.18, camD:4.1, camS:1.1,
-    w:{ kind:'shot', pellets:8, dmg:13, rate:1.45, mag:6, reload:1.8, speed:150, spread:0.07, bloom:0, headMul:1.3, falloff:[7, 0.25, 13], range:34, botRange:15 }, cdQ:5, cdE:12 },
+    w:{ kind:'shot', pellets:8, dmg:13, rate:1.45, mag:6, reload:1.8, speed:110, spread:0.07, bloom:0, headMul:1.3, falloff:[7, 0.25, 13], range:34, botRange:15 }, cdQ:5, cdE:12 },
   sniper:{ hp:140, speed:6.8, rad:0.45, eye:1.62, h:2.05, body:[0.8, 0.5], head:[1.62, 0.46], headY:1.35, camD:4.3, camS:1.1,
-    w:{ kind:'snipe', dmg:50, rate:0.75, mag:5, reload:2.1, speed:400, spread:0.03, scoped:0.0012, bloom:0, headMul:2.2, range:220 }, cdQ:10, cdE:12 }
+    w:{ kind:'snipe', dmg:50, rate:0.75, mag:5, reload:2.1, speed:320, grav:6, spread:0.03, scoped:0.0012, bloom:0, headMul:2.2, range:220 }, cdQ:10, cdE:12 }
 };
 ARCH.medic = { hp:180, speed:7.3, rad:0.5, eye:1.5, h:1.95, body:[0.85, 0.6], head:[1.5, 0.52], headY:1.25, camD:4.2, camS:1.1,
-  w:{ kind:'burst', dmg:11, rate:2.3, burst:3, mag:24, reload:1.5, speed:120, spread:0.013, bloom:0.03, headMul:1.5, range:85 }, cdQ:11, cdE:16 };
+  w:{ kind:'burst', dmg:11, rate:2.3, burst:3, mag:24, reload:1.5, speed:85, spread:0.013, bloom:0.03, headMul:1.5, range:85 }, cdQ:11, cdE:16 };
 ARCH.sentry = { hp:150, speed:0, rad:0.55, eye:1.15, h:1.45, body:[0.8, 0.5], head:[1.24, 0.34], headY:1.1, camD:4, camS:1,
-  w:{ kind:'auto', dmg:7, rate:4, mag:9999, reload:1, speed:110, spread:0.02, bloom:0, headMul:1.2, range:50 }, cdQ:999, cdE:999 };
+  w:{ kind:'auto', dmg:7, rate:4, mag:9999, reload:1, speed:75, spread:0.02, bloom:0, headMul:1.2, range:50 }, cdQ:999, cdE:999 };
 const ARCHS = ['soldier', 'tank', 'scout', 'sniper', 'medic'];
 // every fighter carries two grenades (G); they come back one at a time
 const GREN = { max:2, regen:14, dmg:60, r:4.2, name:{ guard:'Шишка-граната', rot:'Гнилое яйцо' } };
@@ -2339,7 +2339,7 @@ function animFighter(f, dt){
 
 /* ================= match & fighters ================= */
 const GRAV = 26, JUMP_V = 9.5;
-let fighters = [], shots = [], zones = [], traps = [], grenades = [], beams = [], stations = [];
+let fighters = [], shots = [], zones = [], traps = [], grenades = [], stations = [];
 const match = { mode:'tdm', diff:'normal', limit:30, dur:420, t:0, scores:{ guard:0, rot:0 }, over:false, winner:null, firstBlood:false, frozen:false };
 let FID = 0;
 function isEnemy(a, b){ return a !== b && a.team !== b.team; }
@@ -2491,9 +2491,9 @@ function fireWeapon(f){
     DIR.set(bx, by, bz);
   } else {
     DIR.x += tri() * sp; DIR.y += tri() * sp; DIR.z += tri() * sp; DIR.normalize();
-    if(W.kind === 'snipe') hitscan(f, MZ, DIR, W); else spawnShot(f, MZ, DIR, W);
+    spawnShot(f, MZ, DIR, W);
   }
-  if(NET.on && W.kind === 'lob') netEv('l', f.nid, r2(MZ.x), r2(MZ.y), r2(MZ.z), r3(DIR.x), r3(DIR.y), r3(DIR.z));
+  if(NET.on && (W.kind === 'lob' || W.kind === 'snipe')) netEv('l', f.nid, r2(MZ.x), r2(MZ.y), r2(MZ.z), r3(DIR.x), r3(DIR.y), r3(DIR.z));
   f.recoil = Math.min(1, f.recoil + (W.kind === 'snipe' || W.kind === 'shot' ? 1 : W.kind === 'lob' ? 0.8 : 0.3));
   fxShot(f, W, MZ, DIR);
   if(f.ammo <= 0) startReload(f);
@@ -2525,34 +2525,56 @@ function applyHit(owner, h, px, py, pz, W, dist){
   if(W.splash) explode(px, py, pz, W.splash, W.splashDmg, owner, 'lob', h.f);
   fxImpact(px, py, pz, h.f, W, owner, h.head);
 }
-function hitscan(f, m, d, W){
-  const L = W.range, bx = m.x + d.x * L, by = m.y + d.y * L, bz = m.z + d.z * L;
-  const h = traceSeg(f, m.x, m.y, m.z, bx, by, bz), t = h ? h.t : 1;
-  const ex = m.x + (bx - m.x) * t, ey = m.y + (by - m.y) * t, ez = m.z + (bz - m.z) * t;
-  if(h) applyHit(f, h, ex, ey, ez, W, L * t);
-  fxBeam(f, m.x, m.y, m.z, ex, ey, ez);
-  if(NET.on) netEv('b', f.nid, r2(m.x), r2(m.y), r2(m.z), r2(ex), r2(ey), r2(ez));
+/* ---- projectiles: a glowing spore / acid drop with a tapered trail ---- */
+// glow: a camera-facing quad with a hot white core and a coloured halo (reads well even without bloom)
+const GLOW_G = new THREE.PlaneGeometry(1, 1);
+const TRAIL_G = new THREE.CylinderGeometry(1, 0.12, 1, 8, 1, true); TRAIL_G.rotateX(Math.PI / 2); TRAIL_G.translate(0, 0, -0.5);
+const SHELL_G = new THREE.SphereGeometry(1, 12, 8);
+keep(GLOW_G, TRAIL_G, SHELL_G);
+const glowMat = c => new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false, fog:false, uniforms:{ c:{ value:new THREE.Vector3(c[0], c[1], c[2]) } },
+  vertexShader:'varying vec2 vU; void main(){ vU = uv - 0.5; float s = length(modelMatrix[0].xyz); vec4 mv = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0); mv.xy += position.xy * s; gl_Position = projectionMatrix * mv; }',
+  fragmentShader:'uniform vec3 c; varying vec2 vU; void main(){ float d = length(vU) * 2.0; if(d > 1.0) discard; float core = smoothstep(0.42, 0.0, d); float halo = pow(1.0 - d, 2.2); gl_FragColor = vec4(mix(c * halo, vec3(1.25), core), max(halo, core));\n#include <colorspace_fragment>\n}' });
+const trailMat = c => new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false, fog:false, side:THREE.DoubleSide, uniforms:{ c:{ value:new THREE.Vector3(c[0], c[1], c[2]) } },
+  vertexShader:'varying float vA; void main(){ vA = uv.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader:'uniform vec3 c; varying float vA; void main(){ float a = pow(vA, 1.7); gl_FragColor = vec4(c * (0.55 + 0.9 * a), a * 0.85);\n#include <colorspace_fragment>\n}' });
+const PMAT = {};
+function projMats(fac){
+  if(PMAT[fac]) return PMAT[fac];
+  const t = FACTIONS[fac].tracer, core = [t[0] * 0.75 + 0.35, t[1] * 0.75 + 0.35, t[2] * 0.75 + 0.35];
+  return PMAT[fac] = { glow:glowMat(core), trail:trailMat([t[0] * 0.8, t[1] * 0.8, t[2] * 0.8]), flash:glowMat([t[0] * 0.6 + 0.6, t[1] * 0.6 + 0.6, t[2] * 0.6 + 0.6]), shell:new THREE.MeshBasicMaterial({ color:new THREE.Color(t[0] * 1.2, t[1] * 1.2, t[2] * 1.2), toneMapped:false }) };
 }
-const TRACER_G = new THREE.CylinderGeometry(1, 1, 1, 6, 1, true); TRACER_G.rotateX(Math.PI / 2);
-const SHELL_G = new THREE.SphereGeometry(0.2, 12, 8);
-const tracerPool = [], shellPool = [];
-function tracerMesh(f, kind){
-  const c = FACTIONS[f.fac].tracer;
-  if(kind === 'lob'){
-    let m = shellPool.pop(); if(!m){ m = new THREE.Mesh(SHELL_G, new THREE.MeshBasicMaterial({ toneMapped:false })); }
-    m.material.color.setRGB(c[0] * 1.3, c[1] * 1.3, c[2] * 1.3); m.visible = true; scene.add(m); return m;
+// size of the glow, trail radius and trail length per weapon kind
+const PROJ = { auto:[0.46, 0.055, 3.4], burst:[0.48, 0.06, 3.2], rapid:[0.34, 0.04, 2.6], shot:[0.32, 0.04, 1.7], snipe:[0.7, 0.08, 9], lob:[1.1, 0.14, 2.4] };
+const projPool = [];
+function projMesh(f, kind){
+  let g = projPool.pop();
+  if(!g){
+    g = new THREE.Group();
+    const glow = new THREE.Mesh(GLOW_G); glow.frustumCulled = false; glow.renderOrder = 7;
+    const trail = new THREE.Mesh(TRAIL_G); trail.frustumCulled = false; trail.renderOrder = 6;
+    const shell = new THREE.Mesh(SHELL_G);
+    g.add(glow, trail, shell); g.userData = { glow, trail, shell };
   }
-  let m = tracerPool.pop();
-  if(!m){ m = new THREE.Mesh(TRACER_G, new THREE.MeshBasicMaterial({ transparent:true, blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false })); m.frustumCulled = false; }
-  m.material.color.setRGB(c[0], c[1], c[2]); m.material.opacity = 1;
-  m.userData.r = kind === 'rapid' || kind === 'shot' ? 0.024 : kind === 'snipe' ? 0.05 : 0.034; m.userData.len = kind === 'rapid' ? 2.4 : kind === 'shot' ? 1.5 : 3.4;
-  m.scale.set(0.001, 0.001, 0.001); scene.add(m); return m;
+  const M = projMats(f.fac), u = g.userData, P = PROJ[kind] || PROJ.auto;
+  u.glow.material = M.glow; u.trail.material = M.trail; u.shell.material = M.shell;
+  u.shell.visible = kind === 'lob'; u.shell.scale.setScalar(0.2);
+  u.P = P; u.trail.scale.set(0.001, 0.001, 0.001); u.glow.scale.setScalar(P[0]);
+  g.visible = true; scene.add(g); return g;
 }
-function freeTracer(m, kind){ scene.remove(m); (kind === 'lob' ? shellPool : tracerPool).push(m); }
+function freeProj(g){ scene.remove(g); projPool.push(g); }
+// short bright flashes: muzzle and impact
+const flashes = [], flashPool = [];
+function flashAt(f, x, y, z, size, life){
+  if(camera.position.distanceToSquared(V3.set(x, y, z)) > 3600) return;
+  let m = flashPool.pop(); if(!m){ m = new THREE.Mesh(GLOW_G); m.frustumCulled = false; m.renderOrder = 8; }
+  m.material = projMats(f.fac).flash; m.position.set(x, y, z); m.scale.setScalar(size); scene.add(m);
+  flashes.push({ m, t:life, T:life, s:size });
+}
 function spawnShot(f, m, d, W, vis){
-  shots.push({ vis:!!vis, owner:f, x:m.x, y:m.y, z:m.z, vx:d.x * W.speed, vy:d.y * W.speed, vz:d.z * W.speed, W, life:W.range / W.speed + (W.grav ? 2.5 : 0), sx:m.x, sy:m.y, sz:m.z, mesh:tracerMesh(f, W.kind) });
+  shots.push({ vis:!!vis, owner:f, x:m.x, y:m.y, z:m.z, vx:d.x * W.speed, vy:d.y * W.speed, vz:d.z * W.speed, W, life:W.range / W.speed + (W.kind === 'lob' ? 2.5 : 0), sx:m.x, sy:m.y, sz:m.z, mesh:projMesh(f, W.kind), wz:false });
 }
 function updateShots(dt){
+  const hx = me && me.alive ? me.x : 1e9, hy = me ? me.y + ARCH[me.arch].eye : 0, hz = me ? me.z : 0;
   for(let i = shots.length - 1; i >= 0; i--){
     const s = shots[i]; s.life -= dt;
     if(s.W.grav) s.vy -= s.W.grav * dt;
@@ -2563,33 +2585,29 @@ function updateShots(dt){
       const px = s.x + (bx - s.x) * h.t - s.vx * back, py = s.y + (by - s.y) * h.t - s.vy * back, pz = s.z + (bz - s.z) * h.t - s.vz * back;
       if(s.vis){ fxImpact(px, py, pz, h.f, s.W, s.owner, false); if(s.W.splash) fxExplosion(px, py, pz, s.W.splash, 'lob', s.owner); }
       else applyHit(s.owner, h, px, py, pz, s.W, Math.hypot(px - s.sx, pz - s.sz));
-      freeTracer(s.mesh, s.W.kind); shots.splice(i, 1); continue;
+      freeProj(s.mesh); shots.splice(i, 1); continue;
+    }
+    // an enemy round passing close by cracks past your ear
+    if(!s.wz && s.owner !== me && me && isEnemy(me, s.owner)){
+      const ux = bx - s.x, uy = by - s.y, uz = bz - s.z, L2 = ux * ux + uy * uy + uz * uz || 1;
+      const k = clamp(((hx - s.x) * ux + (hy - s.y) * uy + (hz - s.z) * uz) / L2, 0, 1);
+      if(Math.hypot(s.x + ux * k - hx, s.y + uy * k - hy, s.z + uz * k - hz) < 2.4){ s.wz = true; SFX.whiz(bx, by, bz, s.W.kind); }
     }
     s.x = bx; s.y = by; s.z = bz;
-    if(s.life <= 0 || s.y < -20){ freeTracer(s.mesh, s.W.kind); shots.splice(i, 1); continue; }
-    const m = s.mesh;
-    if(s.W.kind === 'lob'){
-      m.position.set(s.x, s.y, s.z);
-      const c = FACTIONS[s.owner.fac].tracer;
-      if(Math.random() < 0.8) emit('glow', s.x, s.y, s.z, 1, { spd:0.3, size:0.35, size1:0.02, life:0.35, col:[Math.min(1, c[0]), Math.min(1, c[1]), Math.min(1, c[2])], g:0 });
-      continue;
-    }
-    const sp = Math.hypot(s.vx, s.vy, s.vz), L = Math.min(m.userData.len, Math.hypot(s.x - s.sx, s.y - s.sy, s.z - s.sz));
-    m.position.set(s.x - s.vx / sp * L / 2, s.y - s.vy / sp * L / 2, s.z - s.vz / sp * L / 2);
-    const r = Math.max(m.userData.r, camera.position.distanceTo(m.position) * 0.0011);
-    m.scale.set(r, r, Math.max(0.01, L)); m.lookAt(s.x, s.y, s.z);
+    if(s.life <= 0 || s.y < -20){ freeProj(s.mesh); shots.splice(i, 1); continue; }
+    const g = s.mesh, u = g.userData, P = u.P;
+    g.position.set(s.x, s.y, s.z);
+    const dist = camera.position.distanceTo(g.position), grow = Math.max(1, dist * 0.022);
+    u.glow.scale.setScalar(P[0] * Math.min(grow, 3.5));
+    const L = Math.min(P[2], Math.hypot(s.x - s.sx, s.y - s.sy, s.z - s.sz)), r = P[1] * Math.min(grow, 3);
+    u.trail.scale.set(r, r, Math.max(0.01, L)); u.trail.lookAt(s.x + s.vx, s.y + s.vy, s.z + s.vz);
+    if(s.W.kind === 'lob' && Math.random() < 0.6) emit('glow', s.x, s.y, s.z, 1, { spd:0.3, size:0.35, size1:0.02, life:0.35, col:fcol(s.owner), g:0 });
   }
-  for(let i = beams.length - 1; i >= 0; i--){
-    const b = beams[i]; b.t -= dt;
-    if(b.t <= 0){ freeTracer(b.m, 'snipe'); beams.splice(i, 1); continue; }
-    const k = b.t / b.T; b.m.material.opacity = k; b.m.scale.x = b.m.scale.y = b.r * (0.4 + 0.6 * k);
+  for(let i = flashes.length - 1; i >= 0; i--){
+    const fl = flashes[i]; fl.t -= dt;
+    if(fl.t <= 0){ scene.remove(fl.m); flashPool.push(fl.m); flashes.splice(i, 1); continue; }
+    const k = fl.t / fl.T; fl.m.scale.setScalar(fl.s * (0.55 + 0.45 * k));
   }
-}
-function fxBeam(f, ax, ay, az, bx, by, bz){
-  const m = tracerMesh(f, 'snipe'), L = Math.hypot(bx - ax, by - ay, bz - az);
-  m.position.set((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2);
-  const r = 0.05; m.scale.set(r, r, Math.max(0.01, L)); m.lookAt(bx, by, bz);
-  beams.push({ m, t:0.4, T:0.4, r });
 }
 
 /* ================= damage & kills ================= */
@@ -2877,12 +2895,12 @@ function updateStations(dt){
 }
 function clearCombat(){
   for(const s of stations) scene.remove(s.G); stations = [];
-  for(const s of shots) freeTracer(s.mesh, s.W.kind);
-  for(const b of beams) freeTracer(b.m, 'snipe');
+  for(const s of shots) freeProj(s.mesh);
+  for(const fl of flashes){ scene.remove(fl.m); flashPool.push(fl.m); } flashes.length = 0;
   for(const z of zones){ scene.remove(z.m); z.m.geometry.dispose(); z.m.material.dispose(); }
   for(const t of traps) scene.remove(t.mesh);
   for(const g of grenades){ scene.remove(g.m); g.m.material.dispose(); }
-  shots = []; beams = []; zones = []; traps = []; grenades = []; smokes = [];
+  shots = []; zones = []; traps = []; grenades = []; smokes = [];
 }
 
 /* ================= bots ================= */
@@ -3031,7 +3049,7 @@ function botThink(f, dt){
   let wantX = 0, wantZ = 0;
   if(T){
     const TA = ARCH[T.arch], dx = T.x - f.x, dz = T.z - f.z, d = Math.hypot(dx, dz) || 0.01;
-    const lead = D.lead * (W.kind === 'snipe' ? 0 : d / W.speed);
+    const lead = D.lead * d / W.speed;
     let px = T.x + (T.vx + T.kx) * lead, pz = T.z + (T.vz + T.kz) * lead;
     let py = T.y + T.M.hover + (B.aimHead ? TA.head[0] : TA.body[0]) + (T.ground ? 0 : T.vy * lead * 0.5);
     if(W.grav){ const tt = d / W.speed; py += 0.5 * W.grav * tt * tt; }
@@ -3133,6 +3151,7 @@ const SFX = {
   hurt(){ if(!AC || muted || !ok('hurt', 140)) return; const t = AC.currentTime; tn(master, t, 'sawtooth', 200, 95, 0.1, 0.15); nz(master, t, 'lowpass', 600, 1, 0.14, 0.12); },
   death(x, y, z){ const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'lowpass', 1400, 3, 0.45, 0.35, 160); tn(o, t, 'sine', 380, 70, 0.28, 0.35); },
   boom(x, y, z, big){ const o = spot(x, y, z); if(!o) return; const t = AC.currentTime; nz(o, t, 'lowpass', 1600, 0.7, big ? 0.85 : 0.55, big ? 0.9 : 0.5, 60); tn(o, t, 'sine', 95, 30, big ? 0.75 : 0.45, 0.5); },
+  whiz(x, y, z, kind){ if(!ok('whiz', 70)) return; const o = spot(x, y, z); if(!o) return; const t = AC.currentTime, big = kind === 'snipe'; nz(o, t, 'bandpass', big ? 4200 : 3400, 5, big ? 0.32 : 0.16, big ? 0.16 : 0.1, big ? 700 : 1100); if(big) tn(o, t, 'sine', 1900, 500, 0.05, 0.14); },
   impact(x, y, z){ if(!ok('imp', 70)) return; const o = spot(x, y, z); if(!o) return; nz(o, AC.currentTime, 'bandpass', 2400, 3, 0.07, 0.04); },
   reload(){ if(!AC || muted) return; const t = AC.currentTime; nz(master, t, 'bandpass', 3000, 4, 0.14, 0.05); nz(master, t + 0.22, 'bandpass', 2000, 4, 0.15, 0.06); },
   reloaded(){ if(!AC || muted) return; nz(master, AC.currentTime, 'bandpass', 3600, 5, 0.17, 0.04); },
@@ -3395,6 +3414,7 @@ const flashL = new THREE.PointLight('#FFE6A0', 0, 9, 2); scene.add(flashL); let 
 function fxShot(f, W, m, d){
   const c = fcol(f);
   if(f === me){ flashL.position.copy(m); flashL.color.setRGB(c[0], c[1], c[2]); flashL.intensity = W.kind === 'lob' || W.kind === 'snipe' ? 9 : 5; flashT = 0.05; }
+  flashAt(f, m.x + d.x * 0.15, m.y + d.y * 0.15, m.z + d.z * 0.15, (W.kind === 'snipe' || W.kind === 'lob' ? 1.1 : W.pellets ? 0.95 : 0.65) * (f === me ? 0.6 : 1), W.kind === 'snipe' ? 0.09 : 0.06);
   emit('glow', m.x, m.y, m.z, W.kind === 'rapid' ? 2 : W.pellets ? 8 : 4, { dir:d, spd:W.kind === 'lob' ? 4 : 7, spread:W.pellets ? 1.2 : 0.6, size:W.kind === 'lob' || W.pellets ? 0.7 : 0.4, size1:0.05, life:0.09, lmin:0.05, col:c, g:0 });
   if(W.pellets) emit('soft', m.x, m.y, m.z, 4, { dir:d, spd:3, spread:0.6, size:0.4, size1:1.1, life:0.4, col:[0.8, 0.78, 0.7], g:0.4 });
   SFX.shot(f, W.kind);
@@ -3405,6 +3425,7 @@ function fxGrenadeThrow(f){
   if(f === me) killNotice(GREN.name[f.fac] + ' летит! Осталось: <em>' + f.gren + '</em>');
 }
 function fxImpact(x, y, z, hitF, W, owner, head){
+  if(W.kind !== 'lob') flashAt(owner, x, y, z, hitF ? (head ? 1.25 : 0.85) : W.pellets ? 0.45 : W.kind === 'snipe' ? 1.1 : 0.7, hitF ? 0.12 : 0.09);
   if(hitF){ emit('soft', x, y, z, head ? 12 : 6, { spd:4, up:1, size:0.22, size1:0.05, life:0.45, col:gooCol(hitF), g:-9 }); if(head) emit('glow', x, y, z, 6, { spd:3, size:0.4, size1:0.05, life:0.25, col:[1, 0.85, 0.3], g:0 }); }
   else if(W.kind !== 'lob'){ emit('soft', x, y, z, 4, { spd:2.5, up:1.2, size:0.16, size1:0.05, life:0.4, col:[0.55, 0.45, 0.32], g:-9 }); emit('glow', x, y, z, 2, { spd:1, size:0.3, size1:0.05, life:0.12, col:fcol(owner), g:0 }); SFX.impact(x, y, z); }
 }
@@ -3718,7 +3739,7 @@ function showBoard(on){ if(on && inGame() && me){ $('board-c').innerHTML = board
    The host also simulates the bots and owns the match clock and team score.
    A shooter decides its hits and sends them to the target's owner, who applies the damage
    and reports the kill. Transports: claude.ai room (artifact), PeerJS (web), BroadcastChannel (tests). */
-const NET_V = 3;
+const NET_V = 4;
 const MODE_NAMES = { tdm:'Командный бой', ffa:'Каждый сам за себя', cap:'Захват полян', duel:'Дуэль', br:'Последний гриб' };
 const NET = { kind:null, roomNs:null, lobby:null, room:null, on:false, role:null, code:null, myPeer:null, waiting:false,
   nick:'', seq:0, events:[], info:new Map(), lastObj:new Map(), remote:new Map(), sendT:0, lobbyT:0, balT:1, epoch:0,
@@ -4074,7 +4095,6 @@ function netEvent(peer, e){
   else if(type === 'pd'){ if(isBR()) addPickup(String(e[3]).slice(0, 60), 'power', cl(e[4], -60, 60), cl(e[5], -70, 70), cl(e[6], 1, 60) | 0); }
   else if(type === 'g') throwGrenade(from, [cl(e[3], -70, 70), cl(e[4], -30, 60), cl(e[5], -80, 80), cl(e[6], -60, 60), cl(e[7], -60, 60), cl(e[8], -60, 60)], e[9] === 1);
   else if(type === 'l'){ MZ.set(cl(e[3], -70, 70), cl(e[4], -30, 60), cl(e[5], -80, 80)); DIR.set(num(e[6]), num(e[7]), num(e[8])); if(DIR.lengthSq() < 1e-6) return; DIR.normalize(); const W = ARCH[from.arch].w; spawnShot(from, MZ, DIR, W, true); fxShot(from, W, MZ, DIR); }
-  else if(type === 'b'){ const W = ARCH.sniper.w, ax = num(e[3]), ay = num(e[4]), az = num(e[5]), bx = num(e[6]), by = num(e[7]), bz = num(e[8]); fxBeam(from, ax, ay, az, bx, by, bz); fxShot(from, W, MZ.set(ax, ay, az), DIR.set(bx - ax, by - ay, bz - az).normalize()); fxImpact(bx, by, bz, null, W, from, false); }
   else if(type === 'a') fxAbility(from, e[3] === 'e' ? 'e' : 'q');
   else if(type === 'st') placeStation(from, cl(e[3], -MAP_X, MAP_X), cl(e[4], -MAP_Z, MAP_Z));
   else if(type === 'tx'){ const t = traps.find(x => x.id === String(e[3])); if(t) removeTrap(t); }
@@ -4713,8 +4733,9 @@ function menuCam(dt){
 }
 
 /* ================= main loop ================= */
-let netUiT = 0, dbgCam = null;
+let netUiT = 0, dbgCam = null, dbgFreeze = false;
 function tick(dt){
+  if(dbgFreeze){ if(dbgCam){ camera.position.set(dbgCam[0], dbgCam[1], dbgCam[2]); camera.lookAt(dbgCam[3], dbgCam[4], dbgCam[5]); } updateShots(0); return; }
   time += dt;
   netTick(dt);
   const pn = performance.now(); if(pn > netUiT){ netUiT = pn + 1000; if(state === 'menu') renderNet(); lobbyPresence(); }
@@ -4791,7 +4812,7 @@ window.__lv = {
   board:() => fighters.map(f => f.name + '[' + f.arch + ']:' + f.kills + '/' + f.deaths),
   get post(){ return { composer:!!composer, usePost }; },
   caps:() => CAPS.map(c => c.id + ':' + (c.owner ? c.owner[0] : '-') + Math.round(c.prog * 100) + '(' + c.g + 'v' + c.r + ')').join(' '),
-  kill:f => killFighter(f || me, null, { kind:"fog" }), net:NET, host:() => netHost(), join:c => netJoin(c), leave:() => netLeave()
+  shotsN:() => shots.length, shotsAt:() => shots.map(s => [s.x, s.y, s.z, s.vx, s.vz, s.W.kind]), freeze(v){ dbgFreeze = !!v; }, kill:f => killFighter(f || me, null, { kind:"fog" }), net:NET, host:() => netHost(), join:c => netJoin(c), leave:() => netLeave()
 };
 // a hidden tab gets no animation frames: keep a networked match (and the host's bots) ticking slowly
 setInterval(() => { if(document.hidden && NET.on){ lastT = performance.now(); tick(0.05); } }, 100);
