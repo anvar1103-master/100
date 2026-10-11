@@ -137,7 +137,8 @@ export function canvasTex(w, h, draw, opt = {}){
 
 // ---- quality ----
 export const Q = { level:LEVEL, PR:1, post:false, composer:null, bloom:null, perfN:0, perfSum:0, calm:0, shadows:!LOW, fps:0, frames:0, fpsT:0, onShadows:null };
-export function maxPR(){ return Math.min(HIGH ? 2 : LOW ? 1.3 : 1.5, devicePixelRatio || 1); }
+// sharpness: how many screen pixels per CSS pixel the game draws; perfWatch lowers it on slow devices and raises it back
+export function maxPR(){ return Math.min(HIGH ? 2.25 : LOW ? 1.5 : 2, devicePixelRatio || 1); }
 const minPR = () => Math.min(LOW ? 0.8 : 0.75, devicePixelRatio || 1);
 export function resize(){
   const w = innerWidth, h = innerHeight;
@@ -160,7 +161,7 @@ function initPost(){
 // a new level is stored and the page reloads (materials and shadows are chosen at start)
 export function setQuality(level){ store.set('gfx', level); }
 export function applyQuality(){
-  Q.PR = Math.min(maxPR(), LOW ? 1.15 : 1.25); renderer.setPixelRatio(Q.PR);
+  Q.PR = Math.min(maxPR(), LOW ? 1.25 : HIGH ? 1.75 : 1.5); renderer.setPixelRatio(Q.PR);   // start sharp; perfWatch adapts
   scene.fog.near = LOW ? 30 : 40; scene.fog.far = LOW ? 85 : 110; camera.far = 160; camera.updateProjectionMatrix();
   const sz = HIGH ? 2048 : 1024;
   if(sun.shadow.mapSize.x !== sz){ sun.shadow.mapSize.set(sz, sz); if(sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map = null; } }

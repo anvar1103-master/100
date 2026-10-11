@@ -108,11 +108,19 @@ export function tankUniforms(){ return { uFlash:{ value:0 }, uTint:{ value:new T
 export function tankMaterial(o, u){
   const m = stdMat({ roughness:0.82, metalness:0.12, ...o });
   m.userData.u = u;
+  // on top of the paint: road dust on the lower hull and the running gear (by height above the ground), and a soft
+  // rim light on the edges facing away from the camera, so a tank stands out from the grass and hedges behind it
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, u);
-    sh.fragmentShader = 'uniform float uFlash; uniform vec3 uTint; uniform float uBurn;\n' + sh.fragmentShader
-      .replace('#include <color_fragment>', '#include <color_fragment>\n diffuseColor.rgb *= 1.0 - uBurn * 0.82;')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += vec3(uFlash) + uTint;');
+    sh.vertexShader = 'varying float vGround;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vGround = (modelMatrix * vec4(transformed, 1.0)).y;');
+    sh.fragmentShader = 'uniform float uFlash; uniform vec3 uTint; uniform float uBurn; varying float vGround;\n' + sh.fragmentShader
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        float dust = 1.0 - smoothstep(0.08, 0.42, vGround);
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.78, 0.7, 0.58), dust * 0.55);
+        diffuseColor.rgb *= 1.0 - uBurn * 0.82;`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        float rim = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);
+        totalEmissiveRadiance += vec3(uFlash) + uTint + diffuseColor.rgb * rim * 0.45 * (1.0 - uBurn);`);
   };
   m.customProgramCacheKey = () => 'tank';
   return m;
