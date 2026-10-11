@@ -101,8 +101,8 @@ on('crateBreak', k => {
   puff(smoke, k.x, 0.6, k.z, { n:14, color:'#A87645', sp:3, upMin:0.4, vy:3, life:0.7, s0:0.25, s1:0.08, grav:6, drag:1.5 });
   sporeBurst(k.x, 0.7, k.z, '#FFC93C', 14);
   sfx('hit_wall', k, 1.3, 0.6);
-  // an ordinary crate holds two spores, an armoured one five
-  const n = k.big ? 5 : 2;
+  // an ordinary crate holds two spores, an armoured one six
+  const n = k.big ? 6 : 2;
   for(let i = 0; i < n; i++){ const a = i / n * TAU + rand(-0.4, 0.4), s = rand(0.5, 1.6); addPower(k.x, k.z, Math.sin(a) * s, Math.cos(a) * s, rand(4, 5.5)); }
 });
 

@@ -11,7 +11,7 @@ import { glow, smoke, puff, ring } from './fx.js';
 import { sfx } from './audio.js';
 import { $, esc, TOUCH } from './util.js';
 
-export const PROG = { orbXP:50, dmgXP:0.04, killXP:220, classLevel:4, maxLevel:15, maxUp:5, start:'rookie' };
+export const PROG = { orbXP:50, dmgXP:0.04, killXP:220, classLevel:4, maxLevel:12, maxUp:5, start:'rookie', rookieHp:1.2 };
 // what each point does (see rebuild)
 export const STATS = [
   { k:'hp',  name:'Броня',       hint:'+12% прочности' },
@@ -20,7 +20,7 @@ export const STATS = [
   { k:'rng', name:'Дальность',   hint:'+7% дальше' },
   { k:'spd', name:'Скорость',    hint:'+5% быстрее ход' }
 ];
-export const xpNeed = L => 80 + 30 * (L - 1);   // experience from level L to the next
+export const xpNeed = L => 60 + 25 * (L - 1);   // experience from level L to the next
 // bots' taste in upgrades, by the class they are heading for
 const TASTE = {
   rookie:{ hp:2, dmg:2, rel:2, rng:1, spd:1 }, shroom:{ hp:3, dmg:2, rel:1, rng:1, spd:2 }, beetle:{ hp:1, dmg:2, rel:3, rng:2, spd:1 },
@@ -45,7 +45,8 @@ export function rebuild(f, mode = 'add'){
   if(H.attack.cd) H.attack.cd *= 1 - 0.06 * u.rel;
   f.H = H; if(f.V) f.V.H = H;
   f.pow = (f.pow0 || 1) * (1 + 0.08 * u.dmg);
-  const max = Math.round(H.hp * (f.pow0 || 1) * (f.hpMul || 1) * (1 + 0.12 * u.hp)), old = f.max || max;
+  // the starter is a little tougher, so fewer tanks are knocked out before they ever pick a class
+  const max = Math.round(H.hp * (f.pow0 || 1) * (f.hpMul || 1) * (1 + 0.12 * u.hp) * (f.hero === PROG.start ? PROG.rookieHp : 1)), old = f.max || max;
   if(mode === 'full' || !f.max) f.hp = max;
   else if(mode === 'ratio') f.hp = Math.max(1, Math.round(f.hp / old * max));
   else f.hp = Math.min(max, f.hp + Math.max(0, max - old));

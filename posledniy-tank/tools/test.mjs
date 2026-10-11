@@ -52,9 +52,9 @@ console.log('«Последний танк» test:', PAGE);
     document.querySelector('#ups-list [data-up="hp"]').click(); __bg.tick(1 / 30);
     const evoShown = !document.getElementById('evo').hidden;
     document.querySelector('#evo-list [data-c="shroom"]').click();
-    const cls = me.hero;
+    const cls = me.hero, up = me.up.hp;   // read before the autopilot: as a bot the player spends points by itself
     __bg.autopilot(true); __bg.sim(70);
-    return { start, up:me.up.hp, evoShown, cls, evolved:G.fighters.filter(f => f.hero !== 'rookie').length, maxLvl:Math.max(...G.fighters.map(f => f.lvl)) };
+    return { start, up, evoShown, cls, evolved:G.fighters.filter(f => f.hero !== 'rookie').length, maxLvl:Math.max(...G.fighters.map(f => f.lvl)) };
   });
   ok(pr.start && pr.up === 1 && pr.evoShown && pr.cls === 'shroom', 'progression: start on the Recruit, upgrade button, class choice');
   ok(pr.evolved >= 4 && pr.maxLvl >= 5, `progression: bots level up and take classes (${pr.evolved} of 10 with a class, top level ${pr.maxLvl})`);
