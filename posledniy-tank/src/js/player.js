@@ -1,7 +1,9 @@
-// The player's controls and the over-the-shoulder camera.
-//   PC: WASD to run, the mouse turns the camera, the crosshair in the middle of the screen is where you shoot.
-//   Phones: left thumb runs, dragging anywhere on the right turns the camera; the attack button fires at the
-//   crosshair, a quick tap aims at the nearest enemy you can see.
+// The player's controls and the camera.
+//   PC: WASD to drive, the mouse turns the over-the-shoulder camera, the crosshair in the middle is where you shoot.
+//   Phones (TOP): a camera from above that never turns and two sticks. The left one drives (up on the stick is up on
+//   the screen); the right one turns the turret — a little push only aims, pushed to the outer ring it fires and keeps
+//   firing while held (for rockets the push also sets the distance). The star fires the super where the turret looks.
+//   No auto-aim: a line in front of the gun shows where the shot goes.
 import * as THREE from 'three';
 import { camera, canvas, scene } from './engine.js';
 import { G } from './state.js';
@@ -17,7 +19,10 @@ const hasScope = () => !!(G.me && G.me.H.attack.scope);
 const PITCH_MIN = -0.6, PITCH_MAX = 0.38;
 const keys = {}, mouse = { l:false, r:false, x:0, y:0 };
 export let locked = false;
-export const T = { move:null, atk:null, sup:null, cam:null };   // active touches
+export const T = { move:null, atk:null, sup:null, cam:null, aim:null, aimA:0, aimK:0, aimNow:0, firing:false };   // active touches
+export const TOP = TOUCH || /[?&]top=1/.test(location.search);   // ?top=1 tries the phone camera on a computer
+const TOP_YAW = 0;   // the phone camera looks along +z, always
+const FIRE_K = 0.5;  // the right stick fires once pushed past half way
 export const AIM = { x:0, y:0, z:0, foe:null, inRange:false, gx:0, gz:0, groundHit:false };
 
 function look(dx, dy, k){
@@ -56,7 +61,7 @@ export function releaseLock(){ if(document.exitPointerLock && locked) document.e
 const inMatch = () => G.state === 'play' || G.state === 'countdown';
 
 // ---------------- touch ----------------
-function stickAt(x, y){ const b = $('stick'); b.style.left = x + 'px'; b.style.top = y + 'px'; b.hidden = false; }
+function stickAt(x, y, id = 'stick'){ const b = $(id); b.style.left = x + 'px'; b.style.top = y + 'px'; b.hidden = false; }
 function onTouchStart(e){
   unlockAudio();
   if(!inMatch() || G.paused) return;
@@ -69,6 +74,7 @@ function onTouchStart(e){
     if(tgt){
       const kind = tgt.dataset.btn;
       if(kind === 'scope'){ T.scopeOn = !T.scopeOn; tgt.classList.toggle('on', T.scopeOn); continue; }
+      if(TOP && kind === 'sup'){ if(!T.sup && G.me && G.me.charge >= 1){ T.sup = { id:t.identifier, x:t.clientX, y:t.clientY, moved:0, t0:performance.now(), el:tgt }; tgt.classList.add('on'); } continue; }
       if((kind === 'atk' && !T.atk) || (kind === 'sup' && !T.sup && G.me && G.me.charge >= 1)){
         T[kind] = { id:t.identifier, x:t.clientX, y:t.clientY, moved:0, t0:performance.now(), el:tgt };
         tgt.classList.add('on');
@@ -76,6 +82,7 @@ function onTouchStart(e){
       continue;
     }
     if(t.clientX < innerWidth * 0.42 && !T.move){ T.move = { id:t.identifier, x0:t.clientX, y0:t.clientY, dx:0, dy:0 }; stickAt(t.clientX, t.clientY); }
+    else if(TOP){ if(!T.aim){ T.aim = { id:t.identifier, x0:t.clientX, y0:t.clientY, dx:0, dy:0 }; stickAt(t.clientX, t.clientY, 'stick2'); } }
     else if(!T.cam) T.cam = { id:t.identifier, x:t.clientX, y:t.clientY };
   }
   if(game) e.preventDefault();
@@ -83,20 +90,23 @@ function onTouchStart(e){
 // drop every held touch (pause, end of match): the stick and buttons start fresh afterwards
 export function resetTouch(){
   for(const k of ['atk', 'sup']) if(T[k]){ T[k].el.classList.remove('on'); T[k] = null; }
-  T.move = T.cam = null; $('stick').hidden = true; $('knob').style.transform = '';
+  T.move = T.cam = T.aim = null; $('stick').hidden = true; $('knob').style.transform = '';
+  $('stick2').hidden = true; $('knob2').style.transform = ''; T.aimNow = 0; T.firing = false; T.aimA = G.me ? G.me.aim : 0; T.aimK = 0;
   T.scopeOn = false; $('b-scope').classList.remove('on'); mouse.r = false;
 }
 const TOUCH_K = 0.0055;
 function onTouchMove(e){
-  if(!T.move && !T.cam && !T.atk && !T.sup) return;
+  if(!T.move && !T.cam && !T.atk && !T.sup && !T.aim) return;
   for(const t of e.changedTouches){
-    if(T.move && t.identifier === T.move.id){
-      let dx = t.clientX - T.move.x0, dy = t.clientY - T.move.y0; const d = Math.hypot(dx, dy), R = 56;
-      if(d > R){ T.move.x0 += dx * (1 - R / d); T.move.y0 += dy * (1 - R / d); dx = t.clientX - T.move.x0; dy = t.clientY - T.move.y0; stickAt(T.move.x0, T.move.y0); }
-      T.move.dx = dx / R; T.move.dy = dy / R;
-      $('knob').style.transform = `translate(${dx}px,${dy}px)`;
-      continue;
+    // both sticks follow the thumb when it slides past the edge
+    for(const [S, id, knob] of [[T.move, 'stick', 'knob'], [T.aim, 'stick2', 'knob2']]){
+      if(!S || t.identifier !== S.id) continue;
+      let dx = t.clientX - S.x0, dy = t.clientY - S.y0; const d = Math.hypot(dx, dy), R = 56;
+      if(d > R){ S.x0 += dx * (1 - R / d); S.y0 += dy * (1 - R / d); dx = t.clientX - S.x0; dy = t.clientY - S.y0; stickAt(S.x0, S.y0, id); }
+      S.dx = dx / R; S.dy = dy / R;
+      $(knob).style.transform = `translate(${dx}px,${dy}px)`;
     }
+    if((T.move && t.identifier === T.move.id) || (T.aim && t.identifier === T.aim.id)) continue;
     if(T.cam && t.identifier === T.cam.id){ look(t.clientX - T.cam.x, t.clientY - T.cam.y, TOUCH_K); T.cam.x = t.clientX; T.cam.y = t.clientY; continue; }
     // dragging a held attack button also turns the camera, so you can aim and shoot with one thumb
     for(const k of ['atk', 'sup']){
@@ -111,14 +121,16 @@ function onTouchMove(e){
 function onTouchEnd(e){
   for(const t of e.changedTouches){
     if(T.move && t.identifier === T.move.id){ T.move = null; $('stick').hidden = true; $('knob').style.transform = ''; }
+    if(T.aim && t.identifier === T.aim.id){ T.aim = null; $('stick2').hidden = true; $('knob2').style.transform = ''; $('stick2').classList.remove('fire'); }
     if(T.cam && t.identifier === T.cam.id) T.cam = null;
     for(const k of ['atk', 'sup']){
       const B = T[k]; if(!B || t.identifier !== B.id) continue;
       B.el.classList.remove('on');
       const me = G.me;
       if(me && me.alive){
-        // a quick tap: aim at the nearest enemy we can see; a drag: shoot where the crosshair is
-        const tap = B.moved < 14 && performance.now() - B.t0 < 350;
+        // phones: the super goes where the turret looks. Over the shoulder: a quick tap aims at the nearest enemy we can
+        // see, a drag shoots where the crosshair is
+        const tap = !TOP && B.moved < 14 && performance.now() - B.t0 < 350;
         const pt = (tap && autoTarget(k === 'sup')) || aimFor(me, k === 'sup');
         me.inp.tx = pt.x; me.inp.tz = pt.z;
         if(k === 'sup') me.inp.sup = true; else me.inp.fire = true;
@@ -166,6 +178,12 @@ export function bankShot(f, o, W){
 // where a weapon goes when fired at the crosshair: lobs land where the crosshair meets the ground
 function aimFor(me, sup){
   const W = sup ? me.H.super : me.H.attack;
+  if(TOP){
+    // along the turret; rockets fly as far as the stick is pushed past the fire ring
+    const a = T.aimA, lob = W.kind === 'lob' || W.kind === 'barrage';
+    const d = lob ? W.range * (T.aimK > FIRE_K ? 0.3 + 0.7 * (T.aimK - FIRE_K) / (1 - FIRE_K) : 0.7) : Math.max(6, W.range || 10);
+    return { x:me.x + Math.sin(a) * d, z:me.z + Math.cos(a) * d };
+  }
   if(W.kind === 'lob' || W.kind === 'barrage'){
     const a = Math.atan2(AIM.gx - me.x, AIM.gz - me.z);
     const d = AIM.groundHit ? clamp(Math.hypot(AIM.gx - me.x, AIM.gz - me.z), 1.5, W.range) : W.range;
@@ -215,9 +233,24 @@ export function playerInput(dt){
   if(T.move){ fx = -T.move.dy; fz = T.move.dx; }
   else { fx = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0); fz = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0); }
   const l = Math.hypot(fx, fz); if(l > 1){ fx /= l; fz /= l; }
+  if(TOP) CAM.yaw = TOP_YAW;
   const sy = Math.sin(CAM.yaw), cy = Math.cos(CAM.yaw);
   // camera forward is (sin yaw, cos yaw); right is (-cos yaw, sin yaw)
   inp.mx = sy * fx - cy * fz; inp.mz = cy * fx + sy * fz;
+  if(TOP){
+    // the right stick: screen direction → world direction the same way as driving
+    const k = T.aim ? Math.min(1, Math.hypot(T.aim.dx, T.aim.dy)) : 0;
+    if(k > 0.18){ const ax = -T.aim.dy, az = T.aim.dx; T.aimA = Math.atan2(sy * ax - cy * az, cy * ax + sy * az); T.aimK = k; }
+    else if(!T.aim && Math.hypot(inp.mx, inp.mz) > 0.3) T.aimA = Math.atan2(inp.mx, inp.mz);   // not aiming: the gun looks where you drive
+    T.aimNow = k; T.firing = k > FIRE_K;
+    $('stick2').classList.toggle('fire', T.firing);
+    if(!inp.locked){ const p = aimFor(me, false); inp.tx = p.x; inp.tz = p.z; }
+    inp.locked = false;
+    inp.aim = Math.atan2(inp.tx - me.x, inp.tz - me.z);
+    me.aiming = true; me.scope = false;
+    if(T.firing && canAttack(me)) inp.fire = true;
+    return;
+  }
   // a tap-aimed shot swings the camera toward its target
   if(CAM.turnTo !== null){ const d = angDiff(CAM.yaw, CAM.turnTo); CAM.yaw += d * Math.min(1, dt * 8); if(Math.abs(d) < 0.02) CAM.turnTo = null; }
   castAim(me);
@@ -237,6 +270,7 @@ const target = new THREE.Vector3();
 const outside = ch => ch === 'X';
 export function updateCamera(dt){
   const me = G.me; if(!me) return;
+  if(TOP) return topCamera(me, dt);
   const k = 1 - Math.exp(-dt * 14);
   CAM.x = lerp(CAM.x, me.x, k); CAM.z = lerp(CAM.z, me.z, k);
   const sy = Math.sin(CAM.yaw), cy = Math.cos(CAM.yaw), cp = Math.cos(CAM.pitch), sp = Math.sin(CAM.pitch);
@@ -261,6 +295,22 @@ export function updateCamera(dt){
   camera.lookAt(target);
 }
 
+// the phone camera: high up behind, looking down at the tank; it never turns, so up on a stick is always up on the screen.
+// A tall phone held upright sees more when the camera goes higher.
+function topCamera(me, dt){
+  CAM.yaw = TOP_YAW; CAM.zoom = 0;
+  const base = camera.userData.baseFov || 55;
+  if(Math.abs(camera.fov - base) > 0.01){ camera.fov = base; camera.updateProjectionMatrix(); }
+  const k = 1 - Math.exp(-dt * 10);
+  CAM.x = lerp(CAM.x, me.x, k); CAM.z = lerp(CAM.z, me.z, k);
+  const s = innerHeight > innerWidth ? 1.5 : 1, sy = Math.sin(CAM.yaw), cy = Math.cos(CAM.yaw);
+  let cx = CAM.x - sy * 5.6 * s, cz = CAM.z - cy * 5.6 * s, cyy = 8.8 * s;
+  if(G.shake > 0){ const q = G.shake * 0.12; cx += (Math.random() - 0.5) * q; cyy += (Math.random() - 0.5) * q; cz += (Math.random() - 0.5) * q; G.shake = Math.max(0, G.shake - dt * 2.5); }
+  camera.position.set(cx, cyy, cz);
+  target.set(CAM.x + sy * 1.4, 0, CAM.z + cy * 1.4);
+  camera.lookAt(target); camera.getWorldDirection(camFwd);
+}
+
 // ---------------- the lob arc: dots along the flight and a ring where the bomb lands ----------------
 const guide = new THREE.Group(); guide.visible = false; scene.add(guide);
 const gMat = new THREE.MeshBasicMaterial({ color:'#FFFFFF', transparent:true, opacity:0.75, depthWrite:false, depthTest:false });
@@ -269,9 +319,21 @@ const ringG = new THREE.RingGeometry(0.86, 1, 40); ringG.rotateX(-Math.PI / 2);
 const gRing = new THREE.Mesh(ringG, gMat); gRing.renderOrder = 6; guide.add(gRing);
 const dotG = new THREE.SphereGeometry(0.06, 8, 6);
 const dots = []; for(let i = 0; i < 16; i++){ const d = new THREE.Mesh(dotG, gMat); d.renderOrder = 6; guide.add(d); dots.push(d); }
+// phones: a line on the ground in front of the gun, as far as the shot goes (it stops at the first hedge)
+const lineGeo = new THREE.PlaneGeometry(1, 1); lineGeo.rotateX(-Math.PI / 2); lineGeo.translate(0, 0, 0.5);
+const lineMat = new THREE.MeshBasicMaterial({ color:'#FFFFFF', transparent:true, opacity:0.45, depthWrite:false });
+const aimLine = new THREE.Mesh(lineGeo, lineMat); aimLine.renderOrder = 6; aimLine.visible = false; scene.add(aimLine);
 export function updateGuide(){
   const me = G.me;
-  const show = me && me.alive && G.state === 'play' && (!TOUCH || T.atk || T.sup);
+  const show = me && me.alive && G.state === 'play' && (TOP ? T.aimNow > 0.18 : !TOUCH || T.atk || T.sup);
+  aimLine.visible = false;
+  if(TOP && show && me.H.attack.kind !== 'lob' && me.H.attack.kind !== 'bounce'){
+    const W = me.H.attack, a = T.aimA, R = W.range;
+    const t = segHit(me.x, me.z, me.x + Math.sin(a) * R, me.z + Math.cos(a) * R), L = t >= 0 ? R * t : R;
+    aimLine.position.set(me.x, 0.09, me.z); aimLine.rotation.y = a; aimLine.scale.set(0.14, 1, Math.max(0.5, L));
+    lineMat.opacity = T.firing ? 0.8 : 0.4; lineMat.color.set(T.firing && canAttack(me) ? '#FFE08A' : '#FFFFFF');
+    aimLine.visible = true;
+  }
   const sup = TOUCH ? !!T.sup : me && me.charge >= 1 && keys.KeyE;
   const W = me && (sup ? me.H.super : me.H.attack);
   const lob = W && (W.kind === 'lob' || W.kind === 'barrage');
