@@ -1,5 +1,6 @@
 // Fighters, movement, attacks, projectiles, damage, supers and visibility (tall grass hides you).
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { scene, camera, Q, stdMat, LOW } from './engine.js';
 import { G, emit, isEnemy } from './state.js';
 import { HEROES, AMMO } from './heroes.js';
@@ -187,7 +188,11 @@ function doSuper(f, tx, tz){
 function fireWeapon(f, W, aim, tx, tz, isSuper){
   muzzlePos(f, MZ);
   const pow = f.pow;
-  if(W.kind === 'fan'){
+  if(W.kind === 'shell'){
+    // one shell (or a few in a row: the rest leave from burstShot, gap seconds apart)
+    if((W.count || 1) > 1){ f.burst = { n:W.count, t:0, W, pow, isSuper, shell:true }; burstShot(f); }
+    else fireShell(f, W, aim, W.dmg * pow, isSuper);
+  } else if(W.kind === 'fan'){
     for(let i = 0; i < W.count; i++){
       const a = aim + (W.count > 1 ? (i / (W.count - 1) - 0.5) * W.spread : 0) + rand(-0.015, 0.015);
       addShot(f, MZ.x, MZ.z, a, W, W.dmg * pow, isSuper);
@@ -202,7 +207,8 @@ function fireWeapon(f, W, aim, tx, tz, isSuper){
     f.burst = { n:W.count + (f.frenzyT > 0 ? 2 : 0), t:0, W, pow };
     burstShot(f);
   } else if(W.kind === 'bounce'){
-    addShot(f, MZ.x, MZ.z, aim, W, W.dmg * pow, isSuper);
+    const n = W.count || 1;
+    for(let i = 0; i < n; i++) addShot(f, MZ.x, MZ.z, aim + (n > 1 ? (i / (n - 1) - 0.5) * W.spread : 0), W, W.dmg * pow, isSuper);
     flashAt(MZ.x, MZ.y, MZ.z, W.color, isSuper ? 1.4 : 0.6, 0.07);
     puff(glow, MZ.x, MZ.y, MZ.z, { n:isSuper ? 12 : 5, color:W.color, sp:3, life:0.2, s0:0.25, s1:0.04, drag:6 });
     if(isSuper){ f.kx -= Math.sin(aim) * 4; f.kz -= Math.cos(aim) * 4; G.shake = Math.max(G.shake, f.isMe ? 0.35 : 0); }
@@ -232,9 +238,47 @@ function fireWeapon(f, W, aim, tx, tz, isSuper){
   }
 }
 
+// a tank shell: a bright tracer, a big muzzle flash and a cloud of smoke; the gun's blast pushes the tank back a little
+function fireShell(f, W, aim, dmg, isSuper){
+  muzzlePos(f, MZ);
+  addShot(f, MZ.x, MZ.z, aim, W, dmg, isSuper);
+  const sa = Math.sin(aim), ca = Math.cos(aim);
+  flashAt(MZ.x, MZ.y, MZ.z, '#FFC46B', isSuper ? 1.5 : 1.1, 0.08);
+  puff(glow, MZ.x, MZ.y, MZ.z, { n:isSuper ? 10 : 6, color:'#FFB04A', sp:3, vx:sa * 5, vz:ca * 5, life:0.16, s0:0.32, s1:0.05, drag:7 });
+  puff(smoke, MZ.x, MZ.y, MZ.z, { n:isSuper ? 9 : 6, color:'#9A968E', sp:1.4, vx:sa * 3.5, vz:ca * 3.5, life:0.9, s0:0.2, s1:0.75, drag:3.5, soft:true, a:0.55 });
+  f.kx -= sa * (isSuper ? 3 : 1.6); f.kz -= ca * (isSuper ? 3 : 1.6);
+  if(f.isMe) G.shake = Math.max(G.shake, isSuper ? 0.4 : 0.22);
+  sfx('shot_shotgun', f, 0.9, isSuper ? 0.62 : 0.72);
+}
+// where a shell bursts: fire, smoke, a crater; everyone near takes part of the damage (the one it struck took it all already)
+function shellBlast(s, x, z){
+  const S = s.W.splash, r = S.r;
+  explosion(x, z, r * 0.75, '#FF9A3E');
+  sfx(s.isSuper ? 'boom_big' : 'boom', { x, z }, 0.8);
+  for(const o of G.fighters){
+    if(!o.alive || o.team === s.team || o === s.direct) continue;
+    const d = Math.hypot(o.x - x, o.z - z);
+    if(d > r + o.H.rad) continue;
+    damage(o, s.dmg * S.k, s.owner, s.isSuper);
+    if(s.knock){ const l = d || 1; o.kx += (o.x - x) / l * s.knock * 2.5; o.kz += (o.z - z) / l * s.knock * 2.5; o.stunT = Math.max(o.stunT, 0.25); }
+  }
+  damageCratesIn(x, z, r * 0.8, s.dmg * S.k);
+}
+// a small shell's hit on the ground or a hedge: a puff of dirt and sparks
+function dirtHit(x, z){
+  puff(smoke, x, 0.4, z, { n:3, color:'#7A6448', sp:1.6, upMin:0.3, life:0.6, s0:0.14, s1:0.4, drag:3, soft:true, a:0.55 });
+  puff(smoke, x, 0.3, z, { n:4, color:'#5C4632', sp:3.5, upMin:0.5, life:0.6, s0:0.06, s1:0.04, grav:12, drag:0.5 });
+}
+
 // one shot of a burst: follows the hero's aim, the spread opens up with every shot fired in a row
 function burstShot(f){
   const B = f.burst; if(!B || !f.alive){ f.burst = null; return; }
+  if(B.shell){
+    if(B.n < B.W.count) kick.attack(f.V);
+    fireShell(f, B.W, f.aim, B.W.dmg * B.pow, B.isSuper);
+    B.n--; B.t += B.W.gap; if(B.n <= 0) f.burst = null;
+    return;
+  }
   const W = B.W, tight = f.frenzyT > 0 ? 0.3 : 1;
   f.bloom = Math.min(1, (f.bloom || 0) + W.bloom);
   const spread = W.spread * (1 + f.bloom * 4) * tight;
@@ -254,9 +298,10 @@ needleGeo.rotateX(Math.PI / 2);
 const matCache = {};
 const glowMat = (c, k = 2.4) => matCache[c + k] || (matCache[c + k] = new THREE.MeshBasicMaterial({ color:new THREE.Color(c).multiplyScalar(k), toneMapped:false }));
 function addShot(f, x, z, a, W, dmg, isSuper){
-  // a glowing bolt with a trail; the stinger's is long and thin, pellets are short (and trail-less on phones)
-  const needle = W.kind === 'needle', bounce = W.kind === 'bounce', sz = W.size || 0.2;
-  const m = makeBolt(W.color, needle ? sz * 2.6 : bounce ? sz * 2.6 : sz * 2.2, needle ? 3.6 : bounce ? (isSuper ? 2.6 : 1.8) : isSuper ? 1.8 : 1.4, needle || bounce || !LOW);
+  // a glowing bolt with a trail; the sniper's is long and thin, autocannon rounds are short (and trail-less on phones)
+  // tank shells are tracers: a hot head and a long streak behind it
+  const needle = W.kind === 'needle', bounce = W.kind === 'bounce', shell = W.kind === 'shell', sz = W.size || 0.2;
+  const m = makeBolt(W.color, needle || bounce || shell ? sz * 2.4 : sz * 2.2, needle ? 3.6 : shell ? 2.6 : bounce ? (isSuper ? 2.6 : 1.8) : isSuper ? 1.8 : 1.4, needle || bounce || shell || !LOW);
   moveBolt(m, x, SHOT_Y, z, Math.sin(a), Math.cos(a), 0);
   G.shots.push({ owner:f, team:f.team, x, z, x0:f.x, z0:f.z, vx:Math.sin(a) * W.speed, vz:Math.cos(a) * W.speed, range:W.range, dist:0, dmg, W, isSuper, m, knock:W.knock || 0,
     bounces:W.bounces || 0, seg:0, hits:W.pierce ? new Set() : null });
@@ -329,7 +374,7 @@ export function updateShots(dt){
         if(s.knock){ const l = Math.hypot(s.vx, s.vz); o.kx += s.vx / l * s.knock * 2.2; o.kz += s.vz / l * s.knock * 2.2; o.stunT = Math.max(o.stunT, 0.25); }
         hitSpark(o.x, SHOT_Y + 0.1, o.z, s.W.color); flashAt(o.x, SHOT_Y + 0.1, o.z, s.W.color, 0.7, 0.08);
         if(s.hits) continue;
-        end = true; nx = o.x; nz = o.z; break;
+        s.direct = o; end = true; nx = o.x; nz = o.z; break;
       }
     }
     s.dist += Math.hypot(nx - s.x, nz - s.z);
@@ -338,16 +383,27 @@ export function updateShots(dt){
     moveBolt(s.m, nx, SHOT_Y, nz, s.vx, s.vz, s.dist - s.seg);
     // trail
     if(Math.random() < 0.25) glow.emit({ x:nx, y:SHOT_Y, z:nz, vx:0, vy:0, vz:0, life:s.W.kind === 'needle' ? 0.3 : 0.16, t:0, s0:(s.W.size || 0.2) * (s.W.kind === 'needle' ? 1.6 : 1.4), s1:0.02, r:1, g:0.8, b:0.4, a:0.7, grav:0, drag:0, soft:1 });
-    if(end){ freeBolt(s.m); G.shots.splice(i, 1); }
+    if(end){
+      if(s.W.splash) shellBlast(s, nx, nz); else if(!s.direct) dirtHit(nx, nz);
+      freeBolt(s.m); G.shots.splice(i, 1);
+    }
   }
 }
 
-// ---------------- lobbed bombs ----------------
-const bombGeo = new THREE.SphereGeometry(0.16, 12, 10), bombMat = stdMat({ color:'#26262E', roughness:0.35, metalness:0.2 });
+// ---------------- rockets fired up and over the hedges ----------------
+// a rocket along +z: olive body, dark nose, tail fins; it turns to fly along its arc
+const bombGeo = (() => {
+  const body = new THREE.CylinderGeometry(0.065, 0.065, 0.42, 10); body.rotateX(Math.PI / 2);
+  const nose = new THREE.ConeGeometry(0.065, 0.14, 10); nose.rotateX(Math.PI / 2); nose.translate(0, 0, 0.28);
+  const fin1 = new THREE.BoxGeometry(0.22, 0.015, 0.1); fin1.translate(0, 0, -0.18);
+  const fin2 = new THREE.BoxGeometry(0.015, 0.22, 0.1); fin2.translate(0, 0, -0.18);
+  return mergeGeometries([body.toNonIndexed(), nose.toNonIndexed(), fin1.toNonIndexed(), fin2.toNonIndexed()]);
+})();
+const bombMat = stdMat({ color:'#5E6644', roughness:0.6, metalness:0.3 });
 const markGeo = new THREE.RingGeometry(0.9, 1, 36); markGeo.rotateX(-Math.PI / 2);
 function addLob(f, x1, z1, W, T, delay, isSuper){
   const m = new THREE.Mesh(bombGeo, bombMat); m.castShadow = true;
-  const fuse = new THREE.Mesh(shotGeo, glowMat('#FFC04A', 3)); fuse.scale.setScalar(0.05); fuse.position.y = 0.17; m.add(fuse);
+  const fuse = new THREE.Mesh(shotGeo, glowMat('#FFC04A', 3)); fuse.scale.set(0.06, 0.06, 0.12); fuse.position.z = -0.26; m.add(fuse);   // the motor's flame
   m.visible = false; scene.add(m);
   const mark = new THREE.Mesh(markGeo, new THREE.MeshBasicMaterial({ color:lookFor(f) === 'foe' ? '#FF4A3A' : '#5FC8FF', transparent:true, opacity:0, depthWrite:false }));
   mark.position.set(x1, 0.05, z1); mark.scale.setScalar(W.radius); mark.renderOrder = 3; scene.add(mark);
@@ -361,9 +417,13 @@ export function updateLobs(dt){
     if(L.t < 0) continue;
     const k = Math.min(1, L.t / L.T);
     const x = lerp(L.x0, L.x1, k), z = lerp(L.z0, L.z1, k), y = lerp(L.y0, 0.15, k) + Math.sin(k * Math.PI) * L.h;
-    L.m.visible = true; L.m.position.set(x, y, z); L.m.rotation.x += dt * 9; L.m.rotation.z += dt * 5;
+    // nose along the flight: look a step ahead on the arc
+    const k2 = Math.min(1, k + 0.02), ax = lerp(L.x0, L.x1, k2), az = lerp(L.z0, L.z1, k2), ay = lerp(L.y0, 0.15, k2) + Math.sin(k2 * Math.PI) * L.h;
+    L.m.visible = true; L.m.position.set(x, y, z); if(k < 1) L.m.lookAt(ax, ay, az);
     L.mark.material.opacity = 0.25 + 0.55 * k; L.mark.scale.setScalar(L.W.radius * (1.25 - 0.25 * k));
-    if(Math.random() < 0.6) glow.emit({ x, y:y + 0.17, z, vx:rand(-0.4, 0.4), vy:0.6, vz:rand(-0.4, 0.4), life:0.3, t:0, s0:0.12, s1:0.02, r:1, g:0.75, b:0.3, a:1, grav:0, drag:1, soft:0 });
+    // the motor's flame and a smoke trail
+    if(Math.random() < 0.7) glow.emit({ x, y, z, vx:rand(-0.3, 0.3), vy:0.2, vz:rand(-0.3, 0.3), life:0.2, t:0, s0:0.14, s1:0.02, r:1, g:0.7, b:0.3, a:1, grav:0, drag:1, soft:0 });
+    if(Math.random() < 0.8) puff(smoke, x, y, z, { n:1, color:'#BDB8AE', sp:0.15, life:0.9, s0:0.1, s1:0.42, drag:1.5, soft:true, a:0.45 });
     if(k >= 1){
       scene.remove(L.m); scene.remove(L.mark); L.mark.material.dispose();
       G.lobs.splice(i, 1);

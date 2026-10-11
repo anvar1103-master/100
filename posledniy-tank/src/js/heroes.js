@@ -5,41 +5,43 @@ import { stdMat } from './engine.js';
 import { TAU } from './util.js';
 
 // Numbers are in metres, seconds and hit points.
-// attack kinds: fan (spread of pellets), lob (thrown over walls, splash + puddle), needle (long fast shot, harder far away),
+// attack kinds: shell (one tank shell with a tracer; splash: { r, k } — it bursts where it lands and hurts everyone within
+//   r for k of its damage; count/gap: several shells in a row), fan (spread of pellets), lob (thrown over walls, splash + puddle),
+//   needle (long fast shot, harder far away),
 // bounce (a pebble that ricochets off hedges; bounces: how many times; pierce: rolls through fighters instead of stopping;
 //   ricochet: damage multiplier once it has bounced), burst (a quick string of small shots; bloom: how much each shot
 //   widens the spread while you keep firing), frenzy (super: a few seconds of faster, tighter bursts)
 export const HEROES = {
   shroom:{
-    name:'Картечник', species:'тяжёлый танк', role:'Дробовик', color:'#E23A2E', hp:3900, speed:5.0, rad:0.55, height:1.05,
-    desc:'Короткая толстая пушка бьёт картечью веером: вблизи разносит любого.',
-    attack:{ kind:'fan', name:'Картечь', count:5, spread:0.5, range:7.2, speed:24, dmg:290, reload:1.5, cd:0.42, size:0.2, color:'#FF6B4A' },
-    super:{ kind:'fan', name:'Двойной заряд', desc:'широкий залп отбрасывает врагов', count:11, spread:0.85, range:8.6, speed:27, dmg:330, knock:3.4, size:0.28, color:'#FFD24A', charge:4600 }
+    name:'Картечник', species:'тяжёлый танк', role:'Штурмовик', color:'#E23A2E', hp:3900, speed:5.0, rad:0.55, height:1.05,
+    desc:'Толстая короткая пушка бьёт фугасами: взрыв задевает и тех, кто стоит рядом с целью.',
+    attack:{ kind:'shell', name:'Фугас', range:11, speed:30, dmg:1050, splash:{ r:1.4, k:0.5 }, reload:1.7, cd:0.55, size:0.17, color:'#FFB25A' },
+    super:{ kind:'shell', name:'Двойной залп', desc:'два тяжёлых фугаса подряд, взрывы отбрасывают врагов', count:2, gap:0.22, range:12, speed:32, dmg:1250, splash:{ r:1.8, k:0.6 }, knock:2.6, size:0.22, color:'#FFD24A', charge:4600 }
   },
   beetle:{
-    name:'Мортира', species:'миномётный танк', role:'Метатель', color:'#3B57D6', hp:3000, speed:4.7, rad:0.56, height:1.1,
-    desc:'Бьёт снарядами навесом через кусты. Разрыв оставляет горящую лужу.',
-    attack:{ kind:'lob', name:'Мина', range:10, flight:0.78, radius:1.7, dmg:820, reload:1.9, cd:0.5, puddle:{ r:1.35, dps:320, t:1.8 }, color:'#FF9A2E' },
-    super:{ kind:'barrage', name:'Ковровый обстрел', desc:'пять мин ложатся дорожкой', count:5, range:12, flight:0.95, radius:1.9, dmg:1050, knock:2.2, step:1.9, color:'#FF5A2E', charge:3900 }
+    name:'Мортира', species:'ракетный танк', role:'Артиллерия', color:'#3B57D6', hp:3000, speed:4.7, rad:0.56, height:1.1,
+    desc:'Пускает ракеты навесом через кусты. Разрыв поджигает землю.',
+    attack:{ kind:'lob', name:'Ракета', range:12, flight:0.85, radius:1.7, dmg:820, reload:1.9, cd:0.5, puddle:{ r:1.35, dps:320, t:1.8 }, color:'#FF9A2E' },
+    super:{ kind:'barrage', name:'Залп ракет', desc:'пять ракет ложатся дорожкой', count:5, range:13, flight:1.0, radius:1.9, dmg:1050, knock:2.2, step:1.9, color:'#FF5A2E', charge:3900 }
   },
   wasp:{
-    name:'Дальнобой', species:'истребитель танков', role:'Снайпер', color:'#F5C21B', hp:3100, speed:5.2, rad:0.48, height:1.0,
+    name:'Дальнобой', species:'истребитель танков', role:'Снайпер', color:'#F5C21B', hp:3300, speed:5.2, rad:0.48, height:1.0,
     desc:'Длинная пушка: чем дальше цель, тем больнее. Прицел приближает, а выстрел из прицела заряжается до +60% урона.',
     // scope: hold to aim down the sight (zoom, slower steps); the shot charges up to +60% damage, flies further and faster
-    attack:{ kind:'needle', name:'Бронебойный', range:15, speed:40, dmg:1000, dmgFar:1800, reload:1.9, cd:0.5, size:0.16, color:'#FFB21E', scope:{ time:0.9, dmg:0.6, range:1.35, speed:1.3, slow:0.5 } },
-    super:{ kind:'beam', name:'Рельсовый луч', desc:'луч прошивает стены и всех на пути', range:21, width:0.75, dmg:2100, windup:0.38, color:'#FFE15A', charge:3600 }
+    attack:{ kind:'needle', name:'Бронебойный', range:17, speed:55, dmg:1100, dmgFar:1950, reload:1.9, cd:0.5, size:0.16, color:'#FFE3A0', scope:{ time:0.9, dmg:0.6, range:1.3, speed:1.2, slow:0.5 } },
+    super:{ kind:'beam', name:'Подкалиберный', desc:'снаряд пробивает стены и всех на линии', range:22, width:0.75, dmg:2100, windup:0.38, color:'#FFE15A', charge:3600 }
   },
   roly:{
-    name:'Рикошет', species:'круглый танк', role:'Рикошет', color:'#6E7FA3', hp:3500, speed:5.0, rad:0.55, height:1.05,
+    name:'Рикошет', species:'лёгкий танк', role:'Рикошет', color:'#6E7FA3', hp:3500, speed:5.0, rad:0.55, height:1.05,
     desc:'Снаряды отскакивают от кустов и достают врага за углом.',
-    attack:{ kind:'bounce', name:'Прыгун', range:12, speed:24, dmg:800, bounces:2, ricochet:1.35, reload:1.2, cd:0.38, size:0.24, color:'#7FE7FF' },
-    super:{ kind:'bounce', name:'Ядро-катун', desc:'огромное ядро долго скачет по коридорам и бьёт всех на пути', range:30, speed:13, dmg:1150, bounces:7, pierce:true, knock:2.4, size:0.5, color:'#B8F4FF', charge:3000 }
+    attack:{ kind:'bounce', name:'Рикошет', range:14, speed:30, dmg:800, bounces:2, ricochet:1.35, reload:1.2, cd:0.38, size:0.2, color:'#BFE6FF' },
+    super:{ kind:'bounce', name:'Тройной рикошет', desc:'три рикошетных снаряда веером, каждый отскакивает трижды', count:3, spread:0.32, range:18, speed:32, dmg:950, bounces:3, ricochet:1.2, knock:1.5, size:0.24, color:'#DFF4FF', charge:3000 }
   },
   hopper:{
-    name:'Стрекот', species:'лёгкий танк', role:'Автоматчик', color:'#5DB83A', hp:3400, speed:5.3, rad:0.5, height:1.0,
+    name:'Стрекот', species:'скорострельный танк', role:'Автопушка', color:'#5DB83A', hp:3400, speed:5.3, rad:0.5, height:1.0,
     desc:'Спаренная автопушка бьёт очередями. Держи кнопку — разброс растёт, стреляй короткими очередями.',
-    attack:{ kind:'burst', name:'Очередь', count:5, gap:0.07, spread:0.05, bloom:0.12, range:9.5, speed:30, dmg:200, reload:1.05, cd:0.42, size:0.13, color:'#B6FF5A' },
-    super:{ kind:'frenzy', name:'Стрекотня', desc:'4 секунды стреляет быстрее и точнее, очереди длиннее', time:4, color:'#E2FF8A', charge:4200 }
+    attack:{ kind:'burst', name:'Очередь', count:5, gap:0.07, spread:0.05, bloom:0.12, range:12, speed:38, dmg:200, reload:1.05, cd:0.42, size:0.12, color:'#FFD27A' },
+    super:{ kind:'frenzy', name:'Шквальный огонь', desc:'4 секунды стреляет быстрее и точнее, очереди длиннее', time:4, color:'#FFE08A', charge:4200 }
   }
 };
 export const HERO_IDS = Object.keys(HEROES);

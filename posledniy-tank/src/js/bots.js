@@ -331,7 +331,7 @@ function fightMoveAndShoot(f, B, T, mx, mz, dt){
     const ready = B.seenT > B.S.react && (!B.holdFire || hurt || (!B.quiet && d < W.range * 0.55));
     // supers: shotgun up close, bombs on anyone in reach, beam lined up from far
     if(ready && f.charge >= 1){
-      if((Sp.kind === 'fan' && d < Sp.range * 0.75 && los) || (Sp.kind === 'barrage' && d < Sp.range) || (Sp.kind === 'beam' && d < Sp.range * 0.9) || (Sp.kind === 'bounce' && d < 11) || (Sp.kind === 'frenzy' && d < W.range && los)) inp.sup = true;
+      if((Sp.kind === 'shell' && d < Sp.range * 0.85 && los) || (Sp.kind === 'fan' && d < Sp.range * 0.75 && los) || (Sp.kind === 'barrage' && d < Sp.range) || (Sp.kind === 'beam' && d < Sp.range * 0.9) || (Sp.kind === 'bounce' && d < 11) || (Sp.kind === 'frenzy' && d < W.range && los)) inp.sup = true;
     }
     if(!inp.sup && ready && canAttack(f)){
       const inRange = d < W.range * (W.kind === 'fan' ? 0.85 : W.kind === 'lob' ? 1.0 : 0.95) * (f.scope ? W.scope.range : 1);
