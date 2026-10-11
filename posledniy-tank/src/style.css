@@ -299,3 +299,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .tag .gm.lvl svg,.tag .gm.lvl .gem-ico{display:none} .tag .gm.lvl b::before{content:'★ '}
 .star-ico{display:inline-block;flex:none;width:20px;text-align:center;font:900 20px/1 var(--font-display);color:#FFE08A}
 .star-ico::before{content:'★'}
+/* phones: keep the class cards clear of the upgrade panel (landscape: cards move right; portrait: points go down-left) */
+@media (orientation:landscape){ .touch-on .evo{left:calc(50% + 72px)} }
+@media (orientation:portrait){ .touch-on .ups{top:auto;bottom:calc(130px + var(--safe-b))} }
+.evo{z-index:2}

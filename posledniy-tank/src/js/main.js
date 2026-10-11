@@ -344,7 +344,7 @@ function tick(dt){
   } else if(G.me) updateCamera(dt);
   updateGuide(); lockHint();
   if(topHintT > 0 && G.state === 'play') topHintT -= dt;
-  { const v = topHintT > 0 && G.state === 'play' && !G.paused; if($('tophint').hidden === v) $('tophint').hidden = !v; }
+  { const v = topHintT > 0 && G.state === 'play' && !G.paused && $('evo').hidden; if($('tophint').hidden === v) $('tophint').hidden = !v; }   // the class choice wins over the hint
   updateFx(dt); updateEnv(dt, G.time);
   updateTags(); updateCrateBars();
   if(G.state !== 'menu') updateHud();
