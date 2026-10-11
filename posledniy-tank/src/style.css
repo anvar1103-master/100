@@ -303,3 +303,14 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 @media (orientation:landscape){ .touch-on .evo{left:calc(50% + 72px)} }
 @media (orientation:portrait){ .touch-on .ups{top:auto;bottom:calc(130px + var(--safe-b))} }
 .evo{z-index:2}
+/* the arena: the top five on the right, a crown over the leader's tag */
+.lb{position:absolute;right:calc(12px + var(--safe-r));top:calc(70px + var(--safe-t));display:flex;flex-direction:column;gap:2px;min-width:170px;padding:6px 8px;border-radius:12px;background:rgba(12,28,18,.6);font:800 12px/1.3 var(--font-body)}
+.lb div{display:flex;align-items:center;gap:6px} .lb div.me{color:#FFE08A}
+.lb i{font-style:normal;width:14px;text-align:center;color:var(--muted)} .lb div:first-child i{color:#FFD23F;font-size:14px}
+.lb b{flex:1;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px}
+.lb span{color:#FFE08A;font-weight:900} .lb em{font-style:normal;color:var(--muted);min-width:34px;text-align:right}
+body.arena .feed{top:calc(190px + var(--safe-t))}
+.tag.lead .tn::before{content:'♛ ';color:#FFD23F}
+.star-ico.big{width:40px;font-size:34px}
+@media (max-height:420px){ .lb{top:calc(56px + var(--safe-t));min-width:140px;font-size:11px;padding:4px 6px} .lb b{max-width:70px} body.arena .feed{top:calc(150px + var(--safe-t))} }
+@media (orientation:portrait){ .lb{top:calc(70px + var(--safe-t));min-width:130px} }

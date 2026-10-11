@@ -58,6 +58,17 @@ console.log('«Последний танк» test:', PAGE);
   });
   ok(pr.start && pr.up === 1 && pr.evoShown && pr.cls === 'shroom', 'progression: start on the Recruit, upgrade button, class choice');
   ok(pr.evolved >= 4 && pr.maxLvl >= 5, `progression: bots level up and take classes (${pr.evolved} of 10 with a class, top level ${pr.maxLvl})`);
+  // the arena: no fog, knocked-out tanks come back, crates stand again, after 5 minutes the leaderboard decides
+  const ar = await page.evaluate(() => {
+    __bg.start({ mode:'arena', skipCount:true }); __bg.autopilot(true);
+    const G = __bg.G, M = G.match;
+    __bg.sim(120);
+    const mid = { state:G.state, deaths:G.fighters.reduce((a, f) => a + f.deaths, 0), back:G.fighters.filter(f => f.deaths > 0 && f.alive).length, lb:!document.getElementById('lb').hidden, crates:__bg.A.crates.filter(k => k.alive).length };
+    __bg.sim(200);
+    return { mid, end:G.state, why:M.why, place:M.place, places:G.fighters.map(f => f.place).sort((a, b) => a - b).join(',') };
+  });
+  ok(ar.mid.state === 'play' && ar.mid.deaths > 0 && ar.mid.back > 0 && ar.mid.lb, `arena: tanks fight and come back (${ar.mid.deaths} knockouts, ${ar.mid.back} back in, ${ar.mid.crates} crates standing)`);
+  ok(ar.end === 'end' && ar.why === 'time' && ar.place >= 1 && ar.places === '1,2,3,4,5,6,7,8,9,10', 'arena: ends after 5 minutes with places by experience');
   ok(errors.length === 0, 'no script errors' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
   ok(outside.length === 0, 'no requests to other sites' + (outside.length ? ': ' + outside.slice(0, 3).join(', ') : ''));
   await ctx.close();

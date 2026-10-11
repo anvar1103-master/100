@@ -9,7 +9,7 @@ import { AIM, CAM } from './player.js';
 import { sightClear, segHit, A, CRATE_HP } from './arena.js';
 import { SPORES } from './mode.js';
 import { tr, L } from './i18n.js';
-import { ROYALE } from './royale.js';
+import { ROYALE, arenaRank } from './royale.js';
 
 const V3 = new THREE.Vector3();
 const gem = '<span class="gem-ico"></span>';
@@ -41,6 +41,8 @@ export function updateTags(){
     // the royale shows each tank's level (★), the other modes the spores it carries
     const br = G.match && G.match.mode === 'br', gm = br ? f.lvl || 1 : f.gems;
     if(T.last.gems !== gm){ T.gm.hidden = !gm; T.gm.classList.toggle('lvl', !!br); T.gmb.textContent = gm; T.last.gems = gm; }
+    const lead = !!(G.match && G.match.arena && G.leader === f);   // the arena leader wears a crown: everyone hunts it
+    if(T.last.lead !== lead){ T.el.classList.toggle('lead', lead); T.last.lead = lead; }
     const ready = f.charge >= 1;
     if(T.last.ready !== ready){ T.el.classList.toggle('ready', ready); T.last.ready = ready; }
     if(T.am.length) T.am.forEach((el, i) => { const k = clamp(f.ammo - i, 0, 1); el.firstChild.style.width = (k * 100).toFixed(0) + '%'; el.classList.toggle('full', k >= 1); });
@@ -78,7 +80,20 @@ let lastCd = null;
 export function updateHud(){
   const M = G.match, me = G.me; if(!M || !me) return;
   const mt = me.team, br = M.mode === 'br';
-  if(br){
+  const lb = $('lb'), showLb = !!M.arena;
+  if(lb.hidden === showLb) lb.hidden = !showLb;
+  if(M.arena){
+    // the arena: your place by experience · time left · your level; and the top five with the leader's crown
+    const rank = arenaRank(), my = rank.indexOf(me) + 1;
+    setText('sc0', '#' + my); setText('sc1', me.lvl || 1);
+    setText('timer', fmt(M.dur - M.t)); setText('mode-lbl', tr('Арена'));
+    const key = rank.slice(0, 5).map(f => f.id + ':' + Math.floor((f.score || 0) / 10) + ':' + f.lvl).join() + '|' + my;
+    if(lb._k !== key){
+      lb._k = key;
+      const row = (f, i) => `<div class="${f === me ? 'me' : ''}"><i>${i === 0 ? '♛' : i + 1}</i><b>${esc(f.name)}</b><span>★${f.lvl}</span><em>${Math.round(f.score || 0)}</em></div>`;
+      lb.innerHTML = rank.slice(0, 5).map(row).join('') + (my > 5 ? row(me, my - 1) : '');
+    }
+  } else if(br){
     // fighters left · time until the fog moves (or the fog label while it closes in) · your power
     setText('sc0', M.alive); setText('sc1', me.lvl || 1);
     const wait = ROYALE.wait - M.t;
@@ -204,11 +219,13 @@ function showEndRoyale(result){
   // points: the place counts most, knockouts add a little (kept for progression later)
   const pts = ROYALE_PTS[M.place - 1] || 0, kb = Math.min(3, me.kills);
   if(!M.scored){ M.scored = true; ROYALE_TOTAL.v = (+store.get('brPts', 0) || 0) + pts + kb; store.set('brPts', ROYALE_TOTAL.v); }
-  $('e-sub').textContent = (result === 'win' ? tr('Ты — последний танк!') : k && k !== me ? tr('Тебя подбил: ') + k.name : tr('Тебя накрыл ядовитый туман.')) +
+  const why = M.arena ? (result === 'win' ? tr('Ты — лучший танкист арены!') : tr('Время вышло') + ' · ★' + me.lvl + ' · ' + Math.round(me.score || 0) + ' XP')
+    : result === 'win' ? tr('Ты — последний танк!') : k && k !== me ? tr('Тебя подбил: ') + k.name : tr('Тебя накрыл ядовитый туман.');
+  $('e-sub').textContent = why +
     ' · ' + tr('Очки') + ': +' + pts + (kb ? ' +' + kb + ' ⚔' : '') + ' (' + tr('всего') + ' ' + ROYALE_TOTAL.v + ')';
   const rows = [...G.fighters].sort((a, b) => (a.place || 0) - (b.place || 0) || b.kills - a.kills);
   const pw = '★';
   $('e-board').classList.add('br');
-  $('e-board').innerHTML = rows.map(f => `<tr class="t${f === me ? 0 : 1}${f === me ? ' me' : ''}${f.alive ? '' : ' out'}"><td class="pl">${f.place ? '#' + f.place : '—'}</td><td>${ICONS[f.hero]}</td><td>${esc(f.name)}</td><td>⚔ ${f.kills}</td><td>${pw} ${f.lvl || 1}</td><td>${Math.round(f.dmgDone)}</td></tr>`).join('');
+  $('e-board').innerHTML = rows.map(f => `<tr class="t${f === me ? 0 : 1}${f === me ? ' me' : ''}${f.alive || M.arena ? '' : ' out'}"><td class="pl">${f.place ? '#' + f.place : '—'}</td><td>${ICONS[f.hero]}</td><td>${esc(f.name)}</td><td>⚔ ${f.kills}</td><td>${pw} ${f.lvl || 1}</td><td>${M.arena ? Math.round(f.score || 0) + ' XP' : Math.round(f.dmgDone)}</td></tr>`).join('');
   $('end').hidden = false;
 }

@@ -11,7 +11,7 @@ import { glow, smoke, puff, ring } from './fx.js';
 import { sfx } from './audio.js';
 import { $, esc, TOUCH } from './util.js';
 
-export const PROG = { orbXP:50, dmgXP:0.04, killXP:220, classLevel:4, maxLevel:12, maxUp:5, start:'rookie', rookieHp:1.3 };
+export const PROG = { orbXP:50, dmgXP:0.04, killXP:220, classLevel:4, maxLevel:20, maxUp:5, start:'rookie', rookieHp:1.3 };
 // what each point does (see rebuild)
 export const STATS = [
   { k:'hp',  name:'Броня',       hint:'+12% прочности' },
@@ -29,7 +29,7 @@ const TASTE = {
 
 // a fresh start (each new match)
 export function resetProgress(f){
-  f.lvl = 1; f.xp = 0; f.pts = 0; f.power = 0; f.up = { hp:0, dmg:0, rel:0, rng:0, spd:0 };
+  f.score = 0; f.lvl = 1; f.xp = 0; f.pts = 0; f.power = 0; f.up = { hp:0, dmg:0, rel:0, rng:0, spd:0 };
   rebuild(f, 'full');
 }
 // the fighter's own copy of its tank's numbers with the upgrades in. mode: 'full' heals to full, 'add' adds the
@@ -54,7 +54,9 @@ export function rebuild(f, mode = 'add'){
 }
 
 export function addXP(f, n){
-  if(!f.alive || f.lvl >= PROG.maxLevel || !(n > 0)) return;
+  if(!f.alive || !(n > 0)) return;
+  f.score = (f.score || 0) + n;   // all experience ever earned (the arena's leaderboard)
+  if(f.lvl >= PROG.maxLevel) return;
   f.xp += n;
   while(f.lvl < PROG.maxLevel && f.xp >= xpNeed(f.lvl)){
     f.xp -= xpNeed(f.lvl); f.lvl++; f.pts++; f.power = f.lvl - 1;
@@ -75,15 +77,29 @@ export function spend(f, k){
 }
 // the rookie becomes one of the five classes: a new tank rolls out of a cloud of smoke
 export const canEvolve = f => f.alive && f.hero === PROG.start && f.lvl >= PROG.classLevel;
-export function evolve(f, cls){
-  if(!canEvolve(f) || !HERO_IDS.includes(cls)) return false;
+// put a fighter into another tank (new model, same place and heading)
+function swapModel(f, id){
   const old = f.V;
-  f.hero = cls; rebuild(f, 'ratio');
-  const V = makeVisual(cls);
+  f.hero = id;
+  const V = makeVisual(id);
   V.yaw = old.yaw; V.hullYaw = old.hullYaw; V.root.position.copy(old.root.position); V.root.visible = old.root.visible;
   setTeamLook(V, lookFor(f)); scene.add(V.root);
   scene.remove(old.root); disposeVisual(old);
   f.V = V;
+}
+// the arena: a knocked-out tank comes back at level L with its points to spend again (it keeps its class from level
+// PROG.classLevel up, below that it is a Recruit again)
+export function setLevel(f, L){
+  L = Math.max(1, Math.min(PROG.maxLevel, L));
+  if(L < PROG.classLevel && f.hero !== PROG.start) swapModel(f, PROG.start);
+  f.lvl = L; f.xp = 0; f.pts = L - 1; f.power = L - 1; f.up = { hp:0, dmg:0, rel:0, rng:0, spd:0 };
+  rebuild(f, 'full');
+  if(f.bot) botGrow(f);
+}
+export function evolve(f, cls){
+  if(!canEvolve(f) || !HERO_IDS.includes(cls)) return false;
+  swapModel(f, cls); rebuild(f, 'ratio');
+  const V = f.V;
   f.ammo = AMMO; f.burst = null; f.pendingBeam = null; f.scope = false; f.charge = Math.max(f.charge, 0.35);
   if(f === G.me || f.seen){
     puff(smoke, f.x, 0.6, f.z, { n:16, color:'#B9B3A8', sp:2.2, upMin:0.2, vy:1.2, life:0.9, s0:0.3, s1:0.9, drag:2, soft:true, a:0.6 });

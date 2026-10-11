@@ -476,6 +476,8 @@ function placeCrate(k){
   crateDummy.position.set(k.x + j, 0, k.z); crateDummy.rotation.set(0, k.rot + j, 0); crateDummy.scale.set(s, s * (1 - j * 0.5), s);
   crateDummy.updateMatrix(); crateMesh.setMatrixAt(k.i, crateDummy.matrix); crateMesh.instanceMatrix.needsUpdate = true;
 }
+// the arena: a broken crate stands again
+export function reviveCrate(k){ k.alive = true; k.hp = k.max || CRATE_HP; k.shake = 0; A.rows[k.r][k.c] = 'C'; placeCrate(k); }
 export const crateAt = (c, r) => A.crates.find(k => k.alive && k.c === c && k.r === r) || null;
 // returns true when the crate breaks
 export function hitCrate(k, dmg){
