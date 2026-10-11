@@ -304,7 +304,7 @@ function topCamera(me, dt){
   const k = 1 - Math.exp(-dt * 10);
   CAM.x = lerp(CAM.x, me.x, k); CAM.z = lerp(CAM.z, me.z, k);
   const s = innerHeight > innerWidth ? 1.5 : 1, sy = Math.sin(CAM.yaw), cy = Math.cos(CAM.yaw);
-  let cx = CAM.x - sy * 5.6 * s, cz = CAM.z - cy * 5.6 * s, cyy = 8.8 * s;
+  let cx = CAM.x - sy * 5.0 * s, cz = CAM.z - cy * 5.0 * s, cyy = 7.8 * s;
   if(G.shake > 0){ const q = G.shake * 0.12; cx += (Math.random() - 0.5) * q; cyy += (Math.random() - 0.5) * q; cz += (Math.random() - 0.5) * q; G.shake = Math.max(0, G.shake - dt * 2.5); }
   camera.position.set(cx, cyy, cz);
   target.set(CAM.x + sy * 1.4, 0, CAM.z + cy * 1.4);

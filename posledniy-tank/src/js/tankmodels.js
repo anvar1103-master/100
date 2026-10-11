@@ -9,12 +9,12 @@ import { setTankModels } from './tanks.js';
 
 // which model plays which role, its size (hull length, m) and tweaks; paint: colours for untextured materials, by name
 const SPEC = {
-  rookie:{ file:'starter',   len:1.4 },
-  shroom:{ file:'heavy',     len:1.5 },
-  beetle:{ file:'artillery', len:1.35, restElev:0.3 },
-  wasp:  { file:'sniper',    len:1.45 },
-  roly:  { file:'light',     len:1.35 },
-  hopper:{ file:'rapid',     len:1.35, restElev:-0.28 }   // its twin guns point skyward (an anti-aircraft mount): level them
+  rookie:{ file:'starter',   len:1.55 },
+  shroom:{ file:'heavy',     len:1.65 },
+  beetle:{ file:'artillery', len:1.5, restElev:0.3 },
+  wasp:  { file:'sniper',    len:1.6 },
+  roly:  { file:'light',     len:1.5 },
+  hopper:{ file:'rapid',     len:1.5, restElev:-0.28 }   // its twin guns point skyward (an anti-aircraft mount): level them
 };
 
 // one model → hull / turret / barrel pieces
@@ -34,7 +34,7 @@ function convert(scene, S){
     all.union(b); if(m.part === 'hull') hb.union(b);
   }
   const L = hb.max.z - hb.min.z, W = hb.max.x - hb.min.x, Ht = all.max.y - hb.min.y;
-  const s = Math.min(S.len / L, 1.08 / W);
+  const s = Math.min(S.len / L, 1.2 / W);
   const sy = THREE.MathUtils.clamp(Ht * s * 1.1, 0.8, 1.2) / Ht;
   const cx = (hb.min.x + hb.max.x) / 2, cz = (hb.min.z + hb.max.z) / 2, y0 = hb.min.y;
   // each piece is baked into its part's frame: the hull's is the tank's ground centre, the turret's its base, the barrel's its hinge
@@ -50,6 +50,7 @@ function convert(scene, S){
     if(!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
     g.applyMatrix4(M);
     const mat = o.material, map = mat.map || null;
+    if(map) map.anisotropy = 8;   // the tread texture stays crisp at a glancing angle
     // the tread belt: find which way its texture runs along the tank, and how many texture lengths per metre
     let scroll = null;
     if(map && /tread|track/i.test(mat.name || '')) scroll = treadScroll(g);
