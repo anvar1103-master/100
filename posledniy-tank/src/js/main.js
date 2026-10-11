@@ -17,7 +17,8 @@ import { freeBolt, clearShotFx, updateShotFx, shotFxSamples } from './shotfx.js'
 import { applyEnv, pickEnv, updateEnv, envLabel, ENV } from './env.js';
 import { BALL, startFootball, updateFootball, clearFootball, footballSamples } from './football.js';
 import { ROYALE, startRoyale, updateRoyale, clearRoyale, royaleSamples } from './royale.js';
-import { playerInput, updateCamera, updateGuide, CAM, releaseLock, lockHint, resetTouch } from './player.js';
+import { playerInput, updateCamera, updateGuide, CAM, releaseLock, lockHint, resetTouch, TOP } from './player.js';
+let topHintT = 0;   // seconds left to show the phone controls hint
 import { makeTag, updateTags, updateHud, feed, announce, tickAnnounce, renderHeroes, showEnd, updateCrateBars } from './hud.js';
 import { updateFx, clearFx, explosion, hitSpark, sporeBurst } from './fx.js';
 import { preloadSfx, unlockAudio, sfx, AU, setSfx, setMusic } from './audio.js';
@@ -61,7 +62,7 @@ function renderMenu(){
   renderHeroes(MENU.hero, id => { MENU.hero = id; store.set('hero', id); sfx('select'); renderMenu(); setPreview(id); });
   for(const b of $('m-diff').querySelectorAll('button')) b.classList.toggle('sel', b.dataset.v === MENU.diff);
   for(const b of $('m-mode').querySelectorAll('.mode-card')) b.classList.toggle('sel', b.dataset.v === MENU.mode);
-  $('howto').textContent = tr(TOUCH ? 'Левый палец — бег, правый — поворот камеры. Кнопка атаки: короткое нажатие — автоприцел, с протяжкой — целишься сам. Звезда — супер.' : 'WASD — бег, мышь — камера и прицел, ЛКМ — атака, ПКМ или E — супер, Esc — пауза.');
+  $('howto').textContent = tr(TOUCH ? 'Левый джойстик — ехать, правый — повернуть башню; толкни его до края — танк стреляет, пока держишь. Звезда — супер туда, куда смотрит пушка.' : 'WASD — бег, мышь — камера и прицел, ЛКМ — атака, ПКМ или E — супер, Esc — пауза.');
 }
 $('m-mode').onclick = e => { const b = e.target.closest('.mode-card'); if(!b || b.dataset.v === MENU.mode) return; MENU.mode = b.dataset.v; store.set('mode', MENU.mode); sfx('select'); renderMenu(); };
 $('m-diff').onclick = e => { const v = e.target.dataset.v; if(!v) return; MENU.diff = v; store.set('diff', v); sfx('click'); renderMenu(); };
@@ -168,7 +169,8 @@ function beginMatch(title, sub){
   $('sp-keys').textContent = tr(scope ? 'E · Пробел' : 'ПКМ · E');
   G.state = 'countdown'; countT = 3.2; lastCount = 4; endT = 0;
   $('menu').hidden = true; $('end').hidden = true; $('hud').hidden = false;
-  $('touch').hidden = !TOUCH; $('superpc').hidden = TOUCH; $('ammopc').hidden = TOUCH; document.body.classList.toggle('touch-on', TOUCH);
+  $('touch').hidden = !TOUCH; $('superpc').hidden = TOUCH; $('ammopc').hidden = TOUCH && !TOP; document.body.classList.toggle('touch-on', TOUCH);
+  document.body.classList.toggle('top-on', TOP); topHintT = TOP ? 9 : 0;
   $('lockhint').hidden = TOUCH;
   const br = G.mode === 'br';
   const ball = G.mode === 'ball';
@@ -337,6 +339,8 @@ function tick(dt){
     camera.lookAt(f.x, 0.8, f.z);
   } else if(G.me) updateCamera(dt);
   updateGuide(); lockHint();
+  if(topHintT > 0 && G.state === 'play') topHintT -= dt;
+  { const v = topHintT > 0 && G.state === 'play' && !G.paused; if($('tophint').hidden === v) $('tophint').hidden = !v; }
   updateFx(dt); updateEnv(dt, G.time);
   updateTags(); updateCrateBars();
   if(G.state !== 'menu') updateHud();

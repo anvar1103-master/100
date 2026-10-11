@@ -85,6 +85,9 @@ export const EN = {
   'снаряд отскакивает от кустов 2 раза, после отскока бьёт сильнее':'the shell bounces off hedges twice, hits harder after a bounce',
   'очередь из 5 снарядов, разброс растёт при стрельбе':'a burst of 5 rounds, the spread grows as you fire',
   'бронебойный на дальнюю дистанцию, урон растёт с расстоянием':'armour-piercing at long range, damage grows with distance',
+  // phone controls
+  'Левый палец — ехать · правый — повернуть башню, до края — огонь':'Left thumb drives · right thumb turns the turret, push to the edge to fire',
+  'Левый джойстик — ехать, правый — повернуть башню; толкни его до края — танк стреляет, пока держишь. Звезда — супер туда, куда смотрит пушка.':'Left stick drives, right stick turns the turret; push it to the edge and the tank fires while you hold. The star fires the super where the gun points.',
   // tank call signs (bot names)
   'Ржавчик':'Rusty', 'Гаечка':'Nutty', 'Болтик':'Bolt', 'Шестерёнка':'Gear', 'Бампер':'Bumper', 'Дизель':'Diesel', 'Трактор':'Tractor', 'Поршень':'Piston', 'Карбюратор':'Carb',
   'Клёпка':'Rivet', 'Броня':'Armor', 'Пыхтун':'Puffer', 'Громыхало':'Rumbler', 'Рычаг':'Lever', 'Домкрат':'Jack', 'Тарахтун':'Rattler', 'Буксир':'Tug', 'Катушка':'Spool',
