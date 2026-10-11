@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#16301E">
+<title>Последний танк</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"../node_modules/three/build/three.module.js","three/addons/":"../node_modules/three/examples/jsm/"}}</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="fogtint" class="fogtint"></div>
+<div id="hud-world" class="hud-world"></div>
+<div id="fps" class="fps" hidden>60 FPS</div>
+
+<!-- ============ battle HUD ============ -->
+<div id="hud" class="hud" hidden>
+  <div class="top">
+    <div class="tscore ally"><span class="gem-ico" id="ico0"></span><b id="sc0">0</b></div>
+    <div class="timer"><b id="timer">3:00</b><small id="mode-lbl">Споры</small></div>
+    <div class="tscore foe"><b id="sc1">0</b><span class="gem-ico" id="ico1"></span></div>
+  </div>
+  <div id="cdown" class="cdown" hidden><b id="cd-n">15</b><span id="cd-t">Споры у нас!</span></div>
+  <div id="feed" class="feed"></div>
+  <div id="ann" class="ann"></div>
+  <div id="dead" class="dead" hidden><span>Возрождение через</span><b id="dead-n">3</b></div>
+  <div id="superpc" class="superpc">
+    <svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34" class="sp-bg"/><circle cx="40" cy="40" r="34" class="sp-fg" id="sp-ring"/></svg>
+    <div class="sp-in"><b>Супер</b><small id="sp-keys">ПКМ · E</small></div>
+  </div>
+  <div id="scope" class="scope" hidden><i class="sc-ring"></i><i class="sc-h"></i><i class="sc-v"></i><b id="sc-charge"></b><span id="sc-hint">Прицел</span></div>
+  <div id="xhair" class="xhair"><i></i><i></i><i></i><i></i><b></b></div>
+  <div id="hitm" class="hitm"><i></i><i></i><i></i><i></i></div>
+  <div id="mehp" class="mehp"><u></u><b></b></div>
+  <div id="ammopc" class="ammopc"><i><u></u></i><i><u></u></i><i><u></u></i></div>
+  <button id="pause-btn" class="pause-btn" aria-label="Пауза"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg></button>
+  <div id="lockhint" class="lockhint" hidden>Щёлкни по полю, чтобы управлять мышью</div>
+  <div id="touch" class="touch" hidden>
+    <div id="stick" class="stick" hidden><i id="knob"></i></div>
+    <button class="tbtn tscope" data-btn="scope" id="b-scope" aria-label="Прицел" hidden><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="15" fill="none" stroke="#fff" stroke-width="3"/><path d="M24 4v12M24 32v12M4 24h12M32 24h12" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="24" r="2.5" fill="#FF5A4A"/></svg></button>
+    <button class="tbtn sup" data-btn="sup" id="b-sup" aria-label="Супер">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" class="sp-bg"/><circle cx="50" cy="50" r="44" class="sp-fg" id="tsp-ring"/></svg>
+      <span class="ico">★</span>
+    </button>
+    <button class="tbtn atk" data-btn="atk" id="b-atk" aria-label="Атака">
+      <svg viewBox="0 0 120 120" aria-hidden="true"><g id="tammo"></g></svg>
+      <span class="ico" id="atk-ico"></span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ menu ============ -->
+<div id="menu" class="screen menu" hidden>
+  <header class="brand"><b class="logo">Последний <i>танк</i></b><span>Танки в лесном лабиринте</span></header>
+  <section class="panel pick">
+    <h2>Выбери танк</h2>
+    <div id="heroes" class="heroes"></div>
+    <div id="hero-info" class="hero-info"></div>
+  </section>
+  <section class="panel mode">
+    <div class="modes" id="m-mode">
+      <button class="mode-card br sel" data-v="br"><span class="shroom-ico big"></span><div><b>Последний танк</b><small>каждый сам за себя · 10 танков в лесном лабиринте, туман сжимается</small></div></button>
+    </div>
+    <div class="row"><span>Боты</span><div class="seg" id="m-diff"><button data-v="easy">Лёгкие</button><button data-v="normal">Обычные</button><button data-v="hard">Сложные</button></div></div>
+    <button id="play" class="play">В бой!</button>
+    <button id="m-set" class="ghost">Настройки</button>
+    <p class="howto" id="howto"></p>
+  </section>
+</div>
+
+<!-- ============ pause ============ -->
+<div id="pause" class="screen modal" hidden>
+  <div class="card">
+    <h2>Пауза</h2>
+    <button id="p-resume" class="play">Продолжить</button>
+    <button id="p-set" class="ghost">Настройки</button>
+    <button id="p-quit" class="ghost">Выйти в меню</button>
+  </div>
+</div>
+
+<!-- ============ settings ============ -->
+<div id="settings" class="screen modal" hidden>
+  <div class="card settings">
+    <h2>Настройки</h2>
+    <div class="row" id="s-gfx-row"><span>Графика</span><div class="seg" id="s-gfx"><button data-v="low">Быстрая</button><button data-v="medium">Средняя</button><button data-v="high">Красивая</button></div></div>
+    <small class="note" id="s-gfx-note">Игра сама снижает качество, если кадров не хватает. При смене графики страница перезагрузится.</small>
+    <div class="row"><label for="s-sens">Чувствительность</label><div class="slide"><input type="range" id="s-sens" min="0.3" max="2.5" step="0.05"><b id="s-sens-v">1.0</b></div></div>
+    <div class="row"><span>Время суток</span><div class="seg" id="s-tod"><button data-v="rand">Случайно</button><button data-v="day">День</button><button data-v="dusk">Закат</button><button data-v="night">Ночь</button></div></div>
+    <div class="row"><span>Сезон</span><div class="seg" id="s-season"><button data-v="rand">Случайно</button><button data-v="summer">Лето</button><button data-v="autumn">Осень</button><button data-v="winter">Зима</button></div></div>
+    <div class="row"><span>Счётчик FPS</span><div class="seg" id="s-fps"><button data-v="0">Выкл</button><button data-v="1">Вкл</button></div></div>
+    <div class="row"><span>Звук</span><div class="seg" id="s-snd"><button data-v="sfx">Эффекты</button><button data-v="music">Музыка</button></div></div>
+    <button id="s-close" class="play">Готово</button>
+  </div>
+</div>
+
+<!-- ============ end of match ============ -->
+<div id="end" class="screen modal end" hidden>
+  <div class="card">
+    <h1 id="e-title">Победа!</h1>
+    <p id="e-sub"></p>
+    <table class="board" id="e-board"></table>
+    <div class="btns"><button id="e-again" class="play">Ещё бой</button><button id="e-menu" class="ghost">В меню</button></div>
+  </div>
+</div>
+
+<div id="load" class="load"><div class="load-in"><b class="logo">Последний <i>танк</i></b><div class="bar"><u id="load-bar"></u></div><small id="load-txt">Танки прогревают моторы…</small></div></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
