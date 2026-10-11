@@ -458,15 +458,21 @@ function crateTex(){
 }
 function buildCrates(){
   A.crates = [];
-  for(let r = 0; r < A.H; r++) for(let c = 0; c < A.W; c++) if(A.rows[r][c] === 'C') A.crates.push({ c, r, x:tileX(c), z:tileZ(r), hp:CRATE_HP, shake:0, rot:Math.floor(rand(0, 4)) * Math.PI / 2, alive:true });
+  // every third crate is an armoured one: twice as tough, more spores inside, a bit bigger and iron-grey
+  for(let r = 0; r < A.H; r++) for(let c = 0; c < A.W; c++) if(A.rows[r][c] === 'C'){
+    const big = A.crates.length % 3 === 1, max = big ? CRATE_HP * 2 : CRATE_HP;
+    A.crates.push({ c, r, x:tileX(c), z:tileZ(r), hp:max, max, big, shake:0, rot:Math.floor(rand(0, 4)) * Math.PI / 2, alive:true });
+  }
   if(!A.crates.length){ crateMesh = null; return; }
   crateMesh = new THREE.InstancedMesh(crateGeo(), stdMat({ map:crateTex(), roughness:0.85 }), A.crates.length);
   crateMesh.castShadow = crateMesh.receiveShadow = true;
-  A.crates.forEach((k, i) => { k.i = i; placeCrate(k); });
+  const tint = new THREE.Color();
+  A.crates.forEach((k, i) => { k.i = i; placeCrate(k); crateMesh.setColorAt(i, tint.set(k.big ? '#8E969A' : '#FFFFFF')); });
+  crateMesh.instanceColor.needsUpdate = true;
   A.group.add(crateMesh);
 }
 function placeCrate(k){
-  const s = k.alive ? 1 : 0, j = k.shake > 0 ? Math.sin(k.shake * 60) * 0.06 * k.shake / 0.2 : 0;
+  const s = k.alive ? (k.big ? 1.15 : 1) : 0, j = k.shake > 0 ? Math.sin(k.shake * 60) * 0.06 * k.shake / 0.2 : 0;
   crateDummy.position.set(k.x + j, 0, k.z); crateDummy.rotation.set(0, k.rot + j, 0); crateDummy.scale.set(s, s * (1 - j * 0.5), s);
   crateDummy.updateMatrix(); crateMesh.setMatrixAt(k.i, crateDummy.matrix); crateMesh.instanceMatrix.needsUpdate = true;
 }
@@ -481,7 +487,7 @@ export function hitCrate(k, dmg){
 // a new match on the same map: every crate stands again
 export function resetCrates(){
   if(!crateMesh) return;
-  for(const k of A.crates){ k.alive = true; k.hp = CRATE_HP; k.shake = 0; A.rows[k.r][k.c] = 'C'; placeCrate(k); }
+  for(const k of A.crates){ k.alive = true; k.hp = k.max || CRATE_HP; k.shake = 0; A.rows[k.r][k.c] = 'C'; placeCrate(k); }
 }
 export function updateCrates(dt){
   if(!crateMesh) return;

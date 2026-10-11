@@ -9,6 +9,7 @@ import { setTankModels } from './tanks.js';
 
 // which model plays which role, its size (hull length, m) and tweaks; paint: colours for untextured materials, by name
 const SPEC = {
+  rookie:{ file:'basic_tank',     len:1.35 },
   shroom:{ file:'heavy_tank',     len:1.45 },
   beetle:{ file:'artillery_tank', len:1.35, restElev:0.35 },
   wasp:  { file:'sniper_tank',    len:1.5, barrelZ:1.45 },

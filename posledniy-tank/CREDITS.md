@@ -4,6 +4,7 @@
 |---|---|---|
 | Камни, кусты, деревья, папоротники, цветы, грибы, клевер, камешки (`src/assets/nature.glb`) | Quaternius, «Stylized Nature MegaKit» — https://quaternius.com/packs/stylizednaturemegakit.html | CC0 1.0 |
 | Тяжёлый танк «Картечник» и лёгкий танк «Рикошет» (`src/assets/tanks/heavy_tank.glb`, `light_tank.glb`) | CptDrunkBear, «N64 Style Tank Models and Textures» — https://opengameart.org/content/n64-style-tank-models-and-textures | CC0 |
+| Стартовый танк «Новобранец» (`src/assets/tanks/basic_tank.glb`; модель упрощена, текстуры камуфляжа нарисованы заново) | konserwa, «panzerkampfwagen III» — https://opengameart.org/content/panzerkampfwagen-iii | CC0 |
 | Ракетный танк «Мортира» (`src/assets/tanks/artillery_tank.glb`) | mutantleg, «Missile Launcher Tank» — https://opengameart.org/content/missile-launcher-tank | CC0 |
 | Танк-снайпер «Дальнобой» (`src/assets/tanks/sniper_tank.glb`) | Adalbertus Michael Georgios Bydgostiensis, «Cool low poly tonk» — https://opengameart.org/content/cool-low-poly-tonk | CC0 |
 | Скорострельный танк «Стрекот» (`src/assets/tanks/rapid_tank.glb`) | mutantleg, «Mini Tank» — https://opengameart.org/content/mini-tank | CC0 |

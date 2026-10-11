@@ -37,6 +37,13 @@ export const HEROES = {
     attack:{ kind:'bounce', name:'Рикошет', range:14, speed:30, dmg:800, bounces:2, ricochet:1.35, reload:1.2, cd:0.38, size:0.2, color:'#BFE6FF' },
     super:{ kind:'bounce', name:'Тройной рикошет', desc:'три рикошетных снаряда веером, каждый отскакивает трижды', count:3, spread:0.32, range:18, speed:32, dmg:950, bounces:3, ricochet:1.2, knock:1.5, size:0.24, color:'#DFF4FF', charge:3000 }
   },
+  // the starter everyone begins the match on; at level 4 it becomes one of the five classes above
+  rookie:{
+    name:'Новобранец', species:'средний танк', role:'Старт', color:'#8A9A5B', hp:3300, speed:5.1, rad:0.52, height:1.0,
+    desc:'С него начинают все. Ломай ящики и копи опыт: на 4-м уровне выберешь класс.',
+    attack:{ kind:'shell', name:'Пушка', range:10, speed:30, dmg:700, reload:1.35, cd:0.45, size:0.15, color:'#FFC46B' },
+    super:{ kind:'none', name:'—', desc:'появится вместе с классом', charge:1e12, color:'#FFE08A' }
+  },
   hopper:{
     name:'Стрекот', species:'скорострельный танк', role:'Автопушка', color:'#5DB83A', hp:3400, speed:5.3, rad:0.5, height:1.0,
     desc:'Спаренная автопушка бьёт очередями. Держи кнопку — разброс растёт, стреляй короткими очередями.',
@@ -44,7 +51,9 @@ export const HEROES = {
     super:{ kind:'frenzy', name:'Шквальный огонь', desc:'4 секунды стреляет быстрее и точнее, очереди длиннее', time:4, color:'#FFE08A', charge:4200 }
   }
 };
-export const HERO_IDS = Object.keys(HEROES);
+// the five classes (menu, class choice); the starter is separate
+export const HERO_IDS = ['shroom', 'beetle', 'wasp', 'roly', 'hopper'];
+export const ALL_IDS = ['rookie', ...HERO_IDS];
 export const AMMO = 3;
 
 const SK = '#FFF0D9'; // light stem colour
@@ -285,6 +294,7 @@ export const ICONS = {
   beetle:tankIcon('#3E5CC8', '#26387E', '<rect x="22" y="17" width="28" height="18" rx="5" fill="#3E5CC8"/>', '<path d="M44 20L58 7L64 12L50 25Z" fill="#2E2E36"/><path d="M56 5L66 13" stroke="#C9A24A" stroke-width="4"/>'),
   wasp:tankIcon('#F2C01E', '#2A2420', '<rect x="24" y="19" width="24" height="15" rx="5" fill="#F2C01E"/><rect x="24" y="23" width="24" height="3" fill="#2A2420"/>', '<rect x="46" y="24" width="24" height="4" rx="2" fill="#34343C"/><rect x="66" y="22" width="5" height="8" rx="1" fill="#2A2420"/>', '<path d="M18 34V48M30 34V48M42 34V48" stroke="#2A2420" stroke-width="3"/>'),
   roly:tankIcon('#6E7FA3', '#4A5575', '<ellipse cx="36" cy="27" rx="15" ry="11" fill="#6E7FA3"/><path d="M22 30Q36 36 50 30" stroke="#B9C4DE" stroke-width="2.5" fill="none"/>', '<rect x="48" y="24" width="16" height="5" rx="2" fill="#3A4463"/><circle cx="62" cy="26.5" r="4" fill="none" stroke="#7FE7FF" stroke-width="2.5"/>'),
+  rookie:tankIcon('#7E8B55', '#56603A', '<rect x="24" y="20" width="24" height="14" rx="4" fill="#7E8B55"/>', '<rect x="46" y="25" width="20" height="4" rx="2" fill="#3A3C38"/>'),
   hopper:tankIcon('#5DB83A', '#3F8A2A', '<rect x="24" y="19" width="24" height="15" rx="5" fill="#5DB83A"/><path d="M28 19V6" stroke="#2E3A2A" stroke-width="1.6"/><circle cx="28" cy="6" r="2" fill="#B6FF5A"/>', '<rect x="46" y="22" width="18" height="3" rx="1.5" fill="#2E3A2A"/><rect x="46" y="28" width="18" height="3" rx="1.5" fill="#2E3A2A"/>')
 };
 export const TAU_ = TAU;
