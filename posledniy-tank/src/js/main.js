@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { $, TOUCH, store, shuffle, esc, TAU } from './util.js';
 import { renderer, scene, camera, resize, applyQuality, setQuality, render, perfWatch, skyTick, buildEnv, bakeSky, sky, Q } from './engine.js';
 import { loadNature } from './assets.js';
+import { loadTanks } from './tankmodels.js';
 import { buildArena, resetCrates, U, A, segHit, blocksSight } from './arena.js';
 import { applyLang, tr, L } from './i18n.js';
 import { G, on } from './state.js';
@@ -23,12 +24,12 @@ import { yaInit, yaLoaded, yaTick, yaInterstitial, YA, onYandex } from './yandex
 
 const MENU = { hero:HEROES[store.get('hero', 'shroom')] ? store.get('hero', 'shroom') : 'shroom', diff:store.get('diff', 'normal'), mode:'br' };   // «Последний танк» has one mode: the royale
 const placeText = n => L.lang === 'en' ? `#${n} place` : `#${n} место`;
-const NAMES = ['Груздь', 'Опёнок', 'Сморчок', 'Рыжик', 'Маслёнок', 'Волнушка', 'Строчок', 'Белянка', 'Ежовик', 'Дубовик', 'Вешенка', 'Короед', 'Шершень', 'Жужелица', 'Щелкун', 'Светлячок', 'Медведка', 'Долгоносик'];
+const NAMES = ['Ржавчик', 'Гаечка', 'Болтик', 'Шестерёнка', 'Бампер', 'Дизель', 'Трактор', 'Поршень', 'Карбюратор', 'Клёпка', 'Броня', 'Пыхтун', 'Громыхало', 'Рычаг', 'Домкрат', 'Тарахтун', 'Буксир', 'Катушка'];
 
 // ---------------- boot ----------------
 if(onYandex()) await yaInit(); else applyLang();
 const setLoad = k => { $('load-bar').style.width = Math.round(k * 100) + '%'; };
-await Promise.all([loadNature(k => setLoad(k * 0.85)), preloadSfx()]);
+await Promise.all([loadNature(k => setLoad(k * 0.7)), loadTanks(), preloadSfx()]);
 setLoad(0.92);
 buildArena('maze');
 { const e = pickEnv(); applyEnv(e.sky, e.season); }
@@ -52,7 +53,7 @@ function setPreview(id){
   const V = makeVisual(id); setTeamLook(V, 'me'); scene.add(V.root);
   const s = A.map.id === 'maze' ? { x:0, z:1.2 } : A.spawns[0][1];
   preview = { V, hop:1.2, f:{ id:99, x:s.x, z:s.z - 1.2, vx:0, vz:0, aim:Math.PI, alive:true, atkT:9, supT:0, flash:0, deadT:0, victory:false } };
-  V.yaw = Math.PI; kick.spawn(V);
+  V.yaw = V.hullYaw = Math.PI + 0.55; preview.f.aim = Math.PI + 0.25; kick.spawn(V);   // three-quarter view, gun toward the camera
 }
 function renderMenu(){
   renderHeroes(MENU.hero, id => { MENU.hero = id; store.set('hero', id); sfx('select'); renderMenu(); setPreview(id); });

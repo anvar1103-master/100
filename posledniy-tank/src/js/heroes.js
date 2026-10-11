@@ -23,10 +23,10 @@ export const HEROES = {
     super:{ kind:'barrage', name:'Ковровый обстрел', desc:'пять мин ложатся дорожкой', count:5, range:12, flight:0.95, radius:1.9, dmg:1050, knock:2.2, step:1.9, color:'#FF5A2E', charge:3900 }
   },
   wasp:{
-    name:'Дальнобой', species:'истребитель танков', role:'Снайпер', color:'#F5C21B', hp:2900, speed:5.2, rad:0.55, height:1.0,
+    name:'Дальнобой', species:'истребитель танков', role:'Снайпер', color:'#F5C21B', hp:3100, speed:5.2, rad:0.48, height:1.0,
     desc:'Длинная пушка: чем дальше цель, тем больнее. Прицел приближает, а выстрел из прицела заряжается до +60% урона.',
     // scope: hold to aim down the sight (zoom, slower steps); the shot charges up to +60% damage, flies further and faster
-    attack:{ kind:'needle', name:'Бронебойный', range:15, speed:40, dmg:900, dmgFar:1650, reload:1.9, cd:0.5, size:0.16, color:'#FFB21E', scope:{ time:0.9, dmg:0.6, range:1.35, speed:1.3, slow:0.5 } },
+    attack:{ kind:'needle', name:'Бронебойный', range:15, speed:40, dmg:1000, dmgFar:1800, reload:1.9, cd:0.5, size:0.16, color:'#FFB21E', scope:{ time:0.9, dmg:0.6, range:1.35, speed:1.3, slow:0.5 } },
     super:{ kind:'beam', name:'Рельсовый луч', desc:'луч прошивает стены и всех на пути', range:21, width:0.75, dmg:2100, windup:0.38, color:'#FFE15A', charge:3600 }
   },
   roly:{

@@ -143,7 +143,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .panel h2{margin:0 0 10px;font:900 20px/1 var(--font-display)}
 .pick{grid-column:1;max-height:100%;overflow:auto}
 .mode{grid-column:3;display:flex;flex-direction:column;gap:12px}
-.heroes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px} .hcard{min-width:0} .hcard b,.hcard small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.heroes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px} .hcard{min-width:0} .hcard b,.hcard small{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hcard{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px 8px;border-radius:16px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 2px rgba(255,255,255,.08);transition:transform .12s}
 .hcard svg{width:100%;max-width:56px;height:auto;aspect-ratio:1;filter:drop-shadow(0 3px 0 rgba(0,0,0,.25))}
 .hcard b{font:900 13px/1 var(--font-display)} .hcard small{font:800 10px/1 var(--font-body);color:var(--muted)}
@@ -254,3 +254,5 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   .mode-card small{display:none} .mode-card b{font-size:16px} .brand .logo{font-size:26px} .brand span{font-size:13px}
   .play{padding:10px;font-size:20px}
 }
+/* long tank names on a narrow portrait phone */
+@media (max-width:440px){ .hcard{padding:8px 0} .heroes{gap:4px} .hcard b{font-size:9.5px;letter-spacing:-.03em} .hcard small{font-size:8.5px} }

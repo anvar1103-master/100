@@ -39,7 +39,7 @@ export const EN = {
   'лето':'summer', 'осень':'autumn', 'зима':'winter',
   'Тихие заводи':'Quiet Backwaters', 'Грибная поляна':'Mushroom Glade',
   // «Последний танк»
-  'Последний танк':'Last Tank', 'Танки в лесном лабиринте':'Tanks in a forest maze', 'Выбери танк':'Pick a tank', 'Танки прогревают моторы…':'Tanks are warming up…',
+  'Последний танк':'Last Tank', 'Последний':'Last', 'танк':'Tank', 'Танки в лесном лабиринте':'Tanks in a forest maze', 'Выбери танк':'Pick a tank', 'Танки прогревают моторы…':'Tanks are warming up…',
   'каждый сам за себя · 10 танков в лесном лабиринте, туман сжимается':'every tank for itself · 10 tanks in a forest maze, the fog closes in',
   'Ты — последний танк!':'You are the last tank standing!', 'Тебя подбил: ':'Knocked out by ', 'Подбит!':'Knocked out!', 'Тебя подбили':'You got knocked out',
   'Картечник':'Buckshot', 'тяжёлый танк':'heavy tank', 'Картечь':'Grapeshot', 'Двойной заряд':'Double Charge', 'картечин веером':'pellets in a fan',
@@ -48,7 +48,7 @@ export const EN = {
   'Бьёт снарядами навесом через кусты. Разрыв оставляет горящую лужу.':'Lobs shells over the hedges. Each blast leaves a burning puddle.',
   'Дальнобой':'Longshot', 'истребитель танков':'tank destroyer', 'Бронебойный':'Armour Piercer', 'Рельсовый луч':'Rail Beam',
   'Длинная пушка: чем дальше цель, тем больнее. Прицел приближает, а выстрел из прицела заряжается до +60% урона.':'A long gun: the further the target, the harder it hits. The scope zooms in, and a scoped shot charges up to +60% damage.',
-  'Рикошет':'Ricochet', 'круглый танк':'round tank', 'Прыгун':'Bouncer', 'Ядро-катун':'Rolling Ball',
+  'круглый танк':'round tank', 'Прыгун':'Bouncer', 'Ядро-катун':'Rolling Ball',
   'Снаряды отскакивают от кустов и достают врага за углом.':'Shells bounce off hedges and reach enemies around corners.',
   'огромное ядро долго скачет по коридорам и бьёт всех на пути':'a huge ball bounces through the corridors for a long time, hitting everyone in its way',
   'лёгкий танк':'light tank', 'Очередь':'Burst',
@@ -72,5 +72,8 @@ export const EN = {
   // bot names
   'Груздь':'Milkcap', 'Опёнок':'Honeycap', 'Сморчок':'Morel', 'Рыжик':'Saffron', 'Маслёнок':'Butterball', 'Волнушка':'Woolly', 'Строчок':'Brainy', 'Белянка':'Whitey',
   'Ежовик':'Hedgehog', 'Дубовик':'Oakcap', 'Вешенка':'Oyster', 'Короед':'Bark Beetle', 'Шершень':'Hornet', 'Жужелица':'Ground Beetle', 'Щелкун':'Clicker',
+  // tank call signs (bot names)
+  'Ржавчик':'Rusty', 'Гаечка':'Nutty', 'Болтик':'Bolt', 'Шестерёнка':'Gear', 'Бампер':'Bumper', 'Дизель':'Diesel', 'Трактор':'Tractor', 'Поршень':'Piston', 'Карбюратор':'Carb',
+  'Клёпка':'Rivet', 'Броня':'Armor', 'Пыхтун':'Puffer', 'Громыхало':'Rumbler', 'Рычаг':'Lever', 'Домкрат':'Jack', 'Тарахтун':'Rattler', 'Буксир':'Tug', 'Катушка':'Spool',
   'Светлячок':'Firefly', 'Медведка':'Mole Cricket', 'Долгоносик':'Weevil'
 };

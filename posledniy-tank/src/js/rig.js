@@ -105,7 +105,7 @@ export function heroMaterial(){
 // inverted hull outline that follows the skin
 export function outlineMaterial(width = 0.022){
   const m = new THREE.MeshBasicMaterial({ color:'#13200F', side:THREE.BackSide });
-  m.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <skinning_vertex>', `#include <skinning_vertex>\n transformed += normalize(objectNormal) * ${width.toFixed(4)};`); };
+  m.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <skinning_vertex>', `#include <skinning_vertex>\n#ifdef USE_SKINNING\n transformed += normalize(objectNormal) * ${width.toFixed(4)};\n#else\n transformed += normalize(normal) * ${width.toFixed(4)};\n#endif`); };
   m.customProgramCacheKey = () => 'outline' + width;
   return m;
 }

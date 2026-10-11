@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { HEROES } from './heroes.js';
 import { tankParts } from './tanks.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { heroMaterial, outlineMaterial, silhouetteMaterial } from './rig.js';
 import { spring, sp, clamp, angDiff, TAU, rand } from './util.js';
 import { Q, LOW } from './engine.js';
@@ -25,6 +26,15 @@ const blobTex = (() => {
 })();
 const blobMat = new THREE.MeshBasicMaterial({ map:blobTex, transparent:true, depthWrite:false });
 const outlineMat = outlineMaterial(0.03);
+// the outline is pushed out along smoothed normals, so the hard-edged low-poly parts get a closed outline, no gaps
+const OLG = new WeakMap();
+function olGeo(geo){
+  if(!OLG.has(geo)){
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', geo.attributes.position);
+    const m = mergeVertices(g, 1e-3); m.computeVertexNormals(); OLG.set(geo, m);
+  }
+  return OLG.get(geo);
+}
 // cartoon eyes on the turret: white balls, dark pupils that look where the turret aims, lids that blink
 const eyeGeo = new THREE.SphereGeometry(1, 14, 10), eyeWhite = new THREE.MeshBasicMaterial({ color:'#FFFFFF' }), eyeDark = new THREE.MeshBasicMaterial({ color:'#16121C' });
 
@@ -39,7 +49,7 @@ export function makeVisual(id){
   const ols = [], meshes = [];
   const part = (geo, parent) => {
     const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.renderOrder = 2; parent.add(m); meshes.push(m);
-    const o = new THREE.Mesh(geo, outlineMat); o.renderOrder = 2; o.visible = !LOW; parent.add(o); ols.push(o);
+    const o = new THREE.Mesh(olGeo(geo), outlineMat); o.renderOrder = 2; o.visible = !LOW; parent.add(o); ols.push(o);
     const s = new THREE.Mesh(geo, silMat); s.renderOrder = 1; parent.add(s);
     return m;
   };
