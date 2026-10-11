@@ -4,6 +4,7 @@ import { $, TOUCH, store, shuffle, esc, TAU } from './util.js';
 import { renderer, scene, camera, resize, applyQuality, setQuality, render, perfWatch, skyTick, buildEnv, bakeSky, sky, Q } from './engine.js';
 import { loadNature } from './assets.js';
 import { loadTanks } from './tankmodels.js';
+import { renderTankIcons } from './icons.js';
 import { buildArena, resetCrates, U, A, segHit, blocksSight } from './arena.js';
 import { applyLang, tr, L } from './i18n.js';
 import { G, on } from './state.js';
@@ -31,6 +32,7 @@ if(onYandex()) await yaInit(); else applyLang();
 const setLoad = k => { $('load-bar').style.width = Math.round(k * 100) + '%'; };
 await Promise.all([loadNature(k => setLoad(k * 0.7)), loadTanks(), preloadSfx()]);
 setLoad(0.92);
+renderTankIcons();
 buildArena('maze');
 { const e = pickEnv(); applyEnv(e.sky, e.season); }
 buildMine();

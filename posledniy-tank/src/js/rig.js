@@ -102,6 +102,21 @@ export function heroMaterial(){
   m.customProgramCacheKey = () => 'hero';
   return m;
 }
+// textured tank paint: o = { map, color, vertexColors }; u = uniforms shared by all of one tank's pieces —
+// uFlash (white hit flash), uTint (added light: shield shimmer, frenzy glow), uBurn (0..1, the wreck chars black)
+export function tankUniforms(){ return { uFlash:{ value:0 }, uTint:{ value:new THREE.Color(0, 0, 0) }, uBurn:{ value:0 } }; }
+export function tankMaterial(o, u){
+  const m = stdMat({ roughness:0.82, metalness:0.12, ...o });
+  m.userData.u = u;
+  m.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, u);
+    sh.fragmentShader = 'uniform float uFlash; uniform vec3 uTint; uniform float uBurn;\n' + sh.fragmentShader
+      .replace('#include <color_fragment>', '#include <color_fragment>\n diffuseColor.rgb *= 1.0 - uBurn * 0.82;')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += vec3(uFlash) + uTint;');
+  };
+  m.customProgramCacheKey = () => 'tank';
+  return m;
+}
 // inverted hull outline that follows the skin
 export function outlineMaterial(width = 0.022){
   const m = new THREE.MeshBasicMaterial({ color:'#13200F', side:THREE.BackSide });
