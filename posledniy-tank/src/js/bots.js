@@ -8,7 +8,7 @@ import { bankShot } from './player.js';
 import { rand, clamp, angDiff, TAU } from './util.js';
 
 export const SKILL = { easy:{ err:0.22, react:0.6, lead:0.4, dodge:0.2 }, normal:{ err:0.11, react:0.35, lead:0.75, dodge:0.5 }, hard:{ err:0.05, react:0.18, lead:1, dodge:0.85 } };
-const PREF = { shroom:0.5, beetle:0.72, wasp:0.82, roly:0.62, hopper:0.6 };
+const PREF = { rookie:0.7, shroom:0.5, beetle:0.72, wasp:0.82, roly:0.62, hopper:0.6 };
 
 export function newBot(skill = 'normal'){
   return { S:SKILL[skill], temper:rand() < 0.55 ? 'careful' : 'bold', path:null, pathT:0, gx:null, gz:null, mode:'idle', target:null, seenT:0, mem:new Map(), strafe:rand() < 0.5 ? -1 : 1, strafeT:rand(0.6, 1.6), thinkT:0, holdX:0, holdZ:0, stuck:0, lx:0, lz:0 };

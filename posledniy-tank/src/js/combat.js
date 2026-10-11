@@ -11,6 +11,7 @@ import { clamp, rand, TAU, lerp } from './util.js';
 import { sfx } from './audio.js';
 import { damageCrateAt, damageCratesIn, damageCrate, ROYALE } from './royale.js';
 import { makeBolt, moveBolt, freeBolt, flashAt, scorchAt } from './shotfx.js';
+import { resetProgress } from './progress.js';
 
 export const SHOT_Y = 0.75;
 export const REGEN_DELAY = 3, REGEN_RATE = 0.13;
@@ -41,7 +42,7 @@ export function lookFor(f){ return f === G.me ? 'me' : G.me && f.team === G.me.t
 export function spawn(f, at){
   const list = A.spawns[f.team] || A.spawns.ffa;
   const p = at || list[(f.slot ?? 0) % list.length];
-  if(!at){ f.power = 0; f.pow = f.pow0; f.max = Math.round(f.H.hp * f.pow0 * (f.hpMul || 1)); }
+  if(!at) resetProgress(f);   // a new match: level 1, no upgrades, full health
   f.x = p.x; f.z = p.z; f.vx = f.vz = f.kx = f.kz = 0;
   f.alive = true; f.hp = f.max; f.ammo = AMMO; f.cdT = 0; f.deadT = 0; f.spawnT = 0; f.shieldT = SPAWN_SHIELD; f.regenT = 0;
   // face the enemy side (or the middle of the map when everyone is on their own)

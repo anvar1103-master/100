@@ -1,5 +1,5 @@
 // «Последний гриб» (battle royale): ten fighters, each on their own, no respawns.
-// Poison fog closes in from the edges; crates and fallen fighters drop power spores (+damage, +health).
+// Poison fog closes in from the edges; crates and fallen fighters drop power spores — experience (progress.js).
 import * as THREE from 'three';
 import { scene, stdMat, LOW } from './engine.js';
 import { G, emit, on } from './state.js';
@@ -7,6 +7,7 @@ import { A, collide, crateAt, hitCrate, updateCrates, colOf, rowOf, tileAt } fro
 import { glow, smoke, puff, ring, sporeBurst, dmgNumber } from './fx.js';
 import { rand, TAU, clamp } from './util.js';
 import { sfx } from './audio.js';
+import { addXP, PROG } from './progress.js';
 
 // fog: waits, then shrinks to a small circle in the middle; damage grows the longer the match lasts.
 // It closes slowly while the field is full and hurries once only a few fighters are left, so the last ones meet in
@@ -74,19 +75,16 @@ export function startRoyale(){
 }
 export function clearRoyale(){ removeFog(); $tint(0); }
 
-// a fighter's power: every spore adds damage and health
+// a spore picked up: experience
 export function addPowerTo(f, n = 1){
-  f.power = (f.power || 0) + n;
-  const P = ROYALE.power;
-  f.pow = (f.pow0 || 1) * (1 + P.dmg * f.power);
-  f.max += P.hp * n; f.hp = Math.min(f.max, f.hp + P.hp * n);
-  if(f === G.me || f.seen) dmgNumber(f.x, f.H.height + 0.3, f.z, P.hp * n, 'heal');
+  addXP(f, PROG.orbXP * n);
+  if(f === G.me) dmgNumber(f.x, f.H.height + 0.3, f.z, PROG.orbXP * n, 'xp');
 }
 
 on('kill', (f, src) => {
   const M = G.match; if(!M || M.mode !== 'br' || M.over) return;
-  // a fallen fighter spills their power (at least one)
-  const n = Math.max(1, f.power || 0);
+  // a fallen tank spills spores: more the higher its level
+  const n = Math.max(2, (f.lvl || 1) - 1);
   for(let i = 0; i < n; i++){ const a = i / n * TAU + rand(-0.3, 0.3), s = rand(1.2, 2.6); addPower(f.x, f.z, Math.sin(a) * s, Math.cos(a) * s, rand(3, 5)); }
   M.alive = G.fighters.filter(o => o.alive).length;
   f.place = M.alive + 1;
@@ -103,7 +101,9 @@ on('crateBreak', k => {
   puff(smoke, k.x, 0.6, k.z, { n:14, color:'#A87645', sp:3, upMin:0.4, vy:3, life:0.7, s0:0.25, s1:0.08, grav:6, drag:1.5 });
   sporeBurst(k.x, 0.7, k.z, '#FFC93C', 14);
   sfx('hit_wall', k, 1.3, 0.6);
-  addPower(k.x, k.z, rand(-0.6, 0.6), rand(-0.6, 0.6), 5);
+  // an ordinary crate holds two spores, an armoured one six
+  const n = k.big ? 6 : 2;
+  for(let i = 0; i < n; i++){ const a = i / n * TAU + rand(-0.4, 0.4), s = rand(0.5, 1.6); addPower(k.x, k.z, Math.sin(a) * s, Math.cos(a) * s, rand(4, 5.5)); }
 });
 
 // shots, blasts and beams damage crates through these helpers (called from combat.js)
@@ -181,7 +181,7 @@ export function updateRoyale(dt, t){
       removePickup(i); addPowerTo(f, 1);
       puff(glow, f.x, 1.0, f.z, { n:12, color:'#FFD45A', sp:2, vy:1.5, life:0.45, s0:0.18, s1:0.02, soft:true });
       ring(f.x, f.z, 0.3, 1.2, 0.4, '#FFC93C');
-      sfx('gem', f, f === G.me ? 1 : 0.6, 0.85 + Math.min(10, f.power) * 0.03);
+      sfx('gem', f, f === G.me ? 1 : 0.6, 0.85 + Math.min(10, f.lvl || 1) * 0.03);
       emit('power', f);
       break;
     }

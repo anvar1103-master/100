@@ -8,7 +8,8 @@ import { renderTankIcons } from './icons.js';
 import { buildArena, resetCrates, U, A, segHit, blocksSight } from './arena.js';
 import { applyLang, tr, L } from './i18n.js';
 import { G, on } from './state.js';
-import { HEROES, HERO_IDS } from './heroes.js';
+import { HEROES, HERO_IDS, ALL_IDS } from './heroes.js';
+import { updateProgressUI, addXP, spend, evolve, PROG } from './progress.js';
 import { effectSamples, makeFighter, removeFighters, spawn, stepFighter, updateShots, updateLobs, updatePuddles, updateBeams, updateFighterVisuals, damage } from './combat.js';
 import { makeVisual, animate, setTeamLook, kick, disposeVisual } from './anim.js';
 import { newBot, botThink } from './bots.js';
@@ -26,7 +27,7 @@ import { yaInit, yaLoaded, yaTick, yaInterstitial, YA, onYandex } from './yandex
 
 const MENU = { hero:HEROES[store.get('hero', 'shroom')] ? store.get('hero', 'shroom') : 'shroom', diff:store.get('diff', 'normal'), mode:'br' };   // «Последний танк» has one mode: the royale
 const placeText = n => L.lang === 'en' ? `#${n} place` : `#${n} место`;
-const NAMES = ['Ржавчик', 'Гаечка', 'Болтик', 'Шестерёнка', 'Бампер', 'Дизель', 'Трактор', 'Поршень', 'Карбюратор', 'Клёпка', 'Броня', 'Пыхтун', 'Громыхало', 'Рычаг', 'Домкрат', 'Тарахтун', 'Буксир', 'Катушка'];
+const NAMES = ['Ржавчик', 'Гаечка', 'Болтик', 'Шестерёнка', 'Бампер', 'Дизель', 'Трактор', 'Поршень', 'Карбюратор', 'Клёпка', 'Траки', 'Пыхтун', 'Громыхало', 'Рычаг', 'Домкрат', 'Тарахтун', 'Буксир', 'Катушка'];
 
 // ---------------- boot ----------------
 if(onYandex()) await yaInit(); else applyLang();
@@ -41,9 +42,9 @@ applyQuality();
 addEventListener('resize', resize);
 // warm up: put one of every effect in the scene and compile all shaders now, not during the first fight
 {
-  const samples = effectSamples().concat(royaleSamples(), footballSamples(), shotFxSamples(HERO_IDS.flatMap(h => [HEROES[h].attack.color, HEROES[h].super.color]))); samples.forEach(m => scene.add(m));
+  const samples = effectSamples().concat(royaleSamples(), footballSamples(), shotFxSamples(ALL_IDS.flatMap(h => [HEROES[h].attack.color, HEROES[h].super.color]))); samples.forEach(m => scene.add(m));
   explosion(0, 0, 1.7); hitSpark(0, 1, 0, '#fff'); sporeBurst(0, 1, 0, '#fff', 4);
-  for(const H of HERO_IDS){ const V = makeVisual(H); scene.add(V.root); samples.push(V.root); }
+  for(const H of ALL_IDS){ const V = makeVisual(H); scene.add(V.root); samples.push(V.root); }
   try{ renderer.compile(scene, camera); }catch(e){}
   samples.forEach(m => scene.remove(m)); clearFx(); G.shake = 0;
 }
@@ -149,12 +150,15 @@ function startRoyaleMatch(opts){
   useArena('maze');
   startRoyale(); leftShown = 0;
   const names = shuffle([...NAMES]);
-  const myHero = opts.hero || MENU.hero;
+  // everyone starts on the same «Новобранец» and picks a class at level 4 (progress.js); bots know theirs from the
+  // start (f.plan). Tests may start the player straight in a class with opts.hero.
+  const myHero = opts.hero && HEROES[opts.hero] ? opts.hero : PROG.start;
   const spots = shuffle(A.spawns.ffa.map((s, i) => i));
+  const plans = shuffle(HERO_IDS.concat(HERO_IDS));
   for(let i = 0; i < ROYALE.fighters; i++){
     const isMe = i === 0;
-    const f = makeFighter({ name:isMe ? tr('Ты') : tr(names.pop()), team:i, hero:isMe ? myHero : HERO_IDS[Math.floor(Math.random() * HERO_IDS.length)], isMe });
-    f.slot = spots[i % spots.length]; f.gemsPicked = 0; f.hpMul = ROYALE.hp;
+    const f = makeFighter({ name:isMe ? tr('Ты') : tr(names.pop()), team:i, hero:isMe ? myHero : PROG.start, isMe });
+    f.slot = spots[i % spots.length]; f.gemsPicked = 0; f.hpMul = ROYALE.hp; f.plan = plans[i % plans.length];
     if(isMe) G.me = f; else f.bot = newBot(opts.diff || MENU.diff);
   }
   for(const f of G.fighters){ makeTag(f); spawn(f); }
@@ -174,7 +178,7 @@ function beginMatch(title, sub){
   $('lockhint').hidden = TOUCH;
   const br = G.mode === 'br';
   const ball = G.mode === 'ball';
-  $('ico0').className = br ? 'shroom-ico' : ball ? 'ball-ico' : 'gem-ico'; $('ico1').className = br ? 'gem-ico gold' : ball ? 'ball-ico' : 'gem-ico';
+  $('ico0').className = br ? 'shroom-ico' : ball ? 'ball-ico' : 'gem-ico'; $('ico1').className = br ? 'star-ico' : ball ? 'ball-ico' : 'gem-ico';
   announce(title, tr(sub) + ' · ' + tr(envLabel()), 'sun', 2.6);
 }
 function countdown(dt){
@@ -340,10 +344,11 @@ function tick(dt){
   } else if(G.me) updateCamera(dt);
   updateGuide(); lockHint();
   if(topHintT > 0 && G.state === 'play') topHintT -= dt;
-  { const v = topHintT > 0 && G.state === 'play' && !G.paused; if($('tophint').hidden === v) $('tophint').hidden = !v; }
+  { const v = topHintT > 0 && G.state === 'play' && !G.paused && $('evo').hidden; if($('tophint').hidden === v) $('tophint').hidden = !v; }   // the class choice wins over the hint
   updateFx(dt); updateEnv(dt, G.time);
   updateTags(); updateCrateBars();
   if(G.state !== 'menu') updateHud();
+  updateProgressUI();
   tickAnnounce(dt);
   sky.position.copy(camera.position);
 }
@@ -375,7 +380,7 @@ window.__bg = {
   env(sky, season){ applyEnv(sky, season); }, get envNow(){ return { ...ENV }; },
   info:() => ({ calls:renderer.info.render.calls, tris:renderer.info.render.triangles, geos:renderer.info.memory.geometries, tex:renderer.info.memory.textures, progs:renderer.info.programs.length, PR:Q.PR, post:Q.post }),
   post(v){ Q.post = !!v && !!Q.composer; Q.noPost = !v; },
-  pause:setPause, tr, L, tick, dmg:damage,
+  pause:setPause, tr, L, tick, dmg:damage, prog:{ addXP, spend, evolve, PROG },
   // frame-time benchmark for tools: n frames of game update + render, waiting for the GPU each frame
   bench(n = 60, pr){ if(pr){ renderer.setPixelRatio(pr); resize(); } const gl = renderer.getContext(), t0 = performance.now(); const px = new Uint8Array(4); for(let i = 0; i < n; i++){ tick(1 / 60); render(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); } return (performance.now() - t0) / n; }
 };

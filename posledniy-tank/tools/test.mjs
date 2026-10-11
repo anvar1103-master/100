@@ -2,7 +2,8 @@
 //   node tools/test.mjs          — tests the source (src/)
 //   node tools/test.mjs --dist   — tests the release build (dist/web, run npm run build first)
 // It serves the repo on a local port, blocks every outside request, then:
-//   loads the game, plays one royale per tank to the end, checks the English screen has no Russian left.
+//   loads the game, plays one royale per tank class to the end, checks the progression (start on the Recruit, upgrades,
+//   class choice, bots growing) and that the English screen has no Russian left.
 import http from 'http'; import fs from 'fs'; import path from 'path';
 import { chromium } from 'playwright';
 
@@ -42,6 +43,21 @@ console.log('«Последний танк» test:', PAGE);
     ok(s.state === 'end' && s.mode === 'br' && s.place >= 1, `${hero}: royale ends (#${s.place}, ${s.t} s, fog ${s.fog} m, ${r.knock} knocked out, ${r.crates} crates, ${r.power} power picked)`);
     ok(r.crates > 0 && r.knock > 0, `${hero}: crates break and tanks fight`);
   }
+  // progression: everyone starts on the Recruit; the player's upgrade button and class choice work; bots level up,
+  // spend their points and take classes by themselves
+  const pr = await page.evaluate(() => {
+    __bg.start({ mode:'br', skipCount:true });
+    const G = __bg.G, me = G.me, start = G.fighters.every(f => f.hero === 'rookie');
+    __bg.prog.addXP(me, 400); __bg.tick(1 / 30);
+    document.querySelector('#ups-list [data-up="hp"]').click(); __bg.tick(1 / 30);
+    const evoShown = !document.getElementById('evo').hidden;
+    document.querySelector('#evo-list [data-c="shroom"]').click();
+    const cls = me.hero, up = me.up.hp;   // read before the autopilot: as a bot the player spends points by itself
+    __bg.autopilot(true); __bg.sim(70);
+    return { start, up, evoShown, cls, evolved:G.fighters.filter(f => f.hero !== 'rookie').length, maxLvl:Math.max(...G.fighters.map(f => f.lvl)) };
+  });
+  ok(pr.start && pr.up === 1 && pr.evoShown && pr.cls === 'shroom', 'progression: start on the Recruit, upgrade button, class choice');
+  ok(pr.evolved >= 4 && pr.maxLvl >= 5, `progression: bots level up and take classes (${pr.evolved} of 10 with a class, top level ${pr.maxLvl})`);
   ok(errors.length === 0, 'no script errors' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
   ok(outside.length === 0, 'no requests to other sites' + (outside.length ? ': ' + outside.slice(0, 3).join(', ') : ''));
   await ctx.close();

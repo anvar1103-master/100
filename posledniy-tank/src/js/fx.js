@@ -100,7 +100,7 @@ const nums = [];
 export function dmgNumber(x, y, z, val, kind){
   const el = document.createElement('div');
   el.className = 'dnum ' + (kind || '');
-  el.textContent = kind === 'heal' ? '+' + Math.round(val) : Math.round(val);
+  el.textContent = kind === 'heal' ? '+' + Math.round(val) : kind === 'xp' ? '+' + Math.round(val) + ' XP' : Math.round(val);
   $('hud-world').appendChild(el);
   nums.push({ el, x:x + rand(-0.3, 0.3), y, z:z + rand(-0.3, 0.3), t:0, life:0.9 });
 }

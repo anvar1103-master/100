@@ -88,8 +88,14 @@ export const EN = {
   // phone controls
   'Левый палец — ехать · правый — повернуть башню, до края — огонь':'Left thumb drives · right thumb turns the turret, push to the edge to fire',
   'Левый джойстик — ехать, правый — повернуть башню; толкни его до края — танк стреляет, пока держишь. Звезда — супер туда, куда смотрит пушка.':'Left stick drives, right stick turns the turret; push it to the edge and the tank fires while you hold. The star fires the super where the gun points.',
+  // progression
+  'Новобранец':'Recruit', 'средний танк':'medium tank', 'Старт':'Starter', 'Пушка':'Cannon', 'появится вместе с классом':'comes with the class',
+  'С него начинают все. Ломай ящики и копи опыт: на 4-м уровне выберешь класс.':'Everyone starts on it. Break crates and gain experience: at level 4 you pick a class.',
+  'Ур.':'Lv', 'Очки прокачки: ':'Upgrade points: ', 'Перезарядка':'Reload', 'Уровень 4 — выбери класс танка':'Level 4 — pick your tank class',
+  'Классы танков':'Tank classes', 'Все начинают на «Новобранце». Ломай ящики и копи опыт — на 4-м уровне выберешь один из классов:':'Everyone starts on the Recruit. Break crates and gain experience — at level 4 you pick one of the classes:',
+  '+12% прочности':'+12% armour', '+8% урона':'+8% damage', '+9% быстрее':'+9% faster', '+7% дальше':'+7% further', '+5% быстрее ход':'+5% faster driving',
   // tank call signs (bot names)
   'Ржавчик':'Rusty', 'Гаечка':'Nutty', 'Болтик':'Bolt', 'Шестерёнка':'Gear', 'Бампер':'Bumper', 'Дизель':'Diesel', 'Трактор':'Tractor', 'Поршень':'Piston', 'Карбюратор':'Carb',
-  'Клёпка':'Rivet', 'Броня':'Armor', 'Пыхтун':'Puffer', 'Громыхало':'Rumbler', 'Рычаг':'Lever', 'Домкрат':'Jack', 'Тарахтун':'Rattler', 'Буксир':'Tug', 'Катушка':'Spool',
+  'Клёпка':'Rivet', 'Траки':'Tracks', 'Броня':'Armour', 'Пыхтун':'Puffer', 'Громыхало':'Rumbler', 'Рычаг':'Lever', 'Домкрат':'Jack', 'Тарахтун':'Rattler', 'Буксир':'Tug', 'Катушка':'Spool',
   'Светлячок':'Firefly', 'Медведка':'Mole Cricket', 'Долгоносик':'Weevil'
 };

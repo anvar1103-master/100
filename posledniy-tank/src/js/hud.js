@@ -38,8 +38,9 @@ export function updateTags(){
     if(T.last.sp !== sp){ T.el.classList.toggle('spotted', sp); T.last.sp = sp; }
     const hp = Math.max(0, Math.ceil(f.hp)), pct = (hp / f.max * 100).toFixed(1) + '%';
     if(T.last.hp !== hp){ T.u.style.width = pct; T.s.style.width = pct; T.b.textContent = hp; T.last.hp = hp; }
-    const gm = G.match && G.match.mode === 'br' ? f.power || 0 : f.gems;
-    if(T.last.gems !== gm){ T.gm.hidden = !gm; T.gmb.textContent = gm; T.last.gems = gm; }
+    // the royale shows each tank's level (★), the other modes the spores it carries
+    const br = G.match && G.match.mode === 'br', gm = br ? f.lvl || 1 : f.gems;
+    if(T.last.gems !== gm){ T.gm.hidden = !gm; T.gm.classList.toggle('lvl', !!br); T.gmb.textContent = gm; T.last.gems = gm; }
     const ready = f.charge >= 1;
     if(T.last.ready !== ready){ T.el.classList.toggle('ready', ready); T.last.ready = ready; }
     if(T.am.length) T.am.forEach((el, i) => { const k = clamp(f.ammo - i, 0, 1); el.firstChild.style.width = (k * 100).toFixed(0) + '%'; el.classList.toggle('full', k >= 1); });
@@ -66,7 +67,7 @@ export function updateCrateBars(){
     V3.set(k.x, 1.45, k.z).project(camera);
     B.el.style.transform = `translate(${((V3.x * 0.5 + 0.5) * w).toFixed(1)}px,${((-V3.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(-50%,-100%) scale(${sc.toFixed(2)})`;
     const hp = Math.max(0, Math.ceil(k.hp));
-    if(B.hp !== hp){ B.u.style.width = (hp / CRATE_HP * 100).toFixed(1) + '%'; B.b.textContent = hp; B.hp = hp; }
+    if(B.hp !== hp){ B.u.style.width = (hp / (k.max || CRATE_HP) * 100).toFixed(1) + '%'; B.b.textContent = hp; B.hp = hp; B.el.classList.toggle('big', !!k.big); }
   }
 }
 export function clearCrateBars(){ for(const k of A.crates || []) if(k.bar){ k.bar.el.remove(); k.bar = null; } }
@@ -79,7 +80,7 @@ export function updateHud(){
   const mt = me.team, br = M.mode === 'br';
   if(br){
     // fighters left · time until the fog moves (or the fog label while it closes in) · your power
-    setText('sc0', M.alive); setText('sc1', me.power || 0);
+    setText('sc0', M.alive); setText('sc1', me.lvl || 1);
     const wait = ROYALE.wait - M.t;
     setText('timer', wait > 0 ? fmt(wait) : '☁');
     setText('mode-lbl', tr(wait > 0 ? 'Туман' : M.fog.r > ROYALE.r1 ? 'Туман идёт' : 'Финал'));
@@ -94,7 +95,8 @@ export function updateHud(){
     if(n !== lastCd){ $('cd-n').textContent = n; cd.classList.remove('pulse'); void cd.offsetWidth; cd.classList.add('pulse'); lastCd = n; }
     $('cd-t').textContent = ours ? tr('Держим споры!') : tr('Враг уносит споры!');
   } else { cd.hidden = true; lastCd = null; }
-  // super meter
+  // super meter (the starter tank has no super: the button waits for a class)
+  const noSup = me.H.super.kind === 'none'; if(updateHud.noSup !== noSup){ updateHud.noSup = noSup; $('superpc').style.visibility = $('b-sup').style.visibility = noSup ? 'hidden' : ''; }
   const k = me.charge, ready = k >= 1;
   $('sp-ring').style.strokeDashoffset = (214 * (1 - k)).toFixed(1);
   $('superpc').classList.toggle('ready', ready);
@@ -205,8 +207,8 @@ function showEndRoyale(result){
   $('e-sub').textContent = (result === 'win' ? tr('Ты — последний танк!') : k && k !== me ? tr('Тебя подбил: ') + k.name : tr('Тебя накрыл ядовитый туман.')) +
     ' · ' + tr('Очки') + ': +' + pts + (kb ? ' +' + kb + ' ⚔' : '') + ' (' + tr('всего') + ' ' + ROYALE_TOTAL.v + ')';
   const rows = [...G.fighters].sort((a, b) => (a.place || 0) - (b.place || 0) || b.kills - a.kills);
-  const pw = '<span class="gem-ico gold"></span>';
+  const pw = '★';
   $('e-board').classList.add('br');
-  $('e-board').innerHTML = rows.map(f => `<tr class="t${f === me ? 0 : 1}${f === me ? ' me' : ''}${f.alive ? '' : ' out'}"><td class="pl">${f.place ? '#' + f.place : '—'}</td><td>${ICONS[f.hero]}</td><td>${esc(f.name)}</td><td>⚔ ${f.kills}</td><td>${pw} ${f.power || 0}</td><td>${Math.round(f.dmgDone)}</td></tr>`).join('');
+  $('e-board').innerHTML = rows.map(f => `<tr class="t${f === me ? 0 : 1}${f === me ? ' me' : ''}${f.alive ? '' : ' out'}"><td class="pl">${f.place ? '#' + f.place : '—'}</td><td>${ICONS[f.hero]}</td><td>${esc(f.name)}</td><td>⚔ ${f.kills}</td><td>${pw} ${f.lvl || 1}</td><td>${Math.round(f.dmgDone)}</td></tr>`).join('');
   $('end').hidden = false;
 }

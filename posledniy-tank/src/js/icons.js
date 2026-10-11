@@ -2,7 +2,7 @@
 // off-screen picture (three-quarter view, soft studio light) that replaces the drawn SVG icon.
 import * as THREE from 'three';
 import { renderer } from './engine.js';
-import { HERO_IDS, ICONS } from './heroes.js';
+import { ALL_IDS, ICONS } from './heroes.js';
 import { makeVisual, disposeVisual } from './anim.js';
 
 export function renderTankIcons(size = 128){
@@ -18,7 +18,7 @@ export function renderTankIcons(size = 128){
     const prevTarget = renderer.getRenderTarget(), prevClear = renderer.getClearColor(new THREE.Color()), prevAlpha = renderer.getClearAlpha();
     const prevShadow = renderer.shadowMap.enabled; renderer.shadowMap.enabled = false;
     renderer.setClearColor(0x000000, 0);
-    for(const id of HERO_IDS){
+    for(const id of ALL_IDS){
       const V = makeVisual(id);
       V.ring.visible = V.blob.visible = false;
       V.hull.rotation.y = 0; V.turret.rotation.y = 0.35; V.barrel.rotation.x = -(V.P.restElev || 0);
