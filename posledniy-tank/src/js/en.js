@@ -72,6 +72,19 @@ export const EN = {
   // bot names
   'Груздь':'Milkcap', 'Опёнок':'Honeycap', 'Сморчок':'Morel', 'Рыжик':'Saffron', 'Маслёнок':'Butterball', 'Волнушка':'Woolly', 'Строчок':'Brainy', 'Белянка':'Whitey',
   'Ежовик':'Hedgehog', 'Дубовик':'Oakcap', 'Вешенка':'Oyster', 'Короед':'Bark Beetle', 'Шершень':'Hornet', 'Жужелица':'Ground Beetle', 'Щелкун':'Clicker',
+  // tank weapons (shells, rockets, tracers)
+  'Штурмовик':'Assault', 'Артиллерия':'Artillery', 'Автопушка':'Autocannon', 'ракетный танк':'rocket tank', 'скорострельный танк':'rapid-fire tank',
+  'Толстая короткая пушка бьёт фугасами: взрыв задевает и тех, кто стоит рядом с целью.':'A short, thick gun fires high-explosive shells: the blast also hits whoever stands next to the target.',
+  'Фугас':'HE Shell', 'Двойной залп':'Double Salvo', 'два тяжёлых фугаса подряд, взрывы отбрасывают врагов':'two heavy HE shells in a row, the blasts throw enemies back',
+  'Пускает ракеты навесом через кусты. Разрыв поджигает землю.':'Fires rockets in an arc over the hedges. The blast sets the ground on fire.',
+  'Ракета':'Rocket', 'Залп ракет':'Rocket Salvo', 'пять ракет ложатся дорожкой':'five rockets land in a line',
+  'Подкалиберный':'Sabot Round', 'снаряд пробивает стены и всех на линии':'the round goes through walls and everyone in line',
+  'Тройной рикошет':'Triple Ricochet', 'три рикошетных снаряда веером, каждый отскакивает трижды':'three ricochet shells in a fan, each bounces three times',
+  'Шквальный огонь':'Hail of Fire',
+  'фугас: взрыв задевает и тех, кто рядом':'HE shell: the blast also hits those nearby', 'ракета навесом через кусты, поджигает землю':'a rocket over the hedges, sets the ground on fire',
+  'снаряд отскакивает от кустов 2 раза, после отскока бьёт сильнее':'the shell bounces off hedges twice, hits harder after a bounce',
+  'очередь из 5 снарядов, разброс растёт при стрельбе':'a burst of 5 rounds, the spread grows as you fire',
+  'бронебойный на дальнюю дистанцию, урон растёт с расстоянием':'armour-piercing at long range, damage grows with distance',
   // tank call signs (bot names)
   'Ржавчик':'Rusty', 'Гаечка':'Nutty', 'Болтик':'Bolt', 'Шестерёнка':'Gear', 'Бампер':'Bumper', 'Дизель':'Diesel', 'Трактор':'Tractor', 'Поршень':'Piston', 'Карбюратор':'Carb',
   'Клёпка':'Rivet', 'Броня':'Armor', 'Пыхтун':'Puffer', 'Громыхало':'Rumbler', 'Рычаг':'Lever', 'Домкрат':'Jack', 'Тарахтун':'Rattler', 'Буксир':'Tug', 'Катушка':'Spool',

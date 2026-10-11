@@ -6,7 +6,7 @@ import { $, esc, TOUCH, clamp, store } from './util.js';
 import { HEROES, HERO_IDS, ICONS, AMMO } from './heroes.js';
 import { lookFor, spotted } from './combat.js';
 import { AIM, CAM } from './player.js';
-import { sightClear } from './arena.js';
+import { sightClear, segHit, A, CRATE_HP } from './arena.js';
 import { SPORES } from './mode.js';
 import { tr, L } from './i18n.js';
 import { ROYALE } from './royale.js';
@@ -45,6 +45,31 @@ export function updateTags(){
     if(T.am.length) T.am.forEach((el, i) => { const k = clamp(f.ammo - i, 0, 1); el.firstChild.style.width = (k * 100).toFixed(0) + '%'; el.classList.toggle('full', k >= 1); });
   }
 }
+
+// ---------------- crate health bars: over every crate near you that you can see on screen ----------------
+export function updateCrateBars(){
+  const w = innerWidth, h = innerHeight, me = G.me, on = me && G.state !== 'menu' && $('end').hidden;
+  for(const k of A.crates || []){
+    let B = k.bar;
+    const d = on && k.alive ? Math.hypot(k.x - me.x, k.z - me.z) : 99;
+    // only crates you could see: no hedge between you and the crate's near side
+    const near = d < 13 && (d < 1.2 || segHit(me.x, me.z, k.x + (me.x - k.x) / d * 0.95, k.z + (me.z - k.z) / d * 0.95) < 0);
+    if(near) V3.set(k.x, 1.45, k.z).project(camera);
+    const vis = near && V3.z < 1 && Math.abs(V3.x) < 1.1 && Math.abs(V3.y) < 1.1;
+    if(!vis){ if(B && B.vis){ B.el.style.display = 'none'; B.vis = false; } continue; }
+    if(!B){
+      const el = document.createElement('div'); el.className = 'cbar'; el.innerHTML = '<u></u><b></b>';
+      $('hud-world').appendChild(el); B = k.bar = { el, u:el.firstChild, b:el.lastChild, hp:-1, vis:false };
+    }
+    if(!B.vis){ B.el.style.display = ''; B.vis = true; }
+    const dist = camera.position.distanceTo(V3.set(k.x, 1, k.z)), sc = Math.max(0.55, Math.min(1, 7 / dist));
+    V3.set(k.x, 1.45, k.z).project(camera);
+    B.el.style.transform = `translate(${((V3.x * 0.5 + 0.5) * w).toFixed(1)}px,${((-V3.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(-50%,-100%) scale(${sc.toFixed(2)})`;
+    const hp = Math.max(0, Math.ceil(k.hp));
+    if(B.hp !== hp){ B.u.style.width = (hp / CRATE_HP * 100).toFixed(1) + '%'; B.b.textContent = hp; B.hp = hp; }
+  }
+}
+export function clearCrateBars(){ for(const k of A.crates || []) if(k.bar){ k.bar.el.remove(); k.bar = null; } }
 
 // ---------------- top bar, countdown, super meter ----------------
 const fmt = t => { t = Math.max(0, Math.ceil(t)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
@@ -140,11 +165,12 @@ export function renderHeroes(sel, onPick){
     `<div class="abil"><span class="k s">★</span><div><b>${esc(H.super.name)}</b><small>${esc(H.super.desc)}</small></div></div>`;
 }
 function attackText(W){
+  if(W.kind === 'shell') return 'фугас: взрыв задевает и тех, кто рядом';
   if(W.kind === 'fan') return W.count + ' картечин веером';
-  if(W.kind === 'lob') return 'бомба через стены, горящая лужа';
-  if(W.kind === 'bounce') return 'отскакивает от кустов ' + W.bounces + ' раза, после отскока бьёт сильнее';
-  if(W.kind === 'burst') return 'очередь из ' + W.count + ' зарядов, разброс растёт при стрельбе';
-  return 'дальний выстрел, урон растёт с расстоянием';
+  if(W.kind === 'lob') return 'ракета навесом через кусты, поджигает землю';
+  if(W.kind === 'bounce') return 'снаряд отскакивает от кустов ' + W.bounces + ' раза, после отскока бьёт сильнее';
+  if(W.kind === 'burst') return 'очередь из ' + W.count + ' снарядов, разброс растёт при стрельбе';
+  return 'бронебойный на дальнюю дистанцию, урон растёт с расстоянием';
 }
 
 // ---------------- end of match ----------------

@@ -35,6 +35,9 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .tag.foe .hpb u{background:var(--foe)} .tag.me .hpb u{background:var(--lime)}
 .tag.foe .tn{color:#FFC4C4} .tag.ally .tn{color:#CFEFFF} .tag.me .tn{color:#FFF1B0}
 .tag .am{display:flex;gap:2px;width:72px}
+.cbar{position:absolute;left:0;top:0;width:60px;height:11px;border-radius:4px;background:rgba(10,14,10,.72);box-shadow:0 0 0 2px rgba(10,14,10,.6);overflow:hidden;transform-origin:50% 100%;will-change:transform;pointer-events:none}
+.cbar u{position:absolute;left:0;top:0;bottom:0;width:100%;background:#E8B04A;border-radius:3px;transition:width .12s}
+.cbar b{position:absolute;inset:0;display:grid;place-items:center;font:900 9px/1 var(--font-display);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
 .tag .am i{flex:1;height:5px;border-radius:3px;background:rgba(10,14,10,.7);overflow:hidden;position:relative}
 .tag .am i u{position:absolute;inset:0;width:0;background:#FFA63D}
 .tag .am i.full u{background:#FFC93C}

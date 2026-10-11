@@ -18,7 +18,7 @@ import { applyEnv, pickEnv, updateEnv, envLabel, ENV } from './env.js';
 import { BALL, startFootball, updateFootball, clearFootball, footballSamples } from './football.js';
 import { ROYALE, startRoyale, updateRoyale, clearRoyale, royaleSamples } from './royale.js';
 import { playerInput, updateCamera, updateGuide, CAM, releaseLock, lockHint, resetTouch } from './player.js';
-import { makeTag, updateTags, updateHud, feed, announce, tickAnnounce, renderHeroes, showEnd } from './hud.js';
+import { makeTag, updateTags, updateHud, feed, announce, tickAnnounce, renderHeroes, showEnd, updateCrateBars } from './hud.js';
 import { updateFx, clearFx, explosion, hitSpark, sporeBurst } from './fx.js';
 import { preloadSfx, unlockAudio, sfx, AU, setSfx, setMusic } from './audio.js';
 import { yaInit, yaLoaded, yaTick, yaInterstitial, YA, onYandex } from './yandex.js';
@@ -338,7 +338,7 @@ function tick(dt){
   } else if(G.me) updateCamera(dt);
   updateGuide(); lockHint();
   updateFx(dt); updateEnv(dt, G.time);
-  updateTags();
+  updateTags(); updateCrateBars();
   if(G.state !== 'menu') updateHud();
   tickAnnounce(dt);
   sky.position.copy(camera.position);
