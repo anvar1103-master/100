@@ -11,7 +11,7 @@ import { glow, smoke, puff, ring } from './fx.js';
 import { sfx } from './audio.js';
 import { $, esc, TOUCH } from './util.js';
 
-export const PROG = { orbXP:50, dmgXP:0.04, killXP:220, classLevel:4, maxLevel:12, maxUp:5, start:'rookie', rookieHp:1.2 };
+export const PROG = { orbXP:50, dmgXP:0.04, killXP:220, classLevel:4, maxLevel:12, maxUp:5, start:'rookie', rookieHp:1.3 };
 // what each point does (see rebuild)
 export const STATS = [
   { k:'hp',  name:'Броня',       hint:'+12% прочности' },

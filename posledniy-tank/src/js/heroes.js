@@ -34,7 +34,7 @@ export const HEROES = {
   roly:{
     name:'Рикошет', species:'лёгкий танк', role:'Рикошет', color:'#6E7FA3', hp:3500, speed:5.0, rad:0.55, height:1.05,
     desc:'Снаряды отскакивают от кустов и достают врага за углом.',
-    attack:{ kind:'bounce', name:'Рикошет', range:14, speed:30, dmg:800, bounces:2, ricochet:1.35, reload:1.2, cd:0.38, size:0.2, color:'#BFE6FF' },
+    attack:{ kind:'bounce', name:'Рикошет', range:14, speed:30, dmg:860, bounces:2, ricochet:1.35, reload:1.2, cd:0.38, size:0.2, color:'#BFE6FF' },
     super:{ kind:'bounce', name:'Тройной рикошет', desc:'три рикошетных снаряда веером, каждый отскакивает трижды', count:3, spread:0.32, range:18, speed:32, dmg:950, bounces:3, ricochet:1.2, knock:1.5, size:0.24, color:'#DFF4FF', charge:3000 }
   },
   // the starter everyone begins the match on; at level 4 it becomes one of the five classes above
@@ -47,7 +47,7 @@ export const HEROES = {
   hopper:{
     name:'Стрекот', species:'скорострельный танк', role:'Автопушка', color:'#5DB83A', hp:3400, speed:5.3, rad:0.5, height:1.0,
     desc:'Спаренная автопушка бьёт очередями. Держи кнопку — разброс растёт, стреляй короткими очередями.',
-    attack:{ kind:'burst', name:'Очередь', count:5, gap:0.07, spread:0.05, bloom:0.12, range:12, speed:38, dmg:180, reload:1.05, cd:0.42, size:0.12, color:'#FFD27A' },
+    attack:{ kind:'burst', name:'Очередь', count:5, gap:0.07, spread:0.05, bloom:0.12, range:12, speed:38, dmg:190, reload:1.05, cd:0.42, size:0.12, color:'#FFD27A' },
     super:{ kind:'frenzy', name:'Шквальный огонь', desc:'4 секунды стреляет быстрее и точнее, очереди длиннее', time:4, color:'#FFE08A', charge:4200 }
   }
 };
