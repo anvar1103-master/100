@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { scene, camera, Q, stdMat, LOW } from './engine.js';
 import { G, emit, isEnemy } from './state.js';
 import { HEROES, AMMO } from './heroes.js';
-import { makeVisual, animate, kick, setTeamLook, disposeVisual } from './anim.js';
+import { makeVisual, animate, kick, setTeamLook, disposeVisual, setOpacity } from './anim.js';
 import { collide, segHit, inGrass, A, blocksMove, blocksShot, tileAtXZ, sightClear } from './arena.js';
 import { glow, smoke, puff, explosion, hitSpark, sporeBurst, dmgNumber, dust, ring } from './fx.js';
 import { clamp, rand, TAU, lerp } from './util.js';
@@ -495,13 +495,11 @@ export function updateFighterVisuals(dt, t){
     // and your own hero fades when the camera is pressed right up against it
     let op = f.alive && f.inGrass && f.team === meTeam ? 0.55 : 1;
     if(f === G.me && G.state !== 'menu'){ const cd = camera.position.distanceTo(V.root.position) - 0.6; if(cd < 2.2) op = Math.min(op, Math.max(0.15, (cd - 0.6) / 1.6)); }
-    const ghost = op < 1;
-    if(V.mat.transparent !== ghost){ V.mat.transparent = ghost; V.mat.depthWrite = !ghost; V.ol.visible = !ghost && !LOW; }
-    V.mat.opacity = op;
+    setOpacity(V, op);
     // spawn shield shimmer
-    if(f.shieldT > 0) V.mat.userData.u.uTint.value.setScalar(0.12 + Math.sin(t * 20) * 0.08);
-    else if(f.frenzyT > 0) V.mat.userData.u.uTint.value.setRGB(0.25, 0.45, 0.05).multiplyScalar(0.6 + Math.sin(t * 18) * 0.4);
-    else if(V.id !== 'wasp' || f.supT >= 1.2) V.mat.userData.u.uTint.value.setScalar(0);
+    if(f.shieldT > 0) V.u.uTint.value.setScalar(0.035 + Math.sin(t * 20) * 0.025);
+    else if(f.frenzyT > 0) V.u.uTint.value.setRGB(0.25, 0.2, 0.02).multiplyScalar(0.6 + Math.sin(t * 18) * 0.4);
+    else if(V.id !== 'wasp' || f.supT >= 1.2) V.u.uTint.value.setScalar(0);
   }
 }
 
