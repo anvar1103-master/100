@@ -80,7 +80,7 @@ let lastCd = null;
 export function updateHud(){
   const M = G.match, me = G.me; if(!M || !me) return;
   const mt = me.team, br = M.mode === 'br';
-  const lb = $('lb'), showLb = !!M.arena;
+  const lb = $('lb'), showLb = !!M.arena && $('evo').hidden;   // the class choice takes the top of the screen for a moment
   if(lb.hidden === showLb) lb.hidden = !showLb;
   if(M.arena){
     // the arena: your place by experience · time left · your level; and the top five with the leader's crown
