@@ -1,6 +1,6 @@
 // Loads the CC0 tank models (OpenGameArt, see CREDITS.md) and turns each into the three parts the game animates:
-// hull (with tracks and wheels), turret and barrel, in metres facing +z (see tanks.js). The models keep their own
-// military textures. Each part is a list of pieces, one per material: { geo, map, color, scroll } — scroll is set on
+// hull (with tracks and wheels), turret and barrel, in metres facing +z (see tanks.js). The models are flat-coloured
+// (sharp at any distance) with a textured tread belt. Each part is a list of pieces, one per material: { geo, map, color, scroll } — scroll is set on
 // track belts and says how far their texture slides per metre driven, so the treads roll. Sizes are fitted to the game.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -9,12 +9,12 @@ import { setTankModels } from './tanks.js';
 
 // which model plays which role, its size (hull length, m) and tweaks; paint: colours for untextured materials, by name
 const SPEC = {
-  rookie:{ file:'basic_tank',     len:1.35 },
-  shroom:{ file:'heavy_tank',     len:1.45 },
-  beetle:{ file:'artillery_tank', len:1.35, restElev:0.35 },
-  wasp:  { file:'sniper_tank',    len:1.5, barrelZ:1.45 },
-  roly:  { file:'light_tank',     len:1.3, barrelZ:1.25 },
-  hopper:{ file:'rapid_tank',     len:1.3, paint:{ Body:'#5F6B3E', Gun:'#3A3C38', Tracks:'#2C2B28', Wheels:'#55564E' } }
+  rookie:{ file:'starter',   len:1.4 },
+  shroom:{ file:'heavy',     len:1.5 },
+  beetle:{ file:'artillery', len:1.35, restElev:0.3 },
+  wasp:  { file:'sniper',    len:1.45 },
+  roly:  { file:'light',     len:1.35 },
+  hopper:{ file:'rapid',     len:1.35, restElev:-0.28 }   // its twin guns point skyward (an anti-aircraft mount): level them
 };
 
 // one model → hull / turret / barrel pieces
@@ -72,7 +72,10 @@ function convert(scene, S){
   const turretPos = [(tW.x - cx) * s, (tW.y - y0) * sy, (tW.z - cz) * s];
   const barrelPos = [(bW.x - tW.x) * s, (bW.y - tW.y) * sy, (bW.z - tW.z) * s];
   const bb = box(parts.barrel);
-  const muzzle = [(bb.min.x + bb.max.x) / 2, (bb.min.y + bb.max.y) / 2, bb.max.z];
+  // the muzzle: the middle of the barrel's very tip (also right for a raised gun or a twin mount)
+  let mx = 0, my = 0, mn = 0; const tip = bb.max.z - (bb.max.z - bb.min.z) * 0.06;
+  for(const { geo } of parts.barrel){ const q = geo.attributes.position; for(let i = 0; i < q.count; i++) if(q.getZ(i) >= tip){ mx += q.getX(i); my += q.getY(i); mn++; } }
+  const muzzle = mn ? [mx / mn, my / mn, bb.max.z] : [(bb.min.x + bb.max.x) / 2, (bb.min.y + bb.max.y) / 2, bb.max.z];
   return { len:L * s, hull:parts.hull, turret:parts.turret, barrel:parts.barrel, turretPos, barrelPos, muzzle, restElev:S.restElev };
 }
 // slope of the texture coordinate along the tank's length (least squares over the belt's vertices)
