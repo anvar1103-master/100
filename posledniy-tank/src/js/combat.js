@@ -94,7 +94,7 @@ const P = { x:0, z:0 };
 export function stepFighter(f, dt){
   if(!f.alive){
     f.deadT += dt;
-    if(G.match && G.match.respawn && !G.match.over){ f.respawnT -= dt; if(f.respawnT <= 0) spawn(f); }
+    if(G.match && G.match.respawn && !G.match.over){ f.respawnT -= dt; if(f.respawnT <= 0){ if(G.match.onRespawn) G.match.onRespawn(f); else spawn(f); } }
     return;
   }
   const H = f.H, inp = f.inp;

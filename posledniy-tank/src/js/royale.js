@@ -3,11 +3,12 @@
 import * as THREE from 'three';
 import { scene, stdMat, LOW } from './engine.js';
 import { G, emit, on } from './state.js';
-import { A, collide, crateAt, hitCrate, updateCrates, colOf, rowOf, tileAt } from './arena.js';
+import { A, collide, crateAt, hitCrate, updateCrates, colOf, rowOf, tileAt, reviveCrate } from './arena.js';
 import { glow, smoke, puff, ring, sporeBurst, dmgNumber } from './fx.js';
 import { rand, TAU, clamp } from './util.js';
 import { sfx } from './audio.js';
-import { addXP, PROG } from './progress.js';
+import { addXP, PROG, setLevel } from './progress.js';
+import { spawn } from './combat.js';
 
 // fog: waits, then shrinks to a small circle in the middle; damage grows the longer the match lasts.
 // It closes slowly while the field is full and hurries once only a few fighters are left, so the last ones meet in
@@ -73,6 +74,26 @@ export function startRoyale(){
   removeFog(); buildFog();
   FOG.u.uR.value = R0;
 }
+// «Танковая арена»: the same maze, crates and progression, but no fog and no last-one-standing. Knocked-out tanks come
+// back after a few seconds with half their level; broken crates stand again. After dur seconds the leaderboard
+// (experience earned, f.score) decides the places.
+export const ARENA = { fighters:10, dur:300, crateBack:22, keep:0.5 };
+export function startArena(){
+  G.match = { mode:'br', arena:true, t:0, dur:ARENA.dur, over:false, winner:null, respawn:true, count:[0, 0], alive:ARENA.fighters, place:0,
+    fog:{ r:1e9, r0:1e9, tick:0, shrinking:false }, crates:0, onRespawn:arenaRespawn };
+  removeFog();
+}
+// back in the fight: the spawn point farthest from everyone, half the level
+function arenaRespawn(f){
+  let best = null, bd = -1;
+  for(const s of A.spawns.ffa){
+    let d = 1e9; for(const o of G.fighters) if(o.alive && o !== f) d = Math.min(d, Math.hypot(o.x - s.x, o.z - s.z));
+    if(d > bd){ bd = d; best = s; }
+  }
+  spawn(f, best || A.spawns.ffa[0]);
+  setLevel(f, Math.floor((f.lvl || 1) * ARENA.keep));
+}
+export const arenaRank = () => [...G.fighters].sort((a, b) => (b.score || 0) - (a.score || 0));
 export function clearRoyale(){ removeFog(); $tint(0); }
 
 // a spore picked up: experience
@@ -87,6 +108,7 @@ on('kill', (f, src) => {
   const n = Math.max(2, (f.lvl || 1) - 1);
   for(let i = 0; i < n; i++){ const a = i / n * TAU + rand(-0.3, 0.3), s = rand(1.2, 2.6); addPower(f.x, f.z, Math.sin(a) * s, Math.cos(a) * s, rand(3, 5)); }
   M.alive = G.fighters.filter(o => o.alive).length;
+  if(M.arena) return;   // the arena goes on: the tank comes back (onRespawn)
   f.place = M.alive + 1;
   if(f === G.me){ M.place = f.place; return finish(-1, 'out'); }
   if(M.alive <= 1){
@@ -98,6 +120,7 @@ on('kill', (f, src) => {
 on('crateBreak', k => {
   if(!G.match || G.match.mode !== 'br') return;
   G.match.crates++;
+  if(G.match.arena) k.backAt = G.match.t + ARENA.crateBack;
   puff(smoke, k.x, 0.6, k.z, { n:14, color:'#A87645', sp:3, upMin:0.4, vy:3, life:0.7, s0:0.25, s1:0.08, grav:6, drag:1.5 });
   sporeBurst(k.x, 0.7, k.z, '#FFC93C', 14);
   sfx('hit_wall', k, 1.3, 0.6);
@@ -141,7 +164,18 @@ export function updateRoyale(dt, t){
   FOG.u.uTime.value = t;
   updateCrates(dt);
   const F = M.fog;
-  if(G.state === 'play' && !M.over){
+  if(M.arena && G.state === 'play' && !M.over){
+    M.t += dt;
+    // crates stand again when nobody is right next to them
+    for(const k of A.crates) if(!k.alive && k.backAt && M.t >= k.backAt && !G.fighters.some(o => o.alive && Math.hypot(o.x - k.x, o.z - k.z) < 1.6)){ k.backAt = 0; reviveCrate(k); }
+    G.leader = arenaRank()[0];
+    if(M.t >= M.dur){
+      // time: places by experience earned
+      arenaRank().forEach((o, i) => { o.place = i + 1; });
+      M.place = G.me ? G.me.place : 0;
+      finish(G.leader ? G.leader.team : -1, 'time');
+    }
+  } else if(G.state === 'play' && !M.over){
     M.t += dt;
     const was = F.shrinking;
     if(M.t >= ROYALE.wait) F.r = Math.max(ROYALE.r1, F.r - fogSpeed(M) * dt);

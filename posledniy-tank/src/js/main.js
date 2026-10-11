@@ -17,7 +17,7 @@ import { buildMine, startSpores, updateSpores, clearSpores } from './mode.js';
 import { freeBolt, clearShotFx, updateShotFx, shotFxSamples } from './shotfx.js';
 import { applyEnv, pickEnv, updateEnv, envLabel, ENV } from './env.js';
 import { BALL, startFootball, updateFootball, clearFootball, footballSamples } from './football.js';
-import { ROYALE, startRoyale, updateRoyale, clearRoyale, royaleSamples } from './royale.js';
+import { ROYALE, ARENA, startRoyale, startArena, updateRoyale, clearRoyale, royaleSamples } from './royale.js';
 import { playerInput, updateCamera, updateGuide, CAM, releaseLock, lockHint, resetTouch, TOP } from './player.js';
 let topHintT = 0;   // seconds left to show the phone controls hint
 import { makeTag, updateTags, updateHud, feed, announce, tickAnnounce, renderHeroes, showEnd, updateCrateBars } from './hud.js';
@@ -25,7 +25,8 @@ import { updateFx, clearFx, explosion, hitSpark, sporeBurst } from './fx.js';
 import { preloadSfx, unlockAudio, sfx, AU, setSfx, setMusic } from './audio.js';
 import { yaInit, yaLoaded, yaTick, yaInterstitial, YA, onYandex } from './yandex.js';
 
-const MENU = { hero:HEROES[store.get('hero', 'shroom')] ? store.get('hero', 'shroom') : 'shroom', diff:store.get('diff', 'normal'), mode:'br' };   // «Последний танк» has one mode: the royale
+// two modes: «Последний танк» (br, the royale) and «Танковая арена» (arena: respawns, 5 minutes, the most experience wins)
+const MENU = { hero:HEROES[store.get('hero', 'shroom')] ? store.get('hero', 'shroom') : 'shroom', diff:store.get('diff', 'normal'), mode:store.get('mode', 'br') === 'arena' ? 'arena' : 'br' };
 const placeText = n => L.lang === 'en' ? `#${n} place` : `#${n} место`;
 const NAMES = ['Ржавчик', 'Гаечка', 'Болтик', 'Шестерёнка', 'Бампер', 'Дизель', 'Трактор', 'Поршень', 'Карбюратор', 'Клёпка', 'Траки', 'Пыхтун', 'Громыхало', 'Рычаг', 'Домкрат', 'Тарахтун', 'Буксир', 'Катушка'];
 
@@ -123,6 +124,8 @@ function startMatch(opts = {}){
   if(preview){ scene.remove(preview.V.root); preview = null; }
   const mode = G.mode = 'br';
   document.body.classList.toggle('br', mode === 'br');
+  document.body.classList.toggle('arena', MENU.mode === 'arena');
+  if(MENU.mode === 'arena') return startRoyaleMatch(opts, true);
   if(mode === 'br') return startRoyaleMatch(opts);
   const ball = mode === 'ball';
   // «Споры» is played on either of its two maps
@@ -146,9 +149,10 @@ function startMatch(opts = {}){
   else beginMatch('Споры', A.map.name + ' · ' + 'Собери 10 спор и удержи их 15 секунд');
 }
 // «Последний гриб»: ten fighters, each on their own team, spread over the corners of the maze
-function startRoyaleMatch(opts){
+function startRoyaleMatch(opts, arena = false){
   useArena('maze');
-  startRoyale(); leftShown = 0;
+  if(arena) startArena(); else startRoyale();
+  leftShown = 0;
   const names = shuffle([...NAMES]);
   // everyone starts on the same «Новобранец» and picks a class at level 4 (progress.js); bots know theirs from the
   // start (f.plan). Tests may start the player straight in a class with opts.hero.
@@ -162,7 +166,8 @@ function startRoyaleMatch(opts){
     if(isMe) G.me = f; else f.bot = newBot(opts.diff || MENU.diff);
   }
   for(const f of G.fighters){ makeTag(f); spawn(f); }
-  beginMatch('Последний танк', 'Останься последним! Ломай ящики — в них сила');
+  if(arena) beginMatch('Танковая арена', '5 минут: копи опыт и прокачивайся. Подбитый возвращается с половиной уровня');
+  else beginMatch('Последний танк', 'Останься последним! Ломай ящики — в них сила');
 }
 function beginMatch(title, sub){
   const me = G.me;
@@ -210,7 +215,7 @@ function endRoyale(){
   G.endFocus = win ? me : k && k.alive ? k : G.fighters.filter(f => f.alive).sort((a, b) => b.kills - a.kills)[0] || me;
   G.endYaw = frontYaw(G.endFocus);
   if(win){ me.victory = true; me.aim = G.endYaw; }
-  announce(win ? 'Победа!' : placeText(M.place), win ? 'Ты — последний танк!' : '', win ? 'sun' : 'foe', 2.2);
+  announce(win ? 'Победа!' : placeText(M.place), win ? (M.arena ? 'Ты — лучший танкист арены!' : 'Ты — последний танк!') : '', win ? 'sun' : 'foe', 2.2);
   sfx(win ? 'win' : 'lose');
   releaseLock();
 }
@@ -242,10 +247,10 @@ on('kill', (o, src) => {
   if(!G.me) return;
   if(src && src !== o) feed(nameOf(src) + ' ⚔ ' + nameOf(o), src === G.me ? 'm' : src.team === G.me.team ? 'a' : 'f');
   else if(!src) feed('☁ ' + nameOf(o), 'f');
-  if(G.match && G.match.mode === 'br' && o !== G.me && !G.match.over && G.me.alive) announceLeft();
+  if(G.match && G.match.mode === 'br' && !G.match.arena && o !== G.me && !G.match.over && G.me.alive) announceLeft();
   if(G.state === 'end') return;   // the last knockout already ended the match: keep the result on screen
   if(src === G.me && o !== G.me){ announce('Подбит!', o.name, 'sun', 1.1); sfx('kill'); }
-  if(o === G.me) announce('Тебя подбили', src ? src.name : '', 'foe', 1.6);
+  if(o === G.me) announce('Тебя подбили', G.match && G.match.arena ? 'Вернёшься с половиной уровня' : src ? src.name : '', 'foe', 1.6);
 });
 on('pickup', f => { f.gemsPicked = (f.gemsPicked || 0) + 1; });
 on('countdownStart', team => { const ours = team === G.me.team; announce(ours ? 'Споры у нас!' : 'Враг набрал споры!', ours ? 'Держитесь 15 секунд' : 'Отберите их!', ours ? 'ally' : 'foe', 1.8); sfx(ours ? 'super_ready' : 'gem_drop'); });

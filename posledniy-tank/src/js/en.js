@@ -94,6 +94,10 @@ export const EN = {
   'Ур.':'Lv', 'Очки прокачки: ':'Upgrade points: ', 'Перезарядка':'Reload', 'Уровень 4 — выбери класс танка':'Level 4 — pick your tank class',
   'Классы танков':'Tank classes', 'Все начинают на «Новобранце». Ломай ящики и копи опыт — на 4-м уровне выберешь один из классов:':'Everyone starts on the Recruit. Break crates and gain experience — at level 4 you pick one of the classes:',
   '+12% прочности':'+12% armour', '+8% урона':'+8% damage', '+9% быстрее':'+9% faster', '+7% дальше':'+7% further', '+5% быстрее ход':'+5% faster driving',
+  // the arena
+  'Танковая арена':'Tank Arena', '5 минут без тумана · подбитые возвращаются · побеждает самый прокачанный':'5 minutes, no fog · knocked-out tanks come back · the most upgraded wins',
+  '5 минут: копи опыт и прокачивайся. Подбитый возвращается с половиной уровня':'5 minutes: gain experience and upgrade. A knocked-out tank comes back with half its level',
+  'Вернёшься с половиной уровня':'You come back with half your level', 'Ты — лучший танкист арены!':'You are the best tanker of the arena!', 'Время вышло':'Time is up', 'Арена':'Arena',
   // tank call signs (bot names)
   'Ржавчик':'Rusty', 'Гаечка':'Nutty', 'Болтик':'Bolt', 'Шестерёнка':'Gear', 'Бампер':'Bumper', 'Дизель':'Diesel', 'Трактор':'Tractor', 'Поршень':'Piston', 'Карбюратор':'Carb',
   'Клёпка':'Rivet', 'Траки':'Tracks', 'Броня':'Armour', 'Пыхтун':'Puffer', 'Громыхало':'Rumbler', 'Рычаг':'Lever', 'Домкрат':'Jack', 'Тарахтун':'Rattler', 'Буксир':'Tug', 'Катушка':'Spool',
