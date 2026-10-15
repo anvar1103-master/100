@@ -6,6 +6,9 @@
 каждый этап — отдельный PR в `main`, вливать можно самому (так можно откатить любой этап).
 
 ## Игры
+- `microgang/` — Microgang: шутер от первого лица про крошечных насекомых-бойцов на поляне с травой выше головы
+  (three.js + postprocessing, сборка esbuild, режим «каждый сам за себя»). Подробности — в `microgang/CLAUDE.md`.
+  Сборка кладёт игру в `docs/microgang` и `packages/microgang*.zip`.
 - `posledniy-tank/` — «Последний танк»: королевская битва танков в лесном лабиринте (three.js, сборка esbuild).
   Подробности — в `posledniy-tank/CLAUDE.md`. Сборка кладёт игру в `docs/posledniy-tank` и `packages/`.
 - `lesnaya-voyna/`, `gribnoy-dozor/`, `shar-baba/`, `vyshibala/`, `oil-path/`, `zarya-ellady/` — игры одним файлом `index.html`.
