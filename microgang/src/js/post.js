@@ -1,7 +1,7 @@
 // The frame: world pass, (ambient occlusion), arms-and-gun pass, then one effect pass —
 // far blur and golden haze (the macro-photo look that makes everything feel huge), bloom, sun rays, tone mapping, grade.
 import * as THREE from 'three';
-import { EffectComposer, RenderPass, EffectPass, Pass, Effect, EffectAttribute, BlendFunction, BloomEffect, ToneMappingEffect, ToneMappingMode,
+import { EffectComposer, RenderPass, EffectPass, Pass, ClearPass, Effect, EffectAttribute, BlendFunction, BloomEffect, ToneMappingEffect, ToneMappingMode,
   KawaseBlurPass, KernelSize, GodRaysEffect } from 'postprocessing';
 import { N8AOPostPass } from 'n8ao';
 import { renderer, scene, camera, vmCam, LOW, HIGH, Q, SUN_DIR, SUN_COL, sun } from './engine.js';
@@ -86,6 +86,8 @@ export function initPost(){
   const vm = new RenderPass(scene, vmCam);
   vm.clearPass.setClearFlags(false, true, false); vm.ignoreBackground = true; vm.skipShadowMapUpdate = true; vm.needsDepthBlit = false;
   C.addPass(vm);
+  // and wipe that depth again, or next frame's AO pass (which draws into this same buffer) keeps the old gun as a ghost
+  C.addPass(new ClearPass(false, true, false));
   P.macro = new MacroEffect(P.blurRT.texture);
   P.bloom = new BloomEffect({ intensity:0.55, luminanceThreshold:0.82, luminanceSmoothing:0.25, mipmapBlur:true, radius:0.72 });
   const fx = [P.macro, P.bloom];

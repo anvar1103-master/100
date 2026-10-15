@@ -90,15 +90,16 @@ console.log('Microgang test:', PAGE);
       __mg.start({ primary:id });
       const me = G.me, t = G.fighters[1]; G.fighters.forEach((f, i) => { if(i > 1){ f.x = -80 + i * 4; f.z = 85; } });
       me.x = -8; me.z = -62; t.x = -7; t.z = -66; for(const f of [me, t]){ f.vx = f.vz = 0; f.shieldT = 0; } __mg.step(30);
-      __mg.aimAt(t); __mg.step(2, true); const one = me.guns[0].mag;
-      __mg.step(20, true); const cycled = me.guns[0].mag;   // pump / bolt: no second shot this soon
+      // aim down the sights first (the sniper is wild from the hip), then one shot
+      __mg.aimAt(t); __mg.step(30, false, true); __mg.aimAt(t); __mg.step(2, true, true); const one = me.guns[0].mag, hp = t.hp;
+      __mg.step(20, true, true); const cycled = me.guns[0].mag;   // pump / bolt: no second shot this soon
       me.inp.reload = true; __mg.step(400);
-      out[id] = { one, cycled, full:me.guns[0].mag, hp:t.hp };
+      out[id] = { one, cycled, full:me.guns[0].mag, hp };
     }
     return out;
   });
-  ok(w.acorn.one === 5 && w.acorn.cycled >= 4 && w.acorn.full === 6, `shotgun: one shot per pump, shells reload to full (${JSON.stringify(w.acorn)})`);
-  ok(w.needle.one === 4 && w.needle.full === 5 && w.needle.hp <= 10, `sniper: bolt between shots, one body hit nearly kills (${JSON.stringify(w.needle)})`);
+  ok(w.acorn.one === 5 && w.acorn.cycled >= 4 && w.acorn.full === 6 && w.acorn.hp < 60, `shotgun: one shot per pump hurts badly up close, shells reload to full (${JSON.stringify(w.acorn)})`);
+  ok(w.needle.one === 4 && w.needle.full === 5 && w.needle.hp <= 0, `sniper: one aimed body hit kills, bolt between shots (${JSON.stringify(w.needle)})`);
   const d = await page.evaluate(() => {
     __mg.start({}); const G = __mg.G, me = G.me;
     localStorage.setItem('mg_primary', JSON.stringify('hornet'));
