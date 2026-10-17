@@ -5,19 +5,21 @@ import { initPost, renderFrame, P } from './post.js';
 import { buildLayout, groundH } from './map.js';
 import { buildGround, tickTerrain } from './nature/terrain.js';
 import { buildGrass, tickGrass, GR } from './nature/grass.js';
-import { tickNature } from './nature/shaders.js';
+import { tickNature, setCamFade } from './nature/shaders.js';
 import { buildPlants, tickPlants, puffKick } from './nature/plants.js';
 import { buildProps } from './nature/props.js';
+import { buildModels } from './nature/models.js';
 import { buildWorld, WORLD } from './world.js';
 import { buildNav } from './nav.js';
 import { G, on } from './state.js';
 import { startMatch, stepMatch, standings, FFA } from './match.js';
 import { botThink, botReset } from './bots.js';
-import { SPECIES, SPECIES_IDS, setPrimary, gun } from './fighter.js';
+import { HEROES, HERO_IDS, heroOf, setPrimary, gun } from './fighter.js';
 import { WEAPONS, PRIMARIES } from './weapons.js';
-import { PL, playerInput, updateCamera, requestLock, resetView } from './player.js';
+import { PL, VIEW, playerInput, updateCamera, requestLock, resetView, setView, ownHidden } from './player.js';
 import { initViewmodel, updateViewmodel, setArms, VMS } from './viewmodel.js';
-import { buildCreature, animCreature, disposeCreature } from './creatures.js';
+import { loadHeroes, buildHero, animHero, disposeHero } from './heroes.js';
+import { loadGuns } from './gunmodels.js';
 import { initFx, stepFx, clearFx, FX } from './fx.js';
 import { initAudio, resumeAudio, startAmbience, setVolume, uiSound, AU } from './audio.js';
 import { initHud, updateHud, showBoard, boardHTML, renderDeadPick, announce } from './hud.js';
@@ -26,7 +28,7 @@ import { L, applyLang, tr } from './i18n.js';
 import { $, store, esc, clamp } from './util.js';
 
 const setLoad = (k, t) => { $('load-bar').style.width = Math.round(k * 100) + '%'; if(t) $('load-txt').textContent = tr(t); };
-const MENU = { species:store.get('species', 'ant'), primary:store.get('primary', 'hornet'), count:store.get('count', 12), diff:store.get('diff', 'normal') };
+const MENU = { hero:heroOf(store.get('hero', 'ranger')), primary:store.get('primary', 'hornet'), count:store.get('count', 12), diff:store.get('diff', 'normal') };
 const CAM = { free:null, menuT:0 };
 const yieldFrame = () => new Promise(r => setTimeout(r, 0));
 
@@ -40,10 +42,12 @@ async function boot(){
   await buildGround();
   setLoad(0.35); await yieldFrame();
   buildGrass();
-  setLoad(0.55, 'Распускаются одуванчики…'); await yieldFrame();
+  setLoad(0.5, 'Распускаются одуванчики…'); await yieldFrame();
+  await buildModels();
   buildPlants();
   await buildProps();
-  setLoad(0.8, 'Насекомые чистят оружие…'); await yieldFrame();
+  setLoad(0.7, 'Герои чистят бластеры…'); await yieldFrame();
+  await loadGuns(); await loadHeroes(k => setLoad(0.7 + k * 0.2));
   initViewmodel(); initFx(); initHud();
   const icons = makeIcons();
   buildMenu(icons);
@@ -56,12 +60,12 @@ async function boot(){
 
 // ---- menu ----
 function buildMenu(icons){
-  const sp = $('m-species');
-  sp.innerHTML = SPECIES_IDS.map(id => `<button data-v="${id}"><img alt="" src="${icons.species[id] || ''}"><b>${esc(SPECIES[id].name)}</b></button>`).join('');
+  const sp = $('m-hero');
+  sp.innerHTML = HERO_IDS.map(id => `<button data-v="${id}"><img alt="" src="${icons.heroes[id] || ''}"><b>${esc(HEROES[id].name)}</b></button>`).join('');
   const wp = $('m-weapon');
   wp.innerHTML = PRIMARIES.map(id => `<button data-v="${id}"><img alt="" src="${icons.weapons[id] || ''}"><b>${esc(WEAPONS[id].name)}</b><small>${esc(WEAPONS[id].what)}</small></button>`).join('');
   const seg = (el, key, cb) => { const upd = () => { for(const b of el.querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === String(MENU[key])); }; for(const b of el.querySelectorAll('button')) b.onclick = () => { MENU[key] = /^\d+$/.test(b.dataset.v) ? +b.dataset.v : b.dataset.v; store.set(key, MENU[key]); uiSound('click'); upd(); if(cb) cb(); }; upd(); };
-  seg(sp, 'species'); seg(wp, 'primary', weaponInfo); seg($('m-count'), 'count'); seg($('m-diff'), 'diff');
+  seg(sp, 'hero'); seg(wp, 'primary', weaponInfo); seg($('m-count'), 'count'); seg($('m-diff'), 'diff');
   weaponInfo();
   $('play').onclick = () => { uiSound('click'); startGame(); };
   $('m-set').onclick = () => openSettings('menu');
@@ -87,12 +91,12 @@ function initAudioOnGesture(){ if(gestureBound) return; gestureBound = true; con
 const MODELS = new Map();
 function startGame(o = {}){
   if(o.primary) MENU.primary = o.primary;
-  if(o.species) MENU.species = o.species;
-  for(const C of MODELS.values()) disposeCreature(C);
+  if(o.hero) MENU.hero = heroOf(o.hero);
+  for(const C of MODELS.values()) disposeHero(C);
   MODELS.clear(); clearFx();
-  startMatch(Object.assign({ count:MENU.count, diff:MENU.diff, species:MENU.species, primary:MENU.primary }, o));
-  for(const f of G.fighters){ botReset(f); f.model = buildCreature(f); MODELS.set(f, f.model); }
-  setArms(G.me.species);
+  startMatch(Object.assign({ count:MENU.count, diff:MENU.diff, hero:MENU.hero, primary:MENU.primary }, o));
+  for(const f of G.fighters){ botReset(f); f.model = buildHero(f); MODELS.set(f, f.model); }
+  setArms(G.me.hero);
   VMS.shown = true;
   $('menu').hidden = true; $('end').hidden = true; $('pause').hidden = true; $('hud').hidden = false;
   showBoard(false);
@@ -123,7 +127,7 @@ on('shot', (f, traces) => { f.shotsFired = (f.shotsFired || 0) + 1; if(traces.so
 
 function toMenu(){
   G.state = 'menu'; G.paused = false;
-  for(const C of MODELS.values()) disposeCreature(C); MODELS.clear(); clearFx();
+  for(const C of MODELS.values()) disposeHero(C); MODELS.clear(); clearFx();
   G.fighters.length = 0; G.me = null;
   if(document.exitPointerLock) try{ document.exitPointerLock(); }catch(e){}
   showMenu();
@@ -146,6 +150,7 @@ function openSettings(from){
   seg('s-gfx', LEVEL, v => { if(v !== LEVEL){ store.set('gfx', v); location.reload(); } });
   seg('s-aim', PL.aimHold ? 'hold' : 'toggle', v => { PL.aimHold = v === 'hold'; store.set('aimHold', PL.aimHold); });
   seg('s-blood', FX.blood, v => { FX.blood = v; store.set('blood', v); });
+  seg('s-view', VIEW.mode, v => setView(+v));
   seg('s-fps', store.get('fps', 0), v => { store.set('fps', +v); $('fps').hidden = !+v; });
   seg('s-lang', L.lang, v => { store.set('lang', v); const u = new URL(location.href); u.searchParams.set('lang', v); location.href = u.toString(); });
   const slide = (id, val, fmt, cb) => { const el = $(id), out = $(id + '-v'); el.value = val; out.textContent = fmt(+val); el.oninput = () => { out.textContent = fmt(+el.value); cb(+el.value); }; };
@@ -165,6 +170,7 @@ function simStep(dt){
   stepMatch(dt);
 }
 const pushers = [];
+const _pv = new THREE.Vector3();
 function frame(dt, raw){
   renderer.info.reset();
   simStep(dt);
@@ -173,12 +179,16 @@ function frame(dt, raw){
   else if((G.state === 'play' || G.state === 'end') && G.me) updateCamera(dt);
   else menuCamera(dt);
   P.aim = G.me && G.state === 'play' ? G.me.adsK : 0;
-  for(const C of MODELS.values()) animCreature(C, dt);
+  for(const C of MODELS.values()) animHero(C, dt, C.f === G.me && ownHidden());
   updateViewmodel(dt);
   pushers.length = 0;
   // fighters push the grass aside; you push a wider circle so blades don't fill the screen
   for(const f of G.fighters) if(f.alive && pushers.length < 16) pushers.push(f === G.me ? { x:f.x, y:f.y, z:f.z, r:0.7 } : f);
   tickNature(dt, pushers);
+  // over the shoulder, blades between the camera and your hero thin out so you can see yourself
+  const me = G.me;
+  if(me && VIEW.mode === 3 && (G.state === 'play' || G.state === 'end') && !CAM.free){ _pv.set(me.x, me.y + me.h * 0.6, me.z); setCamFade(camera.position, _pv, 1.7); }
+  else setCamFade(camera.position, camera.position, 0);
   tickTerrain(dt, SUN_DIR, SUN_COL); tickPlants(dt); tickGrass(camera.position);
   stepFx(dt);
   if(G.state === 'play') updateHud(dt);
@@ -188,9 +198,10 @@ function frame(dt, raw){
 }
 function menuCamera(dt){
   CAM.menuT += dt;
-  const t = CAM.menuT * 0.035, r = 34 + Math.sin(t * 1.7) * 6;
-  camera.position.set(Math.cos(t) * r, 2.4 + Math.sin(t * 2.3) * 0.8, Math.sin(t) * r);
-  camera.lookAt(Math.cos(t + 0.5) * 6, 7 + Math.sin(t * 1.3) * 2, Math.sin(t + 0.5) * 6);
+  // a slow walk round the fly agaric ring, along the trail
+  const t = CAM.menuT * 0.03 + 0.6, r = 19 + Math.sin(t * 1.7) * 2;
+  camera.position.set(Math.cos(t) * r, groundH(Math.cos(t) * r, Math.sin(t) * r) + 2.6 + Math.sin(t * 2.3) * 0.5, Math.sin(t) * r);
+  camera.lookAt(Math.cos(t + 0.35) * 4, 5.5 + Math.sin(t * 1.3) * 1.2, Math.sin(t + 0.35) * 4);
   camera.fov = vfov(78, camera.aspect); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
 }
 function loop(now){
@@ -213,12 +224,13 @@ window.__mg = {
   bench(n = 30){ const t0 = performance.now(); for(let i = 0; i < n; i++) frame(1 / 60); return (performance.now() - t0) / n; },
   lockLost(){ PL.onLock(false); return !$('pause').hidden; },
   // advance animation only (viewmodel springs, creatures) without drawing
-  settle(sec = 0.5){ const n = Math.round(sec * 60); for(let i = 0; i < n; i++){ updateCamera(1 / 60); for(const C of MODELS.values()) animCreature(C, 1 / 60); updateViewmodel(1 / 60); } },
+  settle(sec = 0.5){ const n = Math.round(sec * 60); for(let i = 0; i < n; i++){ updateCamera(1 / 60); for(const C of MODELS.values()) animHero(C, 1 / 60, C.f === G.me && ownHidden()); updateViewmodel(1 / 60); } },
   // aim the player at a fighter's chest (or head)
-  aimAt(t, head){ const me = G.me, dx = t.x - me.x, dz = t.z - me.z, dy = t.y + (head ? t.h - 0.2 : t.h * 0.62) - (me.y + me.eye);
+  aimAt(t, head){ const me = G.me, dx = t.x - me.x, dz = t.z - me.z, dy = t.y + (head ? t.h * 0.76 : t.h * 0.42) - (me.y + me.eye);
     PL.yaw = Math.atan2(-dx, -dz); PL.pitch = Math.atan2(dy, Math.hypot(dx, dz)); me.inp.yaw = PL.yaw; me.inp.pitch = PL.pitch; me.yaw = PL.yaw; me.pitch = PL.pitch; },
   // run the match for n frames with only the player acting (bots stand still): fire held or not
   step(n, fire = false, aim = false){ const me = G.me; for(let i = 0; i < n; i++){ me.inp.fire = fire; me.inp.aim = aim; me.inp.yaw = PL.yaw; me.inp.pitch = PL.pitch; stepMatch(1 / 60); } },
+  view(v){ setView(v); return VIEW.mode; },
   ground:groundH, toMenu, G, PL, P, Q, WORLD, VMS, scene, camera,
 };
 boot();

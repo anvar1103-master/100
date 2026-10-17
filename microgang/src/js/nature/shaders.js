@@ -11,7 +11,11 @@ export const NU = {
   push:{ value:Array.from({ length:16 }, () => new THREE.Vector4(0, -999, 0, 0)) },   // x, y, z, radius of fighters
   dapple:{ value:null },
   dappleK:{ value:0.55 },
+  // over the shoulder: plants between the camera and your hero thin out (segment camA → camB, radius camA.w)
+  camA:{ value:new THREE.Vector4(0, -999, 0, 0) },
+  camB:{ value:new THREE.Vector3(0, -999, 0) },
 };
+export function setCamFade(a, b, r){ NU.camA.value.set(a.x, a.y, a.z, r); NU.camB.value.set(b.x, b.y, b.z); }
 // a tiling soft noise texture for the dapple (and anything else that wants cheap noise)
 {
   const N = 128, d = new Uint8Array(N * N * 4), r = mulberry(77);
@@ -73,6 +77,7 @@ export function natureMat(mat, o = {}){
     if(prev) prev(s, r);
     s.uniforms.mgTime = NU.time; s.uniforms.mgWindDir = NU.windDir; s.uniforms.mgWind = NU.wind; s.uniforms.mgPush = NU.push;
     s.uniforms.mgDapple = NU.dapple; s.uniforms.mgDappleK = NU.dappleK;
+    s.uniforms.mgCamA = NU.camA; s.uniforms.mgCamB = NU.camB;
     s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\n' + VS_HEAD);
     // displacement happens in world space, after the instance/model transform
     let disp = '';
@@ -109,6 +114,19 @@ export function natureMat(mat, o = {}){
       float n = texture2D(mgDapple, uv).r * 0.7 + texture2D(mgDapple, uv * 2.7 + 0.3).g * 0.3;
       return mix(1.0, 0.32, smoothstep(0.5, 0.68, n) * mgDappleK);
     }`;
+    if((o.push || o.fadeCam) && !mat.isMeshDepthMaterial){
+      fsHead += `
+    uniform vec4 mgCamA; uniform vec3 mgCamB;
+    void mgCamFade(){
+      vec3 ab = mgCamB - mgCamA.xyz, ap = vMgWorld - mgCamA.xyz;
+      float t = clamp(dot(ap, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
+      float d = length(ap - ab * t), r = mgCamA.w * (0.55 + 0.45 * t);
+      // gone near the line, a thin even dither at the edge (interleaved gradient noise: no grainy clumps)
+      float k = 1.0 - smoothstep(r * 0.72, r, d);
+      if(k > 0.0 && fract(52.9829189 * fract(dot(floor(gl_FragCoord.xy), vec2(0.06711056, 0.00583715)))) < k) discard;
+    }`;
+      s.fragmentShader = s.fragmentShader.replace('void main() {', 'void main() {\n  mgCamFade();');
+    }
     s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\n' + fsHead);
     // the directional (sun) light: dapple shade, and light glowing through thin leaves from behind
     const trans = o.trans ? new THREE.Color(o.trans) : null;
@@ -126,7 +144,7 @@ export function natureMat(mat, o = {}){
     s.fragmentShader = s.fragmentShader.replace('#include <lights_fragment_begin>', lfb);
     if(o.frag) o.frag(s);
   };
-  const key = JSON.stringify([o.wind, o.windH, o.push, o.trans, o.dapple, o.windAmp, o.hBy, o.pushSpan, o.perH, o.transK, o.hConst, !!o.frag, o.key]);
+  const key = JSON.stringify([o.wind, o.windH, o.push, o.trans, o.dapple, o.windAmp, o.hBy, o.pushSpan, o.perH, o.transK, o.hConst, !!o.frag, o.key, o.fadeCam]);
   mat.customProgramCacheKey = () => key;
   return mat;
 }

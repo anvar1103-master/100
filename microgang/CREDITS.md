@@ -10,20 +10,20 @@
 ### Оружие: выстрелы (настоящие записи)
 | Что | Откуда | Лицензия |
 |---|---|---|
-| `rifle_1`, `rifle_2` (AR-15), `rifle_3` (АК-47), `rifle_far`; `shotgun` (Benelli Nova), `shotgun_2`, `shotgun_far` (Winchester Model 12); `sniper` (Tikka T3 .30-06), `sniper_2`, `sniper_far` (Springfield 1917 .30-06); `revolver`, `revolver_2`, `revolver_far` (S&W 642 .38); `pistol` (Colt 1911), `pistol_2` (Walther PPQ). Взяты выстрелы «near» (вплотную) и «mid» (`*_far`, средняя дистанция) из «Prepared SFX Library». Запись: Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney («The Free Firearm Sound Library», на OpenGameArt выложил bart) | https://opengameart.org/content/the-free-firearm-sound-library (сайт проекта: http://freefirearmsfx.com) | «License(s): CC0»; на странице: «Our team holds CC0 NO RIGHTS RESERVED for this library. It may be used without royalty or credit» |
+| `rifle_1`, `rifle_2` (AR-15), `rifle_3` (АК-47), `rifle_far`; `shotgun` (Benelli Nova), `shotgun_2`, `shotgun_far` (Winchester Model 12); `sniper` (Tikka T3 .30-06), `sniper_2`, `sniper_far` (Springfield 1917 .30-06); `revolver_far` (S&W 642 .38, дальний звук пистолета); `pistol` (Colt 1911), `pistol_2` (Walther PPQ). Взяты выстрелы «near» (вплотную) и «mid» (`*_far`, средняя дистанция) из «Prepared SFX Library». Запись: Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney («The Free Firearm Sound Library», на OpenGameArt выложил bart) | https://opengameart.org/content/the-free-firearm-sound-library (сайт проекта: http://freefirearmsfx.com) | «License(s): CC0»; на странице: «Our team holds CC0 NO RIGHTS RESERVED for this library. It may be used without royalty or credit» |
 
 ### Оружие: механика (настоящие записи, кое-что склеено)
 | Что | Откуда | Лицензия |
 |---|---|---|
 | `mag_out`, `mag_in`, `charge` (магазин вынут / вставлен / затвор), нарезаны из одной записи пистолета; часть `bolt` | «Handgun Reload Sound Effect», zer0_sol — https://opengameart.org/content/handgun-reload-sound-effect | «License(s): CC0» |
-| `mag_out_2`, `mag_in_2`, `charge_2` (страйкбольный автомат), `cyl_click` (трещотка барабана) | «Gun reload sounds», SpringySpringo — https://opengameart.org/content/gun-reload-sounds | «License(s): CC0» |
+| `mag_out_2`, `mag_in_2`, `charge_2` (страйкбольный автомат) | «Gun reload sounds», SpringySpringo — https://opengameart.org/content/gun-reload-sounds | «License(s): CC0» |
 | `pump` (перезарядка помпой), `shell_in`, `shell_in_2` (патрон в магазин дробовика) | «Shotgun Reload Sound effects», zer0_sol — https://opengameart.org/content/shotgun-reload-sound-effects | «License(s): CC0» |
 | `dry` (осечка / сухой щелчок) | «Equipment Click», LFA — https://opengameart.org/content/equipment-click | «License(s): CC0» |
-| `dry_2`, `cyl_open`, `bolt` (щелчок поднятия рукоятки): `metalLatch`, `metalClick` | Kenney «RPG Audio» — https://kenney.nl/assets/rpg-audio | «License: Creative Commons CC0» |
-| `cyl_close` (из `mechanical1`), `bolt` (удар затвора вниз из `clank1`) | «Mechanical Sounds», BMacZero — https://opengameart.org/content/mechanical-sounds | «License(s): CC0» |
+| `dry_2`, `bolt` (щелчок поднятия рукоятки): `metalLatch`, `metalClick` | Kenney «RPG Audio» — https://kenney.nl/assets/rpg-audio | «License: Creative Commons CC0» |
+| `bolt` (удар затвора вниз из `clank1`) | «Mechanical Sounds», BMacZero — https://opengameart.org/content/mechanical-sounds | «License(s): CC0» |
 
-`bolt.mp3` (затвор винтовки) и `cyl_open` / `cyl_close` — собраны из настоящих записей щелчков и лязга (отдельной записи
-затвора и барабана с лицензией CC0 не нашлось). `shell_1..4` (гильзы) — тоже собраны: маленький металлический «звяк» плюс затухающие отскоки.
+`bolt.mp3` (затвор винтовки) собран из настоящих записей щелчков и лязга (отдельной записи
+затвора с лицензией CC0 не нашлось). `shell_1..4` (гильзы) — тоже собраны: маленький металлический «звяк» плюс затухающие отскоки.
 
 ### Попадания, шаги, вода
 | Что | Откуда | Лицензия |
@@ -57,7 +57,7 @@
 
 Жужжания пчёл с лицензией CC0 не нашлось — в `amb_meadow` его нет. Звук гильзы дробовика (пластик) отдельно не делали.
 
-## Текстуры (`src/assets/tex/`, 1024 px; `*_diff` цвет, `*_nor` нормали OpenGL, `*_rough` шероховатость)
+## Текстуры земли (`src/assets/tex/`, 1024 px; `*_diff` цвет, `*_nor` нормали OpenGL, `*_rough` шероховатость)
 
 Poly Haven (https://polyhaven.com), на странице каждой текстуры: «CC0 1.0 Universal - public domain» (`license: https://creativecommons.org/publicdomain/zero/1.0/`).
 Исходники 8K перепакованы в 1K jpg (качество ~80).
@@ -65,19 +65,33 @@ Poly Haven (https://polyhaven.com), на странице каждой текс�
 | Файлы | Откуда | Лицензия |
 |---|---|---|
 | `soil_*` (лесная земля с камешками и сухими стебельками) | Poly Haven «Forest Ground 04» — https://polyhaven.com/a/forest_ground_04 , автор Rob Tuytel | CC0 1.0 Universal |
-| `soil_dark_*` (тёмный гравий и перегной) | «Brown Mud Rocks 01» — https://polyhaven.com/a/brown_mud_rocks_01 , Rob Tuytel | CC0 1.0 Universal |
-| `litter_*` (тёмная земля с опавшими листьями и ростками) | «Mud Forest» — https://polyhaven.com/a/mud_forest , eye-candy.xyz | CC0 1.0 Universal |
-| `bark_*` (кора) | «Bark Brown 01» — https://polyhaven.com/a/bark_brown_01 , Rob Tuytel | CC0 1.0 Universal |
-| `rock_*` (камень для галек) | «Rock 05» — https://polyhaven.com/a/rock_05 , Rob Tuytel | CC0 1.0 Universal |
-| `velvet_*` (мягкая ворсистая поверхность, для шляпок грибов и ткани; красная) | «Velour Velvet» — https://polyhaven.com/a/velour_velvet , colormass (фото), Rico Cilliers | CC0 1.0 Universal |
-| `walnut_*` (тёмный лакированный орех для ложи): рисунок волокон от «Black Walnut Veneer 02», **цвет перекрашен нами** в тёмный орех, шероховатость снижена под лак (0,28–0,50) | https://polyhaven.com/a/black_walnut_veneer_02 , Jenelle van Heerden | CC0 1.0 Universal |
-| `steel_*` (тёмная исцарапанная сталь), `brass_*` (потёртая латунь): за основу взяты участки «Blue Metal Plate» (https://polyhaven.com/a/blue_metal_plate , Rob Tuytel) — пятна, шероховатость, нормали, — отражены в плитку; **цвет сделан нами, царапины дорисованы нами по случайному рисунку**. Металличность в игре ставить 1,0. В Poly Haven чистой латуни и стали нет, ambientCG недоступен | CC0 1.0 Universal |
 
 OpenGameArt:
 | Файлы | Откуда | Лицензия |
 |---|---|---|
 | `moss_*` (густой мох): фото «IMGP3092.JPG», обрезано, сделано бесшовным, цвет чуть выправлен; **нормали и шероховатость посчитаны нами по яркости** | «Free texture resource pack: moss, rock, patterns and misc», rubberduck — https://opengameart.org/content/free-texture-resource-pack-moss-rock-patterns-and-misc (`tex-res-stone-and-moss.zip`) | «License(s): CC0» |
-| `leaf_diff.png` (лист с жилками, с прозрачностью, 512×768), `leaf_nor.jpg` (**нормали посчитаны нами по яркости**) | «60 CC0 Vegetation textures» (`plant_55.png`, фото с burningwell), rubberduck — https://opengameart.org/content/60-cc0-vegetation-textures | «License(s): CC0» |
+
+## Модели (`src/assets/models/`)
+
+Все модели готовые, с лицензией CC0. Переупакованы для браузера (glTF → GLB, текстуры уменьшены, вершины ужаты);
+форму никто не перерисовывал.
+
+| Файлы | Что | Откуда | Лицензия |
+|---|---|---|---|
+| `heroes/*.glb` (ranger, knight, barbarian, mage, rogue, hooded) | Герои | KayKit «Adventurers 2.0», Kay Lousberg — https://kaylousberg.itch.io/kaykit-adventurers | License.txt: «License: (Creative Commons Zero, CC0)» |
+| `heroes/skel_*.glb` (warrior, rogue, minion, mage) | Скелеты | KayKit «Skeletons 1.1», Kay Lousberg — https://kaylousberg.itch.io/kaykit-skeletons | License.txt: «License: (Creative Commons Zero, CC0)» |
+| `anims.glb` (25 движений для общего скелета Rig_Medium: бег, стрейф, присед, прыжок, прицел, стрельба, перезарядка, падение, радость) | Анимации | KayKit «Character Animations 1.1», Kay Lousberg — https://kaylousberg.itch.io/kaykit-character-animations | License.txt: «License: (Creative Commons Zero, CC0)» |
+| `guns/blaster-d/o/f/j.glb` | Бластеры: автомат, дробовик, снайперка, пистолет | Kenney «Blaster Kit 2.1» — https://kenney.nl/assets/blaster-kit | License.txt: «License: (Creative Commons Zero, CC0)» |
+| `nature.glb`: камни Rock_Medium, клевер, цветы, папоротник, грибы (Mushroom_Common, трутовик Laetiporus), кусты, деревья | Природа | Quaternius «Stylized Nature MegaKit» (бесплатная версия) — https://quaternius.itch.io/stylized-nature-megakit | License_Standard.txt: «CC0 1.0 Universal (CC0 1.0) Public Domain Dedication» |
+| `props.glb`: мухоморы (big, basic, small, group2) | Мухоморы | Asset Quest «Low Poly Mushroom Kit» — https://opengameart.org/content/low-poly-mushroom-kit | «License(s): CC0»; License.txt: «Creative Commons Zero, CC0» |
+| `props.glb`: полое бревно (LogOpenDecoration) | Бревно | stgpenguin «Forest Asset Pack» — https://stgpenguin.itch.io/forest-assetpack | на странице: «Asset license Creative Commons Zero v1.0 Universal» (нормали сглажены заново) |
+| `props.glb`: пень (Stump_1), старый пень с корнями (Stump_3) | Пни | Fertile Soil Productions «Nature Kit» — https://fertile-soil-productions.itch.io/nature-props | на странице: «Asset license Creative Commons Zero v1.0 Universal» |
+| `props.glb`: доска (Wood_Plank_A) | Доска-трап | KayKit «Resource Bits», Kay Lousberg — https://kaylousberg.itch.io/resource-bits | «(CC0 Licensed)»; License.txt: CC0 |
+| `props.glb`: чашка, ложка, корзина для пикника, яблоко, банка варенья | Пикник | Tiny Treats «Pleasant Picnic», Isa Lousberg — https://tinytreats.itch.io/pleasant-picnic | «Asset license Creative Commons Zero v1.0 Universal»; License.txt: CC0 |
+| `props.glb`: клубника | Клубника | Kenney «Food Kit 2.0» — https://kenney.nl/assets/food-kit | «License Creative Commons CC0» |
+| `props.glb`: игрушечные кубики | Кубики | KayKit «Block Bits», Kay Lousberg — https://kaylousberg.itch.io/block-bits | «(CC0 Licensed)»; License.txt: CC0 |
+| `props.glb`: мяч | Мяч | KayKit «Platformer Pack», Kay Lousberg — https://kaylousberg.itch.io/kaykit-platformer | «(CC0 Licensed)»; License.txt: CC0 |
+| `props.glb`: кубик-головоломка, цветок льна | Мелочи | KayKit «Mixed Bag 1», Kay Lousberg — https://kaylousberg.itch.io/mixed-bag-1 | «(CC0 Licensed)»; License.txt: CC0 |
 
 ## Шрифты и код
 | Что | Откуда | Лицензия |
@@ -86,6 +100,6 @@ OpenGameArt:
 | Движок three.js | https://threejs.org | MIT |
 | Пост-обработка: postprocessing (pmndrs), N8AO | https://github.com/pmndrs/postprocessing , https://github.com/N8python/n8ao | Zlib, ISC |
 
-Всё остальное сделано для этой игры в коде: насекомые-бойцы и их анимации, четыре ружья, трава, грибы, одуванчики,
-клевер, земляника, жёлуди, шишки, раковина, паутина, роса, текстуры листьев и лепестков, эффекты и интерфейс.
+Всё остальное сделано для этой игры в коде: трава, дождевик, одуванчики, мох, опавшие листья, роса, лопухи вдали,
+текстуры листьев и лепестков, эффекты и интерфейс.
 Часть идей и кода (перевод, автонастройка графики, сборка) взята из Brawl Green и «Лесной войны».

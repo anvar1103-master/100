@@ -5,16 +5,23 @@ import { WEAPONS, SIDEARM, coneOf } from './weapons.js';
 import { G, emit } from './state.js';
 import { clamp, damp, gauss } from './util.js';
 
-export const SPECIES = {
-  ant:     { id:'ant',     name:'Муравей',      blood:'#9DB830' },
-  beetle:  { id:'beetle',  name:'Жук-носорог',  blood:'#7AB84A' },
-  bee:     { id:'bee',     name:'Пчела',        blood:'#E0A030' },
-  hopper:  { id:'hopper',  name:'Кузнечик',     blood:'#8CC63F' },
-  shroom:  { id:'shroom',  name:'Грибовик',     blood:'#D88A3A' },
+// the heroes (models in heroes.js): name, and the colour of what flies when they're hit (skeletons crumble into bone dust)
+export const HEROES = {
+  ranger:      { id:'ranger',       name:'Следопыт',        blood:'#B3242C' },
+  knight:      { id:'knight',       name:'Рыцарь',          blood:'#B3242C' },
+  barbarian:   { id:'barbarian',    name:'Варвар',          blood:'#B3242C' },
+  mage:        { id:'mage',         name:'Волшебница',      blood:'#B3242C' },
+  rogue:       { id:'rogue',        name:'Разбойница',      blood:'#B3242C' },
+  hooded:      { id:'hooded',       name:'Тень',            blood:'#B3242C' },
+  skel_warrior:{ id:'skel_warrior', name:'Костяной воин',   blood:'#E6DCC4', bones:true },
+  skel_rogue:  { id:'skel_rogue',   name:'Костяной плут',   blood:'#E6DCC4', bones:true },
+  skel_minion: { id:'skel_minion',  name:'Костяшка',        blood:'#E6DCC4', bones:true },
+  skel_mage:   { id:'skel_mage',    name:'Костяной колдун', blood:'#E6DCC4', bones:true },
 };
-export const SPECIES_IDS = Object.keys(SPECIES);
+export const HERO_IDS = Object.keys(HEROES);
+export const heroOf = id => HEROES[id] ? id : 'ranger';
 export const MOVE = { walk:5.2, sprint:7.8, crouch:2.7, accel:55, airAccel:14, friction:12, jump:7.4, pad:24.5 };
-export const H_STAND = 1.7, H_CROUCH = 1.15, EYE_STAND = 1.55, EYE_CROUCH = 1.0;
+export const H_STAND = 1.7, H_CROUCH = 1.2, EYE_STAND = 1.42, EYE_CROUCH = 1.0;
 export const HP_MAX = 100, REGEN_DELAY = 4, REGEN_RATE = 26, SHIELD_T = 2;
 
 let nextId = 1;
@@ -23,7 +30,7 @@ function gunState(id){ const W = WEAPONS[id]; return { id, W, mag:W.mag, reserve
 
 export function makeFighter(o){
   const f = {
-    id:nextId++, name:o.name, species:o.species || 'ant', bot:!!o.bot, primary:o.primary || 'hornet',
+    id:nextId++, name:o.name, hero:heroOf(o.hero), bot:!!o.bot, primary:o.primary || 'hornet',
     x:0, y:0, z:0, vx:0, vy:0, vz:0, r:0.38, h:H_STAND, ground:false, gN:null,
     yaw:0, pitch:0, crouchK:0, eye:EYE_STAND,
     alive:false, hp:HP_MAX, deadT:0, shieldT:0, sinceHit:99, lastAttacker:null, damagers:new Map(),

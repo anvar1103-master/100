@@ -46,7 +46,7 @@
     <div class="wname" id="wname">«Шершень»</div>
     <div class="ammo"><b id="mag">30</b><small>/ <span id="res">150</span></small></div>
     <div class="rounds" id="rounds"></div>
-    <div class="slots"><span id="slot1" class="on">1 <em id="slot1-n"></em></span><span id="slot2">2 <em>«Соты»</em></span></div>
+    <div class="slots"><span id="slot1" class="on">1 <em id="slot1-n"></em></span><span id="slot2">2 <em>«Оса»</em></span></div>
     <div class="hint" id="rhint" hidden>R — перезарядка</div>
   </div>
   <div id="dead" class="dead" hidden>
@@ -63,8 +63,8 @@
   <header class="brand"><b class="logo">MICRO<i>GANG</i></b><span>Каждый сам за себя · трава выше головы</span></header>
   <div class="cols">
     <section class="panel">
-      <h2>Боец</h2>
-      <div id="m-species" class="cards species"></div>
+      <h2>Герой</h2>
+      <div id="m-hero" class="cards heroes"></div>
       <h2>Оружие</h2>
       <div id="m-weapon" class="cards weapons"></div>
       <div id="w-info" class="w-info"></div>
@@ -76,7 +76,7 @@
       <button id="m-set" class="ghost">Настройки</button>
       <ul class="keys">
         <li><kbd>WASD</kbd> ходить <kbd>Shift</kbd> бег <kbd>C</kbd> присесть <kbd>Пробел</kbd> прыжок</li>
-        <li><kbd>ЛКМ</kbd> огонь <kbd>ПКМ</kbd> прицел <kbd>R</kbd> перезарядка <kbd>1</kbd> <kbd>2</kbd> оружие</li>
+        <li><kbd>ЛКМ</kbd> огонь <kbd>ПКМ</kbd> прицел <kbd>R</kbd> перезарядка <kbd>1</kbd> <kbd>2</kbd> оружие <kbd>V</kbd> вид</li>
         <li>Со снайперкой <kbd>Shift</kbd> в прицеле задерживает дыхание. Гриб-дождевик подбрасывает на шляпки мухоморов.</li>
       </ul>
     </section>
@@ -103,7 +103,8 @@
     <div class="row"><label for="s-fov">Угол обзора</label><div class="slide"><input type="range" id="s-fov" min="60" max="100" step="1"><b id="s-fov-v">78</b></div></div>
     <div class="row"><label for="s-vol">Громкость</label><div class="slide"><input type="range" id="s-vol" min="0" max="1" step="0.05"><b id="s-vol-v">80</b></div></div>
     <div class="row"><span>Прицел (ПКМ)</span><div class="seg" id="s-aim"><button data-v="hold">Удерживать</button><button data-v="toggle">Нажать</button></div></div>
-    <div class="row"><span>Кровь</span><div class="seg" id="s-blood"><button data-v="insect">Как у насекомых</button><button data-v="red">Красная</button><button data-v="off">Выкл</button></div></div>
+    <div class="row"><span>Вид</span><div class="seg" id="s-view"><button data-v="3">Из-за плеча</button><button data-v="1">От первого лица</button></div></div>
+    <div class="row"><span>Кровь</span><div class="seg" id="s-blood"><button data-v="on">Вкл</button><button data-v="off">Выкл</button></div></div>
     <div class="row"><span>Счётчик кадров</span><div class="seg" id="s-fps"><button data-v="0">Выкл</button><button data-v="1">Вкл</button></div></div>
     <div class="row"><span>Язык</span><div class="seg" id="s-lang"><button data-v="ru">Русский</button><button data-v="en">English</button></div></div>
     <button id="s-close" class="play">Готово</button>

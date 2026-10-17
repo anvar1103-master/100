@@ -29,7 +29,8 @@ async function open(lang, gfx = 'low'){
   await page.addInitScript(g => { try{ localStorage.clear(); localStorage.setItem('mg_gfx', JSON.stringify(g)); }catch(e){} }, gfx);
   // ?freeze: the test drives frames itself (the software renderer is slow)
   await page.goto(`http://localhost:${port}${PAGE}?lang=${lang}&freeze`, { waitUntil:'commit', timeout:120000 });
-  await page.waitForFunction('window.__mgReady', null, { timeout:300000 });
+  try{ await page.waitForFunction('window.__mgReady', null, { timeout:600000 }); }
+  catch(e){ console.log('  the game did not load; errors:', errors.slice(0, 5).join(' | ')); throw e; }
   return { ctx, page, errors, outside };
 }
 
@@ -61,13 +62,13 @@ console.log('Microgang test:', PAGE);
   const p = await page.evaluate(() => {
     __mg.start({});
     const G = __mg.G, me = G.me, t = G.fighters[1];
-    G.fighters.forEach((f, i) => { if(i > 1){ f.x = -80 + i * 4; f.z = 85; } });
-    me.x = -8; me.z = -62; t.x = -7; t.z = -71; for(const f of [me, t]){ f.vx = f.vz = 0; f.shieldT = 0; }
+    G.fighters.forEach((f, i) => { if(i > 1){ f.x = -40 + i * 4; f.z = 44; } });
+    me.x = -22; me.z = 0; t.x = -31; t.z = 0.5; for(const f of [me, t]){ f.vx = f.vz = 0; f.shieldT = 0; }
     __mg.step(30);
     const x0 = me.x, z0 = me.z;
     me.inp.mz = 1; __mg.PL.yaw = Math.PI / 2; __mg.step(90); me.inp.mz = 0;
     const walked = Math.hypot(me.x - x0, me.z - z0);
-    me.x = -8; me.z = -62; __mg.step(30);
+    me.x = -22; me.z = 0; __mg.step(30);
     const hp0 = t.hp, mag0 = me.guns[0].mag;
     let n = 0; while(t.alive && n++ < 80){ __mg.aimAt(t); __mg.step(4, true); }
     const shot = { killed:!t.alive, used:mag0 - me.guns[0].mag, kills:me.kills };
@@ -83,13 +84,13 @@ console.log('Microgang test:', PAGE);
   ok(p.walked > 4.5, `the player walks (${p.walked.toFixed(1)} steps in 1.5 s)`);
   ok(p.killed && p.kills === 1 && p.used > 0, `the player shoots a bot dead (${p.used} rounds)`);
   ok(p.reloading && p.reloaded, 'reload refills the magazine');
-  ok(p.swapped && p.back, 'swapping to the revolver and back');
+  ok(p.swapped && p.back, 'swapping to the pistol and back');
   const w = await page.evaluate(() => {
     const G = __mg.G, out = {};
     for(const id of ['acorn', 'needle']){
       __mg.start({ primary:id });
-      const me = G.me, t = G.fighters[1]; G.fighters.forEach((f, i) => { if(i > 1){ f.x = -80 + i * 4; f.z = 85; } });
-      me.x = -8; me.z = -62; t.x = -7; t.z = -66; for(const f of [me, t]){ f.vx = f.vz = 0; f.shieldT = 0; } __mg.step(30);
+      const me = G.me, t = G.fighters[1]; G.fighters.forEach((f, i) => { if(i > 1){ f.x = -40 + i * 4; f.z = 44; } });
+      me.x = -22; me.z = 0; t.x = -26; t.z = 0.3; for(const f of [me, t]){ f.vx = f.vz = 0; f.shieldT = 0; } __mg.step(30);
       // aim down the sights first (the sniper is wild from the hip), then one shot
       __mg.aimAt(t); __mg.step(30, false, true); __mg.aimAt(t); __mg.step(2, true, true); const one = me.guns[0].mag, hp = t.hp;
       __mg.step(20, true, true); const cycled = me.guns[0].mag;   // pump / bolt: no second shot this soon

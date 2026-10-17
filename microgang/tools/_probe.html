@@ -1,0 +1,28 @@
+<!doctype html><html><body style="margin:0">
+<script type="importmap">{"imports":{"three":"../node_modules/three/build/three.module.js","three/addons/":"../node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const L = new GLTFLoader(), load = u => new Promise((a, b) => L.load(u, a, undefined, b));
+const hero = await load('../src/assets/models/heroes/ranger.glb'), an = await load('../src/assets/models/anims.glb');
+const out = {};
+const o = hero.scene; o.updateMatrixWorld(true);
+const box = new THREE.Box3().setFromObject(o); out.box = [box.min.toArray(), box.max.toArray()];
+const bones = {}; o.traverse(b => { if(b.isBone) bones[b.name] = b; });
+out.bones = Object.keys(bones);
+const wp = n => bones[n].getWorldPosition(new THREE.Vector3()).toArray().map(v => +v.toFixed(3));
+out.bind = Object.fromEntries(['root', 'hips', 'spine', 'chest', 'head', 'handslotr', 'handslotl', 'footl', 'toesl'].filter(n => bones[n]).map(n => [n, wp(n)]));
+const mx = new THREE.AnimationMixer(o);
+for(const clipName of ['Ranged_2H_Aiming', 'Ranged_1H_Aiming', 'Idle_A']){
+  mx.stopAllAction();
+  const c = an.animations.find(a => a.name === clipName);
+  mx.clipAction(c).play(); mx.update(0.01); o.updateMatrixWorld(true);
+  const q = bones.handslotr.getWorldQuaternion(new THREE.Quaternion());
+  const ax = v => v.clone().applyQuaternion(q).toArray().map(x => +x.toFixed(2));
+  out[clipName] = { hr:wp('handslotr'), hl:wp('handslotl'), head:wp('head'), chest:wp('chest'), x:ax(new THREE.Vector3(1,0,0)), y:ax(new THREE.Vector3(0,1,0)), z:ax(new THREE.Vector3(0,0,1)), dur:c.duration,
+    tracks:c.tracks.length };
+}
+out.clips = an.animations.map(a => a.name + ':' + a.duration.toFixed(2) + ':' + a.tracks.length);
+out.meshes = []; o.traverse(m => { if(m.isMesh) out.meshes.push([m.name, m.isSkinnedMesh, m.material.name, m.material.type, m.parent.name]); });
+window.out = out;
+</script></body></html>

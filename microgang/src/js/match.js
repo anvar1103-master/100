@@ -1,7 +1,7 @@
 // «Каждый сам за себя»: everyone against everyone. First to the kill target wins, or the leader when time runs out.
 // The fallen come back after a short wait at the spawn point farthest from danger, briefly shielded.
 import { G, emit, on } from './state.js';
-import { makeFighter, spawnFighter, stepFighter, SPECIES_IDS } from './fighter.js';
+import { makeFighter, spawnFighter, stepFighter, HERO_IDS } from './fighter.js';
 import { PRIMARIES } from './weapons.js';
 import { WORLD } from './world.js';
 import { losClear } from './phys.js';
@@ -9,18 +9,18 @@ import { shuffle, store } from './util.js';
 import './combat.js';
 
 export const FFA = { target:25, time:8 * 60, respawn:3 };
-const BOT_NAMES = ['Жужа', 'Хитин', 'Щелкун', 'Мурашка', 'Сверчок', 'Стрекот', 'Шмель', 'Тля', 'Короед', 'Усач', 'Скарабей', 'Медведка',
-  'Жужелица', 'Овод', 'Пасечник', 'Листоед', 'Слизняк', 'Носорог', 'Опёнок', 'Моховик', 'Гусеница', 'Комарик', 'Светлячок', 'Златка'];
+const BOT_NAMES = ['Пенёк', 'Шишкарь', 'Репей', 'Лопух', 'Кочка', 'Сморчок', 'Опёнок', 'Моховик', 'Корешок', 'Колючка', 'Травинка', 'Росинка',
+  'Желудёк', 'Лишайник', 'Подорожник', 'Ромашка', 'Щавель', 'Былинка', 'Светлячок', 'Веточка', 'Пыльца', 'Бурьян', 'Клеверок', 'Хвоинка'];
 
 export function startMatch(o = {}){
   const n = o.count || store.get('count', 12);
   G.fighters.length = 0; G.time = 0; G.paused = false;
   const names = shuffle(BOT_NAMES.slice());
-  const me = makeFighter({ name:o.name || store.get('nick', 'Ты'), species:o.species || store.get('species', 'ant'), primary:o.primary || store.get('primary', 'hornet') });
+  const me = makeFighter({ name:o.name || store.get('nick', 'Ты'), hero:o.hero || store.get('hero', 'ranger'), primary:o.primary || store.get('primary', 'hornet') });
   me.isMe = true;
   G.fighters.push(me); G.me = me;
   for(let i = 1; i < n; i++){
-    const f = makeFighter({ name:names[(i - 1) % names.length], species:SPECIES_IDS[i % SPECIES_IDS.length], bot:true, primary:PRIMARIES[(i + 1) % PRIMARIES.length] });
+    const f = makeFighter({ name:names[(i - 1) % names.length], hero:HERO_IDS[i % HERO_IDS.length], bot:true, primary:PRIMARIES[(i + 1) % PRIMARIES.length] });
     G.fighters.push(f);
   }
   G.match = { mode:'ffa', target:o.target || FFA.target, timeLeft:o.time || FFA.time, over:false, winner:null, diff:o.diff || store.get('diff', 'normal'), started:false };
@@ -39,9 +39,9 @@ export function pickSpawn(f){
     for(const o of G.fighters){
       if(o === f || !o.alive) continue;
       const d = Math.hypot(o.x - s.x, o.z - s.z); near = Math.min(near, d);
-      if(d < 70 && !seen && losClear(o.x, o.y + o.eye, o.z, s.x, s.y + 1.4, s.z)) seen = true;
+      if(d < 55 && !seen && losClear(o.x, o.y + o.eye, o.z, s.x, s.y + 1.4, s.z)) seen = true;
     }
-    const sc = Math.min(near, 80) - (seen ? 60 : 0) + Math.random() * 12;
+    const sc = Math.min(near, 40) - (seen ? 40 : 0) + Math.random() * 8;
     if(sc > bestS){ bestS = sc; best = s; }
   }
   return best || WORLD.spawns[0];
