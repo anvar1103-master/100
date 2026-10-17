@@ -34,21 +34,17 @@ vmCam.layers.set(VM_LAYER);
 export const VM = { proj:{ value:new THREE.Matrix4() }, fov:52, env:null, clip:{ value:0 } };
 
 // ---- sun and sky ----
-// late golden afternoon: the sun is low, so tall grass glows against it and throws long shadows
-export const SUN_DIR = new THREE.Vector3(-0.62, 0.36, -0.7).normalize();
-export const SUN_COL = new THREE.Color('#FFD7A0');
-export const FOG_COL = new THREE.Color('#C9D6B8');
+// a clear sunny day: the sun high enough for bright light, still low enough for the grass to glow against it
+export const SUN_DIR = new THREE.Vector3(-0.55, 0.62, -0.6).normalize();
+export const SUN_COL = new THREE.Color('#FFF0D8');
+export const FOG_COL = new THREE.Color('#C4D8EC');
 scene.fog = new THREE.Fog(FOG_COL, 140, 1500);
 
-const skyU = { top:{ value:new THREE.Color('#5D8FCB') }, hor:{ value:new THREE.Color('#F4DDB0') }, low:{ value:new THREE.Color('#B9C7A0') },
-  sunDir:{ value:SUN_DIR }, sunCol:{ value:new THREE.Color('#FFE2B0') }, cloud:{ value:new THREE.Color('#FFF4E2') } };
+const skyU = { top:{ value:new THREE.Color('#3F86E0') }, hor:{ value:new THREE.Color('#BFDDF7') }, low:{ value:new THREE.Color('#B9C7A0') },
+  sunDir:{ value:SUN_DIR }, sunCol:{ value:new THREE.Color('#FFF4DC') } };
 export const skyMat = new THREE.ShaderMaterial({ side:THREE.BackSide, depthWrite:false, fog:false, uniforms:skyU,
   vertexShader:'varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-  fragmentShader:`uniform vec3 top; uniform vec3 hor; uniform vec3 low; uniform vec3 sunDir; uniform vec3 sunCol; uniform vec3 cloud; varying vec3 vDir;
-float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
-float fbm(vec2 p){ float v = 0.0, a = 0.5; for(int i = 0; i < 5; i++){ v += a * noise(p); p = p * 2.03 + 1.7; a *= 0.5; } return v; }
+  fragmentShader:`uniform vec3 top; uniform vec3 hor; uniform vec3 low; uniform vec3 sunDir; uniform vec3 sunCol; varying vec3 vDir;
 void main(){
   vec3 d = normalize(vDir); float h = d.y;
   float s = max(dot(d, sunDir), 0.0);
@@ -57,12 +53,6 @@ void main(){
   // warm light scattered around the sun
   col += sunCol * (pow(s, 6.0) * 0.35 + pow(s, 48.0) * 0.6);
   col += sunCol * pow(s, 2400.0) * 40.0;
-  if(h > 0.0){
-    vec2 uv = d.xz / (h + 0.2) * 1.6;
-    float c = smoothstep(0.5, 0.82, fbm(uv)) * smoothstep(0.0, 0.3, h);
-    vec3 cc = cloud * (0.82 + 0.25 * fbm(uv * 2.3 + 4.0)) + sunCol * pow(s, 4.0) * 0.8;
-    col = mix(col, cc, c * 0.75);
-  }
   col = clamp(col, 0.0, 60.0);
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>

@@ -33,7 +33,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth,
   outputColor = vec4(c, inputColor.a);
 }`, { attributes:EffectAttribute.DEPTH, uniforms:new Map([
       ['blurTex', new THREE.Uniform(blurTex)], ['farRange', new THREE.Uniform(new THREE.Vector2(60, 230))], ['maxBlur', new THREE.Uniform(0.8)],
-      ['hazeCol', new THREE.Uniform(new THREE.Color('#B9C9A8'))], ['sunCol', new THREE.Uniform(new THREE.Color('#FFC27A'))],
+      ['hazeCol', new THREE.Uniform(new THREE.Color('#BCD3DF'))], ['sunCol', new THREE.Uniform(new THREE.Color('#FFE2B8'))],
       ['sunView', new THREE.Uniform(new THREE.Vector3())], ['projInv', new THREE.Uniform(new THREE.Matrix4())],
       ['hazeK', new THREE.Uniform(0.0018)], ['aim', new THREE.Uniform(0)] ]) });
   }
