@@ -50,5 +50,49 @@ R — перезарядка, F — подобрать, 1–4 — оружие, 
 Поиск пути по сетке (A*), восприятие (взгляд, слух — выстрелы и шаги, темнота), засады в тёмных комнатах и у
 дверей, сбор лута, уход от зоны, сложность по меткости и реакции.
 
-## Ассеты
-Варианты для выбора владельцем — ниже (заполняется после поиска). Только CC0, авторы — `CREDITS.md`.
+## Ассеты: варианты (этап 0, ждут выбора владельца)
+Только CC0. Лист с превью владелец получил в чате; в игру ничего ещё не положено. Авторы — в `CREDITS.md`, когда
+ассет войдёт в игру. Реалистичных солдат в одежде с движениями автомата под CC0 нет нигде.
+
+**Солдаты**
+- A. Quaternius Universal Base Characters + Universal Animation Library (бесплатные версии) —
+  https://quaternius.itch.io/universal-base-characters , https://quaternius.itch.io/universal-animation-library .
+  License.txt: «CC0 1.0 Universal». Мужчина и женщина, 14–15 тыс. треуг., скелет 65 костей (имена как в UE: pelvis,
+  spine_01…, hand_r). 43 движения ставятся без доработки: бег, спринт, присед, пистолет (стойка, прицел, выстрел,
+  перезарядка), попадания, смерть. Нет одежды, движений с автоматом и бокового бега. Вид — «манекен» (пластик)
+  или крашеный комбинезон. Внимание: с 28.08.2026 сайт Quaternius ввёл свою лицензию QAL (не CC0); эти наборы на
+  своих страницах и в License.txt — CC0, License.txt хранить. Новые наборы Quaternius не брать.
+- B. KayKit Character Animations 1.1 — https://kaylousberg.itch.io/kaykit-character-animations , «CC0». Мультяшный
+  манекен, но полный набор с автоматом (Ranged_2H_Aiming/Reload/Shoot, Running_HoldingRifle, стрейф, смерть).
+  Скелет Rig_Medium (23 кости) — движения с автоматом можно перенести на A.
+- C. «Hazmat zombie» (OpenGameArt, CC0, 1 тыс. треуг., только движения зомби, исходник с BlendSwap не проверен);
+  солдаты Quaternius Ultimate Animated Character Pack (мультяшные, 11 движений).
+
+**Оружие**
+- A. «Free CC0 Guns & Explosives Pack» — https://3dmodelscc0.itch.io/free-cc0-guns-explosives-pack (в описании:
+  «all offered under a CC0 public domain license», автор не назван). FBX в сантиметрах + PNG 2K PBR, архив RAR 155 МБ.
+  АК-47 4,8k треуг., M4A1 9,3k, помповый дробовик 1,7k, снайперка 4,8k, Макаров 4k, Люгер 5k, Grease Gun, Suomi.
+  Магазин, затвор, прицел, цевьё дробовика — отдельные узлы. Нормали частью DirectX (зелёный канал перевернуть).
+- B. Poly Haven, Mateusz Sadek — https://polyhaven.com/a/bolt_action_rifle_7_62 (20k треуг.),
+  https://polyhaven.com/a/service_pistol (10–17k) — «CC0». Самые детальные и потёртые; автомата и дробовика нет.
+- C. Quaternius Animated Guns — https://opengameart.org/content/low-poly-animated-guns («CC0», простые, без текстур).
+- Руки: реалистичных CC0 нет (WRAD ARMS, Drillimpact PSX Arms — стиль PS1; para «fps arms» — грубые). План: руки
+  модели солдата.
+
+**Текстуры и предметы**
+- A. «Backrooms PBR texture pack» — https://opengameart.org/content/backrooms-pbr-texture-pack , «CC0», 1K PNG:
+  обои с узором, ковёр (коричневый, сухой — мокрые пятна в шейдере), плитка потолка, крашеные стены, бассейн.
+  Нормали в стиле DirectX.
+- B. «Backrooms like asset RE» — https://loafbrr.itch.io/backrooms-like-asset-re , CC0 (архив 220 МБ): обои ярче,
+  зелёный ковёр, модульные стены, двери, плинтусы, лестницы.
+- C. Poly Haven decrepit_wallpaper + dirty_carpet (фото, нужна подкраска), плитка потолка para (OpenGameArt).
+- Предметы: Poly Haven (стол metal_office_desk, кресла, стеллажи, огнетушитель, fire_alarm, wall_clock,
+  WetFloorSign_01, урна, mounted_fluorescent_lights) — реалистичные; Oxygen «Game Ready Backrooms Asset Pack»
+  Vol. 1/2 (itch.io, CC0; Vol. 2 помечен «AI Assisted») — двери, шкафы, кулер, табличка EXIT, простые. Панель лампы — в коде.
+
+**Звуки (CC0)** — Freesound (CC0, скачивается только сжатое превью без входа): гул ламп 870708, мигание 777053 и
+484157, вентиляция 637804, удар 653294, выстрелы в помещении 815698 и 592264; шаги по ковру — Kenney «Impact
+Sounds» (footstep_carpet); выстрелы и перезарядки — из `microgang` (Free Firearm Sound Library). Эхо — в коде.
+
+**Совет владельцу:** солдаты A (+ движения автомата из B), оружие A (снайперка и пистолет — из B), текстуры A,
+предметы Poly Haven, звуки как выше.
