@@ -1,0 +1,228 @@
+[
+[
+"idle",
+"Rifle 8-Way Locomotion Pack/idle.fbx"
+],
+[
+"aim",
+"Rifle 8-Way Locomotion Pack/idle aiming.fbx"
+],
+[
+"crouch",
+"Rifle 8-Way Locomotion Pack/idle crouching.fbx"
+],
+[
+"crouch_aim",
+"Rifle 8-Way Locomotion Pack/idle crouching aiming.fbx"
+],
+[
+"walk_f",
+"Rifle 8-Way Locomotion Pack/walk forward.fbx"
+],
+[
+"walk_b",
+"Rifle 8-Way Locomotion Pack/walk backward.fbx"
+],
+[
+"walk_l",
+"Rifle 8-Way Locomotion Pack/walk left.fbx"
+],
+[
+"walk_r",
+"Rifle 8-Way Locomotion Pack/walk right.fbx"
+],
+[
+"walk_fl",
+"Rifle 8-Way Locomotion Pack/walk forward left.fbx"
+],
+[
+"walk_fr",
+"Rifle 8-Way Locomotion Pack/walk forward right.fbx"
+],
+[
+"walk_bl",
+"Rifle 8-Way Locomotion Pack/walk backward left.fbx"
+],
+[
+"walk_br",
+"Rifle 8-Way Locomotion Pack/walk backward right.fbx"
+],
+[
+"run_f",
+"Rifle 8-Way Locomotion Pack/run forward.fbx"
+],
+[
+"run_b",
+"Rifle 8-Way Locomotion Pack/run backward.fbx"
+],
+[
+"run_l",
+"Rifle 8-Way Locomotion Pack/run left.fbx"
+],
+[
+"run_r",
+"Rifle 8-Way Locomotion Pack/run right.fbx"
+],
+[
+"run_fl",
+"Rifle 8-Way Locomotion Pack/run forward left.fbx"
+],
+[
+"run_fr",
+"Rifle 8-Way Locomotion Pack/run forward right.fbx"
+],
+[
+"run_bl",
+"Rifle 8-Way Locomotion Pack/run backward left.fbx"
+],
+[
+"run_br",
+"Rifle 8-Way Locomotion Pack/run backward right.fbx"
+],
+[
+"sprint_f",
+"Rifle 8-Way Locomotion Pack/sprint forward.fbx"
+],
+[
+"sprint_b",
+"Rifle 8-Way Locomotion Pack/sprint backward.fbx"
+],
+[
+"sprint_l",
+"Rifle 8-Way Locomotion Pack/sprint left.fbx"
+],
+[
+"sprint_r",
+"Rifle 8-Way Locomotion Pack/sprint right.fbx"
+],
+[
+"sprint_fl",
+"Rifle 8-Way Locomotion Pack/sprint forward left.fbx"
+],
+[
+"sprint_fr",
+"Rifle 8-Way Locomotion Pack/sprint forward right.fbx"
+],
+[
+"sprint_bl",
+"Rifle 8-Way Locomotion Pack/sprint backward left.fbx"
+],
+[
+"sprint_br",
+"Rifle 8-Way Locomotion Pack/sprint backward right.fbx"
+],
+[
+"cwalk_f",
+"Rifle 8-Way Locomotion Pack/walk crouching forward.fbx"
+],
+[
+"cwalk_b",
+"Rifle 8-Way Locomotion Pack/walk crouching backward.fbx"
+],
+[
+"cwalk_l",
+"Rifle 8-Way Locomotion Pack/walk crouching left.fbx"
+],
+[
+"cwalk_r",
+"Rifle 8-Way Locomotion Pack/walk crouching right.fbx"
+],
+[
+"cwalk_fl",
+"Rifle 8-Way Locomotion Pack/walk crouching forward left.fbx"
+],
+[
+"cwalk_fr",
+"Rifle 8-Way Locomotion Pack/walk crouching forward right.fbx"
+],
+[
+"cwalk_bl",
+"Rifle 8-Way Locomotion Pack/walk crouching backward left.fbx"
+],
+[
+"cwalk_br",
+"Rifle 8-Way Locomotion Pack/walk crouching backward right.fbx"
+],
+[
+"turn_l",
+"Rifle 8-Way Locomotion Pack/turn 90 left.fbx"
+],
+[
+"turn_r",
+"Rifle 8-Way Locomotion Pack/turn 90 right.fbx"
+],
+[
+"jump_up",
+"Rifle 8-Way Locomotion Pack/jump up.fbx",
+1
+],
+[
+"jump_loop",
+"Rifle 8-Way Locomotion Pack/jump loop.fbx"
+],
+[
+"jump_down",
+"Rifle 8-Way Locomotion Pack/jump down.fbx",
+1
+],
+[
+"fire",
+"Shooter Pack/firing rifle.fbx"
+],
+[
+"reload",
+"Reload.fbx"
+],
+[
+"reload_2",
+"Reload (1).fbx"
+],
+[
+"hit",
+"Hit Reaction.fbx"
+],
+[
+"hit_walk",
+"Walking Hit Reaction.fbx"
+],
+[
+"death_front",
+"Death From The Front.fbx",
+1
+],
+[
+"death_back",
+"Death From The Back.fbx",
+1
+],
+[
+"death_right",
+"Death From Right.fbx",
+1
+],
+[
+"death_head_front",
+"Death From Front Headshot.fbx",
+1
+],
+[
+"death_head_back",
+"Death From Back Headshot.fbx",
+1
+],
+[
+"death",
+"Death.fbx",
+1
+],
+[
+"death_crouch",
+"Rifle 8-Way Locomotion Pack/death crouching headshot front.fbx",
+1
+],
+[
+"death_walk",
+"Shooter Pack/walking to dying.fbx",
+1
+]
+]

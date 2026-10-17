@@ -1,0 +1,27 @@
+{
+  "name": "backshots",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backshots: a realistic first-person battle royale in the Backrooms, for the browser",
+  "type": "module",
+  "scripts": {
+    "serve": "http-server -p 8127 -c-1 .",
+    "build": "node tools/build.mjs",
+    "test": "node tools/test.mjs",
+    "balance": "node tools/balance.mjs"
+  },
+  "devDependencies": {
+    "@dimforge/rapier3d-compat": "0.19.3",
+    "@gltf-transform/core": "4.2.1",
+    "@gltf-transform/extensions": "4.2.1",
+    "@gltf-transform/functions": "4.2.1",
+    "esbuild": "0.24.0",
+    "http-server": "14.1.1",
+    "meshoptimizer": "0.22.0",
+    "n8ao": "2.0.1",
+    "playwright": "1.56.1",
+    "postprocessing": "6.39.5",
+    "sharp": "0.33.5",
+    "three": "0.186.1"
+  }
+}
