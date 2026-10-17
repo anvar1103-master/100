@@ -5,13 +5,14 @@ import * as THREE from 'three';
 import { scene, camera } from './engine.js';
 import { G, on, emit } from './state.js';
 import { ray, HIT, W as PW } from './phys.js';
-import { SPECIES } from './fighter.js';
+import { HEROES } from './fighter.js';
+import { heroMuzzle } from './heroes.js';
 import { casingGeo, gunMats } from './gunmodels.js';
 import { VMS } from './viewmodel.js';
 import { store, clamp, rand } from './util.js';
 
-export const FX = { blood:store.get('blood', 'insect') };
-const bloodCol = f => FX.blood === 'red' ? '#7A0A08' : (SPECIES[f.species] || SPECIES.ant).blood;
+export const FX = { blood:store.get('blood', 'on') === 'off' ? 'off' : 'on' };
+const bloodCol = f => (HEROES[f.hero] || HEROES.ranger).blood;
 
 // ---- particles: camera-facing soft quads, one pool blended normally, one added (sparks, glints, flashes) ----
 function makePool(max, additive){
@@ -190,7 +191,8 @@ on('casing', (f, anchor, id) => {
 const DROPS = [];
 on('magDrop', (f, mag, id) => {
   if(!mag) return;
-  const m = mag.clone(true); m.traverse(o => { o.layers.set(0); if(o.isMesh){ o.material = gunMats(false).chitin; o.castShadow = true; } });
+  const m = mag.clone(true); m.traverse(o => { o.layers.set(0); if(o.isMesh){ o.material = o.material.userData.world || o.material; o.castShadow = true; } });
+  const ws = new THREE.Vector3(); mag.getWorldScale(ws); m.scale.copy(ws);
   mag.getWorldPosition(_wp); const q = new THREE.Quaternion(); mag.getWorldQuaternion(q);
   const holder = new THREE.Group(); holder.add(m); m.position.set(0, 0, 0); m.rotation.set(0, 0, 0);
   holder.position.copy(_wp); holder.quaternion.copy(q); scene.add(holder);
@@ -269,7 +271,7 @@ function bleed(t, o, heavy){
     onLand:p => { if(Math.random() < 0.35) decal(p.x, PW.groundH(p.x, p.z), p.z, 0, 1, 0, 4 + Math.floor(Math.random() * 2), 0.18 + Math.random() * 0.25, col, 50); } });
   burst(PN, Math.round(5 * k), o.x, o.y, o.z, { dir:[-d.x, 0.3, -d.z], spd:2, cone:0.6, life:0.6, size:0.06, size1:0.05, col:cc, grav:18 });
   burst(PN, Math.round(3 * k), o.x, o.y, o.z, { dir:[d.x * 0.3, 0.1, d.z * 0.3], spd:0.8, cone:1, life:0.5, size:0.15, size1:0.65 * k, col:c3(col, 0.5), soft:true, drag:3 });
-  // chitin flakes in the fighter's own colour
+  // bits of cloth and bone
   burst(PN, Math.round(3 * k), o.x, o.y, o.z, { dir:[-d.x, 0.5, -d.z], spd:3, cone:0.8, life:1, size:0.05, size1:0.05, col:c3('#2A1A0C', 1), grav:18, spin:15 });
   // splatter on whatever is right behind them
   const h = ray(o.x, o.y, o.z, d.x, d.y, d.z, 3.5);
@@ -281,7 +283,7 @@ on('shot', (f, traces, W) => {
   // tracer start: your gun's muzzle in first person, the model's muzzle otherwise
   let sx, sy, sz;
   if(f === G.me && VMS.cur && VMS.root.visible){ VMS.cur.muzzle.getWorldPosition(_wp); sx = _wp.x; sy = _wp.y; sz = _wp.z; }
-  else if(f.model){ const C = f.model, b = f.cur === 0 ? C.bones.gunP : C.bones.gunS, g = f.cur === 0 ? C.gp : C.gs; _wp.copy(g.muzzle).applyMatrix4(b.matrixWorld); sx = _wp.x; sy = _wp.y; sz = _wp.z;
+  else if(f.model){ heroMuzzle(f.model, _wp); sx = _wp.x; sy = _wp.y; sz = _wp.z;
     // their muzzle flash and smoke
     spawn(PA, { x:sx, y:sy, z:sz, vx:0, vy:0, vz:0, life:0.06, size:W.kind === 'sniper' ? 1.1 : 0.7, size1:0.5, col:c3('#FFC060', 1), soft:false });
     burst(PN, 2, sx, sy, sz, { spd:0.3, life:1.2, size:0.15, size1:0.7, col:c3('#C8C0B0', 0.2), soft:true, up:0.3 });

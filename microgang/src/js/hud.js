@@ -8,7 +8,7 @@ import { WEAPONS, PRIMARIES, coneOf } from './weapons.js';
 import { rayFighters } from './combat.js';
 import { ray } from './phys.js';
 import { standings, leader, FFA } from './match.js';
-import { PL } from './player.js';
+import { PL, VIEW } from './player.js';
 import { P } from './post.js';
 import { $, esc, store, clamp } from './util.js';
 import { tr } from './i18n.js';
@@ -115,7 +115,8 @@ export function updateHud(dt){
   const half = Math.tan(camera.fov * Math.PI / 360), cone = Math.tan(coneOf(W, f) * Math.PI / 180);
   const gap = clamp(cone / half * innerHeight / 2, 3, 120);
   x.style.setProperty('--g', gap.toFixed(1) + 'px');
-  x.classList.toggle('off', f.adsK > 0.5 || f.sprintT > 0.1 || !f.alive);
+  // (over the shoulder there are no sights to look down, so the crosshair stays; the scope has its own)
+  x.classList.toggle('off', (VIEW.mode === 1 || W.ads.scope ? f.adsK > 0.5 : false) || f.sprintT > 0.1 || !f.alive);
   // whose name is under the crosshair
   H.tagT = (H.tagT || 0) - dt;
   if(H.tagT <= 0 && f.alive){

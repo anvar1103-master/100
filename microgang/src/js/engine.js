@@ -69,10 +69,10 @@ void main(){
   #include <colorspace_fragment>
 }` });
 
-export const hemi = new THREE.HemisphereLight('#CFE0FF', '#5A6B34', 1.0);
-export const sun = new THREE.DirectionalLight(SUN_COL, 3.4);
+export const hemi = new THREE.HemisphereLight('#D8E6FF', '#6A7A44', 1.35);
+export const sun = new THREE.DirectionalLight(SUN_COL, 2.8);
 sun.castShadow = true;
-sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.04;
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.08;
 sun.shadow.mapSize.set(LOW ? 1024 : HIGH ? 4096 : 2048, LOW ? 1024 : HIGH ? 4096 : 2048);
 sun.shadow.radius = 2;
 const SH = LOW ? 36 : 52;   // half size of the shadow box around the player

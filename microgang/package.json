@@ -11,11 +11,14 @@
     "unit": "node tools/unit.mjs"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.2.1",
+    "@gltf-transform/extensions": "^4.2.1",
+    "@gltf-transform/functions": "^4.2.1",
     "esbuild": "0.24.0",
-    "three": "0.186.1",
-    "postprocessing": "6.39.5",
-    "n8ao": "2.0.1",
     "http-server": "14.1.1",
-    "playwright": "1.56.1"
+    "n8ao": "2.0.1",
+    "playwright": "1.56.1",
+    "postprocessing": "6.39.5",
+    "three": "0.186.1"
   }
 }

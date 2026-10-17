@@ -57,7 +57,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   c = mix(c, vec3(l) * vec3(1.0, 0.75, 0.7), hurt * e * 0.7);
   outputColor = vec4(c, inputColor.a);
 }`, { blendFunction:BlendFunction.NORMAL, uniforms:new Map([
-      ['sat', new THREE.Uniform(1.12)], ['contrast', new THREE.Uniform(1.05)], ['lift', new THREE.Uniform(new THREE.Vector3(0.02, 0.018, 0.0))],
+      ['sat', new THREE.Uniform(1.02)], ['contrast', new THREE.Uniform(0.98)], ['lift', new THREE.Uniform(new THREE.Vector3(0.02, 0.018, 0.0))],
       ['gain', new THREE.Uniform(new THREE.Vector3(1.03, 1.0, 0.94))], ['vig', new THREE.Uniform(0.32)], ['hurt', new THREE.Uniform(0)] ]) });
   }
 }
@@ -89,7 +89,7 @@ export function initPost(){
   // and wipe that depth again, or next frame's AO pass (which draws into this same buffer) keeps the old gun as a ghost
   C.addPass(new ClearPass(false, true, false));
   P.macro = new MacroEffect(P.blurRT.texture);
-  P.bloom = new BloomEffect({ intensity:0.55, luminanceThreshold:0.82, luminanceSmoothing:0.25, mipmapBlur:true, radius:0.72 });
+  P.bloom = new BloomEffect({ intensity:0.3, luminanceThreshold:0.9, luminanceSmoothing:0.25, mipmapBlur:true, radius:0.72 });
   const fx = [P.macro, P.bloom];
   if(HIGH){
     const m = P.sunMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), new THREE.MeshBasicMaterial({ color:SUN_COL.clone().multiplyScalar(1.6), transparent:true, depthWrite:false, fog:false }));

@@ -15,7 +15,7 @@ export const DIFF = {
 };
 // preferred distance band and the farthest it bothers shooting, per gun
 // preferred distance band, the farthest it shoots, the farthest it notices someone to go after
-const BAND = { hornet:[12, 42, 95, 115], acorn:[2, 9, 34, 95], needle:[38, 140, 260, 280], comb:[7, 26, 60, 90] };
+const BAND = { hornet:[10, 30, 70, 80], acorn:[2, 8, 26, 70], needle:[24, 70, 140, 150], comb:[6, 20, 45, 60] };
 
 function brain(f){
   return f.bot_ || (f.bot_ = { target:null, reactT:rand(0, 0.4), fireDelay:0, err:{ x:0, y:0, tx:0, ty:0, t:0 }, track:0, strafeT:0, strafeDir:1,
@@ -29,7 +29,7 @@ on('fire', f => {
   for(const b of G.fighters){
     if(!b.bot || b === f || !b.alive) continue;
     const d = Math.hypot(b.x - f.x, b.z - f.z);
-    if(d < (f.guns[f.cur].W.kind === 'sniper' ? 130 : 95)){ const B = brain(b); B.heard = { x:f.x, z:f.z, f }; B.heardT = G.time; }
+    if(d < (f.guns[f.cur].W.kind === 'sniper' ? 80 : 60)){ const B = brain(b); B.heard = { x:f.x, z:f.z, f }; B.heardT = G.time; }
   }
 });
 // being shot: turn toward the shooter quickly
@@ -105,7 +105,7 @@ export function botThink(f, dt){
   const ex = f.x, ey = eyeY(f), ez = f.z;
   let wx = 0, wz = 0, sprint = false;
   I.aim = false; I.fire = false; I.crouch = false;
-  // the primary is empty and the enemy is close: pull the revolver
+  // the primary is empty and the enemy is close: pull the pistol
   if(T && f.cur === 0 && g.mag === 0 && Math.hypot(T.x - f.x, T.z - f.z) < 30) I.slot = 1;
   else if(!T && f.cur === 1 && f.guns[0].mag + f.guns[0].reserve > 0) I.slot = 0;
   if(T){
@@ -117,7 +117,7 @@ export function botThink(f, dt){
     if(E.t <= 0){ E.t = rand(0.25, 0.6); const steady = W.kind === 'sniper' && f.adsK > 0.9 && Math.hypot(f.vx, f.vz) < 1 ? 0.45 : 1;
       const e = D.err * steady * (1 + Math.max(0, 1 - B.track / D.settle) * 2.5) * (1 + d / (W.kind === 'sniper' ? 200 : 90)); E.tx = gauss() * e; E.ty = gauss() * e * 0.7; if(Math.random() < 0.1) B.aimHead = Math.random() < D.head; }
     E.x += (E.tx - E.x) * Math.min(1, dt * 5); E.y += (E.ty - E.y) * Math.min(1, dt * 5);
-    const py = T.y + (B.aimHead ? T.h - 0.2 : T.h * 0.62);
+    const py = T.y + (B.aimHead ? T.h * 0.76 : T.h * 0.42);
     const ax = T.x - ex, ay = py - ey, az = T.z - ez, hd = Math.hypot(ax, az);
     const yawT = Math.atan2(-ax, -az) + E.x, pitT = Math.atan2(ay, hd) + E.y;
     // fight the recoil: the aim is view + recoil, so pull the view down by part of it

@@ -1,0 +1,25 @@
+<!doctype html><html><body style="margin:0;background:#fff">
+<script type="importmap">{"imports":{"three":"../node_modules/three/build/three.module.js","three/addons/":"../node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const L = new GLTFLoader(), load = u => new Promise((a, b) => L.load(u, a, undefined, b));
+const r = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true }); r.setSize(1600, 800); document.body.appendChild(r.domElement); r.setClearColor('#ffffff'); r.autoClear = false; r.clear();
+const ids = ['blaster-d', 'blaster-o', 'blaster-f', 'blaster-j'];
+const info = {};
+for(let i = 0; i < 4; i++){
+  const g = (await load('../src/assets/models/guns/' + ids[i] + '.glb')).scene;
+  const s = new THREE.Scene(); s.add(new THREE.AmbientLight('#fff', 2)); s.add(g);
+  // side view from +x: z to the left/right; ortho 1.4 wide
+  const cam = new THREE.OrthographicCamera(-0.7, 0.7, 0.35, -0.35, 0.01, 10); cam.position.set(3, 0, 0); cam.lookAt(0, 0, 0);
+  // grid lines every 0.05
+  const pts = []; for(let v = -0.7; v <= 0.701; v += 0.05){ pts.push(0.5, -0.35, v, 0.5, 0.35, v); } for(let v = -0.35; v <= 0.351; v += 0.05){ pts.push(0.5, v, -0.7, 0.5, v, 0.7); }
+  const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  s.add(new THREE.LineSegments(gg, new THREE.LineBasicMaterial({ color:'#ccc' })));
+  const ax = []; ax.push(0.6, 0, -0.7, 0.6, 0, 0.7, 0.6, -0.35, 0, 0.6, 0.35, 0); const ag = new THREE.BufferGeometry(); ag.setAttribute('position', new THREE.Float32BufferAttribute(ax, 3)); s.add(new THREE.LineSegments(ag, new THREE.LineBasicMaterial({ color:'#f00' })));
+  r.setViewport((i % 2) * 800, (1 - Math.floor(i / 2)) * 400, 800, 400); r.render(s, cam);
+  const nodes = []; g.traverse(o => nodes.push(o.name + (o.isMesh ? '*' : '')));
+  info[ids[i]] = nodes;
+}
+window.out = info;
+</script></body></html>

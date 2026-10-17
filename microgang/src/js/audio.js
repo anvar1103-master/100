@@ -8,13 +8,13 @@ import { store, clamp } from './util.js';
 import { groundMat, grassAt } from './map.js';
 
 export const AU = { ctx:null, master:null, sfx:null, amb:null, verb:null, buf:{}, vol:store.get('vol', 0.8), ready:false, voices:0, ambOn:false, muted:false };
-const FILES = ['rifle_1', 'rifle_2', 'rifle_3', 'rifle_far', 'shotgun', 'shotgun_2', 'shotgun_far', 'sniper', 'sniper_2', 'sniper_far', 'revolver', 'revolver_2', 'revolver_far',
-  'mag_out', 'mag_in', 'charge', 'pump', 'shell_in', 'shell_in_2', 'bolt', 'cyl_open', 'cyl_close', 'cyl_click', 'dry', 'dry_2',
+const FILES = ['rifle_1', 'rifle_2', 'rifle_3', 'rifle_far', 'shotgun', 'shotgun_2', 'shotgun_far', 'sniper', 'sniper_2', 'sniper_far', 'pistol', 'pistol_2', 'revolver_far',
+  'mag_out', 'mag_in', 'charge', 'pump', 'shell_in', 'shell_in_2', 'bolt', 'dry', 'dry_2',
   'shell_1', 'shell_2', 'shell_3', 'shell_4', 'imp_dirt_1', 'imp_dirt_2', 'imp_dirt_3', 'imp_wood', 'imp_wood_2', 'imp_stone', 'imp_stone_2',
   'imp_flesh_1', 'imp_flesh_2', 'imp_flesh_3', 'splash', 'splash_2', 'splash_3', 'whiz_1', 'whiz_2', 'whiz_3',
   'step_grass_1', 'step_grass_2', 'step_grass_3', 'step_grass_4', 'step_dirt_1', 'step_dirt_2', 'step_dirt_3', 'step_dirt_4', 'land', 'jump',
   'tick', 'hover', 'click', 'head', 'kill', 'amb_meadow', 'amb_wind'];
-const SHOT = { hornet:['rifle_1', 'rifle_2', 'rifle_3'], acorn:['shotgun', 'shotgun_2'], needle:['sniper', 'sniper_2'], comb:['revolver', 'revolver_2'] };
+const SHOT = { hornet:['rifle_1', 'rifle_2', 'rifle_3'], acorn:['shotgun', 'shotgun_2'], needle:['sniper', 'sniper_2'], comb:['pistol', 'pistol_2'] };
 const FAR = { hornet:'rifle_far', acorn:'shotgun_far', needle:'sniper_far', comb:'revolver_far' };
 const pick = a => a[Math.floor(Math.random() * a.length)];
 

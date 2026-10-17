@@ -1,53 +1,44 @@
-// First person: your insect forelegs holding the gun. Springs drive everything — sway when you turn, bob when you
-// walk, the sprint carry, aiming down the sights, the recoil kick — and each gun has its own hand-made reload:
-// the chitin magazine drops out and a new one snaps in, shells go one by one into the acorn shotgun, the needle's
-// bolt is worked after every shot, the honeycomb cylinder swings out and spills its casings.
+// First person (when chosen in the settings): the hero's arms holding the blaster. Springs drive everything — sway
+// when you turn, bob when you walk, the sprint carry, aiming down the sights, the recoil kick — and the reloads:
+// the magazine drops out and a new one snaps in, shells go one by one into the shotgun.
 import * as THREE from 'three';
 import { G, on, emit } from './state.js';
 import { scene, camera, vmMaterial, VM_LAYER, VM } from './engine.js';
 import { buildGun } from './gunmodels.js';
 import { gun } from './fighter.js';
-import { PL } from './player.js';
+import { PL, VIEW } from './player.js';
 import { sp, spring, clamp, damp, lerp } from './util.js';
 
-export const VMS = { root:null, guns:{}, cur:null, arms:null, species:null, flash:null, shown:true };
+export const VMS = { root:null, guns:{}, cur:null, arms:null, hero:null, flash:null, shown:true };
 const S = { px:sp(), py:sp(), pz:sp(), rx:sp(), ry:sp(), rz:sp(), swayX:0, swayY:0, kick:0, adsK:0, sprint:0, lower:0, fireT:9, act:null, actT:0 };
 
-// ---- arms: segmented chitin forelegs with a two-claw grip, coloured per species ----
+// ---- arms: sleeves and hands in the hero's colours ----
 const ARM = {
-  ant:    { c:'#5A2410', c2:'#3A1608', gloss:0.85, iri:0.1, fuzz:0 },
-  beetle: { c:'#1C2A1E', c2:'#0E140F', gloss:1.0, iri:0.9, fuzz:0 },
-  bee:    { c:'#1E1810', c2:'#C89020', gloss:0.5, iri:0, fuzz:1 },
-  hopper: { c:'#5E8A2C', c2:'#3E5E1A', gloss:0.6, iri:0.15, fuzz:0 },
-  shroom: { c:'#E8DCC0', c2:'#B8A47E', gloss:0.15, iri:0, fuzz:0.4 },
+  ranger:      { c:'#6E4C2C', c2:'#E9B58C' }, knight:     { c:'#9AA3AC', c2:'#5E636B', metal:true }, barbarian:{ c:'#DDA27A', c2:'#6A4528' },
+  mage:        { c:'#5B3F8E', c2:'#EDBE97' }, rogue:      { c:'#2F5E3A', c2:'#E9B58C' },               hooded:   { c:'#2C4636', c2:'#3B2A1E' },
+  skel_warrior:{ c:'#E6DCC4', c2:'#CDBF9C' }, skel_rogue: { c:'#E6DCC4', c2:'#CDBF9C' }, skel_minion:{ c:'#E6DCC4', c2:'#CDBF9C' }, skel_mage:{ c:'#E6DCC4', c2:'#CDBF9C' },
 };
-function armMats(sp){
-  const A = ARM[sp] || ARM.ant;
-  const shell = vmMaterial(new THREE.MeshPhysicalMaterial({ color:A.c, roughness:sp === 'shroom' ? 0.75 : 0.32, clearcoat:A.gloss, clearcoatRoughness:0.15, iridescence:A.iri, iridescenceIOR:1.5, iridescenceThicknessRange:[250, 700],
-    sheen:A.fuzz, sheenColor:new THREE.Color(A.c2), sheenRoughness:0.6 }));
-  const joint = vmMaterial(new THREE.MeshPhysicalMaterial({ color:A.c2, roughness:0.45, clearcoat:0.4, sheen:A.fuzz, sheenColor:new THREE.Color('#E8C060') }));
+function armMats(hero){
+  const A = ARM[hero] || ARM.ranger;
+  const shell = vmMaterial(new THREE.MeshStandardMaterial({ color:A.c, roughness:A.metal ? 0.35 : 0.85, metalness:A.metal ? 0.6 : 0 }));
+  const joint = vmMaterial(new THREE.MeshStandardMaterial({ color:A.c2, roughness:0.75 }));
   return { shell, joint };
 }
-// unit segment along +y (0..1), slightly bulging, ringed at the ends
+// unit segment along +y (0..1), slightly bulging, rounded at the ends
 function segGeo(r0, r1){
-  const pts = [[0, 0], [r0 * 0.85, 0.0], [r0, 0.08], [lerp(r0, r1, 0.5) * 1.12, 0.5], [r1, 0.9], [r1 * 0.8, 1]].map(p => new THREE.Vector2(p[0], p[1]));
+  const pts = [[0, 0], [r0 * 0.85, 0.0], [r0, 0.08], [(r0 + r1) * 0.5 * 1.08, 0.5], [r1, 0.92], [r1 * 0.8, 1]].map(p => new THREE.Vector2(p[0], p[1]));
   return new THREE.LatheGeometry(pts, 14);
 }
-function buildArm(mats, side, sp){
+function buildArm(mats, side){
   const g = new THREE.Group();
-  const upper = new THREE.Mesh(segGeo(0.05, 0.04), mats.shell), fore = new THREE.Mesh(segGeo(0.042, 0.03), mats.shell);
-  const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.042, 12, 10), mats.joint);
+  const upper = new THREE.Mesh(segGeo(0.06, 0.05), mats.shell), fore = new THREE.Mesh(segGeo(0.052, 0.042), mats.shell);
+  const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.052, 12, 10), mats.shell);
+  // a chunky mitten of a hand with a thumb
   const hand = new THREE.Group();
-  // palm and two hooked claws wrapped round the grip, a thumb spur
-  hand.add(new THREE.Mesh(new THREE.SphereGeometry(0.034, 12, 10).scale(1, 0.8, 1.3), mats.joint));
-  const claw = (a, l, rz) => { const c = new THREE.Mesh(new THREE.ConeGeometry(0.013, l, 8).translate(0, l / 2, 0), mats.shell); c.rotation.set(a, 0, rz); return c; };
-  const c1 = claw(-2.0, 0.07, side * 0.9), c2 = claw(-2.3, 0.065, side * 0.6), th = claw(-0.6, 0.05, -side * 0.9);
-  c1.position.set(side * 0.01, 0, -0.01); c2.position.set(side * 0.012, -0.004, 0.014); th.position.set(-side * 0.02, 0.01, -0.005);
-  hand.add(c1, c2, th);
-  // little spines along the shin (grasshopper, beetle), fuzz rings (bee)
-  if(sp === 'hopper' || sp === 'beetle') for(let i = 0; i < 4; i++){ const s = new THREE.Mesh(new THREE.ConeGeometry(0.006, 0.03, 5).translate(0, 0.015, 0), mats.joint); s.position.set(0, 0.25 + i * 0.18, side * 0.03); s.rotation.x = side * 1.2; fore.add(s); }
-  if(sp === 'bee') for(let i = 0; i < 3; i++){ const r = new THREE.Mesh(new THREE.TorusGeometry(0.047, 0.012, 6, 14).rotateX(Math.PI / 2), mats.joint); r.position.y = 0.2 + i * 0.25; upper.add(r); }
-  for(const m of [upper, fore, elbow, ...hand.children, ...fore.children, ...upper.children]) if(m.isMesh){ m.layers.set(VM_LAYER); m.frustumCulled = false; m.receiveShadow = true; }
+  hand.add(new THREE.Mesh(new THREE.SphereGeometry(0.045, 14, 12).scale(1, 0.85, 1.25), mats.joint));
+  const th = new THREE.Mesh(new THREE.SphereGeometry(0.02, 10, 8).scale(1, 1, 1.6), mats.joint); th.position.set(-side * 0.03, 0.015, -0.02);
+  hand.add(th);
+  for(const m of [upper, fore, elbow, ...hand.children]) if(m.isMesh){ m.layers.set(VM_LAYER); m.frustumCulled = false; m.receiveShadow = true; }
   g.add(upper, fore, elbow, hand);
   return { g, upper, fore, elbow, hand, side };
 }
@@ -101,18 +92,18 @@ function muzzleFlash(){
   return g;
 }
 
-export function setArms(species){
-  if(VMS.species === species && VMS.arms) return;
+export function setArms(hero){
+  if(VMS.hero === hero && VMS.arms) return;
   if(VMS.arms){ VMS.root.remove(VMS.arms.R.g, VMS.arms.L.g); }
-  const m = armMats(species);
-  VMS.arms = { R:buildArm(m, 1, species), L:buildArm(m, -1, species) };
+  const m = armMats(hero);
+  VMS.arms = { R:buildArm(m, 1), L:buildArm(m, -1) };
   VMS.root.add(VMS.arms.R.g, VMS.arms.L.g);
-  VMS.species = species;
+  VMS.hero = hero;
 }
 
 // ---- per-gun hip and aim positions (camera space) ----
-const HIP = { hornet:[0.15, -0.165, -0.47], acorn:[0.15, -0.17, -0.47], needle:[0.16, -0.17, -0.5], comb:[0.15, -0.115, -0.38] };
-const ADS_D = { hornet:0.24, acorn:0.24, needle:0.12, comb:0.36 };
+const HIP = { hornet:[0.16, -0.19, -0.42], acorn:[0.16, -0.19, -0.42], needle:[0.16, -0.19, -0.42], comb:[0.15, -0.15, -0.38] };
+const ADS_D = { hornet:0.26, acorn:0.26, needle:0.14, comb:0.36 };
 
 // ---- events: shots kick, reload choreography starts ----
 on('fire', f => { if(f !== G.me || !VMS.cur) return;
@@ -122,7 +113,7 @@ on('fire', f => { if(f !== G.me || !VMS.cur) return;
   const g = VMS.cur; g.flash.visible = true; g.flash.rotation.z = Math.random() * 6.3; const s = 0.8 + Math.random() * 0.5 * (W.kind === 'shotgun' ? 1.6 : 1); g.flash.scale.setScalar(W.kind === 'sniper' ? s * 1.4 : s);
   if(g.parts.hammer){ S.hammer = 1; }
   if(g.parts.trigger) S.trigger = 1;
-  // casings fly out of the port (the revolver keeps its own until the reload)
+  // casings fly out of the port
   if(W.kind === 'rifle') emit('casing', f, g.eject, W.id);
 });
 on('pump', f => { if(f === G.me) startAct('pump', gun(f).W.pump); });
@@ -142,13 +133,13 @@ const bump = (t, a, b) => Math.sin(Math.PI * clamp((t - a) / (b - a), 0, 1));
 const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _e = new THREE.Euler(), _sh = new THREE.Vector3(), _hp = new THREE.Vector3(), _hq = new THREE.Quaternion(), _gq = new THREE.Quaternion();
 export function updateViewmodel(dt){
   const f = G.me;
-  const show = !!f && f.alive && G.state === 'play' && VMS.shown;
+  const show = !!f && f.alive && G.state === 'play' && VMS.shown && VIEW.mode === 1;
   VMS.root.visible = show;
   if(VMS.light) VMS.light.intensity = Math.max(0, VMS.light.intensity - dt * 400);
   if(!show) return;
   const g = gun(f), W = g.W, id = W.id;
   if(!VMS.cur || VMS.cur.id !== id){ if(VMS.cur) VMS.cur.root.visible = false; VMS.cur = VMS.guns[id]; VMS.cur.root.visible = true; S.act = null; }
-  if(VMS.species !== f.species) setArms(f.species);
+  if(VMS.hero !== f.hero) setArms(f.hero);
   const GM = VMS.cur, P = GM.parts;
   VM.clip.value = f.adsK * (id === 'comb' ? 0.1 : 0.21);
   // scoped: the scope overlay takes over, the gun is out of view
@@ -181,7 +172,7 @@ export function updateViewmodel(dt){
   // lowering for a weapon swap / raising after it
   ty -= S.lower * 0.32; trx -= S.lower * 0.9;
   // ---- the reload / pump / bolt choreography ----
-  let magOff = 0, magVis = 1, pump = 0, boltRot = 0, boltBack = 0, cylOut = 0, lhand = new THREE.Vector3(), handBlend = 0, charge = 0;
+  let magOff = 0, magVis = 1, pump = 0, boltRot = 0, boltBack = 0, lhand = new THREE.Vector3(), handBlend = 0, charge = 0;
   if(S.act){
     S.actT += dt; const t = Math.min(1, S.actT / S.actDur), A = S.act;
     const once = (k, at, fn) => { if(t >= at && !S.actFired[k]){ S.actFired[k] = true; fn(); } };
@@ -194,14 +185,6 @@ export function updateViewmodel(dt){
       once('in', 0.64, () => { emit('vmSound', 'mag_in'); S.rx.v -= 0.5; S.py.v += 0.12; });
       handBlend = bump(t, 0.2, 0.7); lhand.set(0.04, -0.25 * seg(t, 0.25, 0.4) * (1 - seg(t, 0.46, 0.62)), 0.1);
       if(S.actEmpty){ charge = bump(t, 0.72, 0.86); once('ch', 0.74, () => emit('vmSound', id === 'needle' ? 'bolt' : 'charge')); }
-    } else if(A === 'reload' && W.reload.kind === 'cylinder'){
-      // swing the cylinder out, tip the gun up so the casings fall, load, flick it shut
-      const tilt = seg(t, 0, 0.12) * (1 - seg(t, 0.82, 1));
-      trz += 0.55 * tilt; trx += 0.5 * seg(t, 0.15, 0.3) * (1 - seg(t, 0.4, 0.5)); ty += 0.04 * tilt;
-      cylOut = seg(t, 0.08, 0.18) * (1 - seg(t, 0.76, 0.84));
-      once('open', 0.1, () => emit('vmSound', 'cyl_open')); once('spill', 0.32, () => { for(let i = 0; i < 6; i++) emit('casing', f, GM.parts.cyl, 'comb'); });
-      handBlend = bump(t, 0.4, 0.78); lhand.set(-0.04, -0.12, 0.05);
-      once('load', 0.62, () => emit('vmSound', 'shell_in')); once('close', 0.8, () => { emit('vmSound', 'cyl_close'); S.rz.v += 1.2; });
     } else if(A === 'shellStart'){
       trz += 0.5 * seg(t, 0, 1); ty += 0.03 * seg(t, 0, 1);
     } else if(A === 'shell'){
@@ -245,7 +228,6 @@ export function updateViewmodel(dt){
   if(P.pump){ P.pump.position.copy(P.pump.userData.home); P.pump.position.z += pump * 0.09; }
   if(P.bolt && id === 'needle'){ P.bolt.rotation.set(0, 0, boltRot * 1.2); P.bolt.position.copy(P.bolt.userData.home); P.bolt.position.z += boltBack * 0.08; }
   if(P.bolt && id === 'hornet'){ P.bolt.position.copy(P.bolt.userData.home); P.bolt.position.z += charge * 0.07; }
-  if(P.cyl){ P.cyl.position.copy(P.cyl.userData.home); P.cyl.position.x -= cylOut * 0.06; P.cyl.position.y -= cylOut * 0.02; P.cyl.rotation.set(0, 0, 0); if(S.fireT < 0.15) P.cyl.rotation.z = -seg(S.fireT, 0, 0.12) * Math.PI / 3; }
   if(P.hammer){ S.hammer = Math.max(0, (S.hammer || 0) - dt * 8); P.hammer.rotation.x = S.hammer * 0.5; }
   if(P.trigger){ S.trigger = Math.max(0, (S.trigger || 0) - dt * 10); P.trigger.position.z = P.trigger.userData.home.z + S.trigger * 0.008; }
   root.updateMatrixWorld(true);

@@ -1,13 +1,23 @@
-// The player: mouse and keyboard → the fighter's input, and the first-person camera (eye height, bob, landing dip,
-// recoil kick and punch, aiming zoom, the sniper scope's breathing sway).
+// The player: mouse and keyboard → the fighter's input, and the camera: over the shoulder (third person, the default)
+// or through the eyes (first person, a setting). Bob, landing dip, recoil kick and punch, aiming zoom, the sniper
+// scope's breathing sway. Over the shoulder the shot is steered from the eye to whatever the crosshair covers.
 import * as THREE from 'three';
 import { G, on } from './state.js';
 import { camera, canvas, vfov, baseFov, Q } from './engine.js';
 import { gun } from './fighter.js';
+import { ray, W as PW } from './phys.js';
+import { rayFighters } from './combat.js';
 import { clamp, damp, store, sp, spring } from './util.js';
 
 export const PL = { yaw:0, pitch:0, locked:false, keys:new Set(), mouse:{ l:false, r:false }, sens:store.get('sens', 1), aimHold:store.get('aimHold', true),
   dx:0, dy:0, bobT:0, landY:sp(), punch:{ p:sp(), y:sp(), r:sp() }, sway:{ x:0, y:0, t:0, breath:1, held:false }, fov:72, autopilot:false, aimToggle:false, deathT:0 };
+
+// 3: over the shoulder, 1: first person
+export const VIEW = { mode:store.get('view', 3) === 1 ? 1 : 3 };
+export function setView(v){ VIEW.mode = +v === 1 ? 1 : 3; store.set('view', VIEW.mode); TP.len = -1; }
+const TP = { len:-1, scopeK:0, aim:new THREE.Vector3() };
+// your own hero is hidden in first person and while looking through the scope
+export function ownHidden(){ const f = G.me; return !!f && f.alive && (VIEW.mode === 1 || TP.scopeK > 0.55); }
 
 const KEY = { fwd:['KeyW', 'ArrowUp'], back:['KeyS', 'ArrowDown'], left:['KeyA', 'ArrowLeft'], right:['KeyD', 'ArrowRight'], jump:['Space'], crouch:['KeyC', 'ControlLeft'], sprint:['ShiftLeft', 'ShiftRight'], reload:['KeyR'] };
 const down = k => KEY[k].some(c => PL.keys.has(c));
@@ -24,6 +34,7 @@ addEventListener('keydown', e => {
   if(e.code === 'KeyQ') f.inp.slot = 1 - f.cur;
   if(e.code === 'Space') f.inp.jump = true;
   if(e.code === 'Tab') e.preventDefault();
+  if(e.code === 'KeyV') setView(VIEW.mode === 1 ? 3 : 1);
 });
 addEventListener('keyup', e => PL.keys.delete(e.code));
 addEventListener('blur', () => { PL.keys.clear(); PL.mouse.l = PL.mouse.r = false; });
@@ -69,6 +80,26 @@ export function playerInput(dt){
     S.x = Math.sin(S.t * 0.9) * a; S.y = Math.sin(S.t * 1.8) * a * 0.6;
   } else { S.x *= 0.9; S.y *= 0.9; S.held = false; S.breath = clamp(S.breath + dt / 5, 0, 1); }
   I.yaw = PL.yaw + S.x; I.pitch = PL.pitch + S.y;
+  if(VIEW.mode === 3 && TP.scopeK < 0.5) converge(f, I);
+}
+
+// over the shoulder the eye and the camera are in different places: find what the crosshair covers and point the
+// shot (from the eye) at it, so bullets land under the crosshair
+const _d = new THREE.Vector3();
+function converge(f, I){
+  const c = camera.position, cp = Math.cos(PL.pitch);
+  _d.set(-Math.sin(PL.yaw) * cp, Math.sin(PL.pitch), -Math.cos(PL.yaw) * cp);
+  const ex = f.x, ey = f.y + f.eye, ez = f.z;
+  // start the search level with the hero, so nothing between the camera and the hero is picked
+  const t0 = Math.max(0, (ex - c.x) * _d.x + (ey - c.y) * _d.y + (ez - c.z) * _d.z);
+  const ox = c.x + _d.x * t0, oy = c.y + _d.y * t0, oz = c.z + _d.z * t0, far = 260;
+  const w = ray(ox, oy, oz, _d.x, _d.y, _d.z, far), tw = w ? w.t : far;
+  const h = rayFighters(ox, oy, oz, _d.x, _d.y, _d.z, tw, f);
+  let t = h ? h.t : tw;
+  if(t < 1.5) t = 30;
+  const px = ox + _d.x * t - ex, py = oy + _d.y * t - ey, pz = oz + _d.z * t - ez;
+  TP.aim.set(ox + _d.x * t, oy + _d.y * t, oz + _d.z * t);
+  I.yaw = Math.atan2(-px, -pz) + PL.sway.x; I.pitch = Math.atan2(py, Math.hypot(px, pz)) + PL.sway.y;
 }
 
 on('land', (f, v) => { if(f === G.me) PL.landY.v -= Math.min(4, v * 0.35); });
@@ -91,7 +122,9 @@ export function updateCamera(dt){
   // springs: landing dip, punch
   spring(PL.landY, 0, 90, 13, dt);
   for(const s of [PL.punch.p, PL.punch.y, PL.punch.r]) spring(s, 0, 160, 16, dt);
-  let x = f.x, y = f.y + f.eye, z = f.z, yaw = f.yaw + f.recY, pitch = f.pitch + f.recP, roll = 0;
+  // over the shoulder the camera follows the mouse (the hero's aim is steered to the crosshair from it)
+  const tp = VIEW.mode === 3 && f.alive;
+  let x = f.x, y = f.y + f.eye, z = f.z, yaw = (tp ? PL.yaw : f.yaw) + f.recY, pitch = (tp ? PL.pitch : f.pitch) + f.recP, roll = 0;
   if(f.alive){
     // head bob: steps up and down, a little side sway, much less while aiming
     const hs = Math.hypot(f.vx, f.vz);
@@ -113,12 +146,38 @@ export function updateCamera(dt){
   }
   if(f.alive) PL.deathYaw = undefined;
   const d2r = Math.PI / 180;
-  _e.set(pitch + PL.punch.p.x * d2r, yaw + PL.punch.y.x * d2r, roll + PL.punch.r.x * d2r, 'YXZ');
-  camera.position.set(x, y, z);
+  const cy = yaw + PL.punch.y.x * d2r, cpch = pitch + PL.punch.p.x * d2r;
+  _e.set(cpch, cy, (roll + PL.punch.r.x * d2r) * (VIEW.mode === 1 ? 1 : 0.3), 'YXZ');
   camera.quaternion.setFromEuler(_e);
-  // field of view: the setting, narrowed by aiming (the scope narrows it a lot)
-  const base = vfov(baseFov(), camera.aspect);
-  const fov = base * (1 + (W.ads.fov - 1) * f.adsK * f.adsK * (3 - 2 * f.adsK)) * (f.sprintT > 0.05 ? 1.04 : 1);
+  // over the shoulder: a boom behind and to the right of the head; it pulls in when aiming and when something is in
+  // the way; the sniper scope takes you to the eye
+  const scopeT = VIEW.mode === 3 && W.ads.scope ? clamp((f.adsK - 0.35) / 0.55, 0, 1) : 0;
+  TP.scopeK = f.alive ? scopeT * scopeT * (3 - 2 * scopeT) : 0;
+  if(VIEW.mode === 3 && TP.scopeK < 1){
+    const ads = f.alive ? f.adsK * f.adsK * (3 - 2 * f.adsK) : 0;
+    const right = 0.78 - 0.18 * ads, up = 0.42 - 0.12 * ads, back = (f.alive ? 3.3 : 4.2) - 1.4 * ads;
+    const px = f.x, py = f.y + (f.alive ? f.h * 0.84 : 0.9), pz = f.z;
+    const sy = Math.sin(cy), cyy = Math.cos(cy), sp_ = Math.sin(cpch), cp_ = Math.cos(cpch);
+    // camera axes: right (cos, 0, -sin), back = -forward
+    const rx = cyy, rz = -sy, bx = Math.sin(cy) * cp_, by = -sp_, bz = Math.cos(cy) * cp_;
+    // the shoulder point first (sideways from the head), then the boom back from it
+    let sx = px + rx * right, sy2 = py + up, sz = pz + rz * right;
+    const hs = ray(px, py, pz, rx, 0, rz, right + 0.25);
+    if(hs){ const k = Math.max(0, hs.t - 0.25); sx = px + rx * k; sz = pz + rz * k; }
+    let len = back;
+    const hb = ray(sx, sy2, sz, bx, by, bz, back + 0.3);
+    if(hb) len = Math.max(0.35, hb.t - 0.3);
+    TP.len = TP.len < 0 || len < TP.len ? len : damp(TP.len, len, 5, dt);
+    let cx = sx + bx * TP.len, cy2 = sy2 + by * TP.len, cz = sz + bz * TP.len;
+    const gh = PW.groundH ? PW.groundH(cx, cz) : -1e9;
+    if(cy2 < gh + 0.3) cy2 = gh + 0.3;
+    x = x + (cx - x) * (1 - TP.scopeK); y = y + (cy2 - y) * (1 - TP.scopeK); z = z + (cz - z) * (1 - TP.scopeK);
+  }
+  camera.position.set(x, y, z);
+  // field of view: the setting, narrowed by aiming (the scope narrows it a lot; over the shoulder a little less)
+  const base = vfov(baseFov(), camera.aspect), e3 = f.adsK * f.adsK * (3 - 2 * f.adsK);
+  const zk = VIEW.mode === 3 && !W.ads.scope ? 0.6 : 1;
+  const fov = base * (1 + (W.ads.fov - 1) * e3 * zk) * (f.sprintT > 0.05 ? 1.04 : 1);
   PL.fov = damp(PL.fov, fov, 18, dt);
   if(Math.abs(camera.fov - PL.fov) > 0.01){ camera.fov = PL.fov; camera.updateProjectionMatrix(); }
   camera.updateMatrixWorld();

@@ -30,7 +30,7 @@ function bladeGeo(seg = 7){
 
 function bladeMat(){
   const m = new THREE.MeshStandardMaterial({ color:'#ffffff', roughness:0.55, metalness:0, side:THREE.DoubleSide, vertexColors:false });
-  return natureMat(m, { wind:1.0, windH:1, windAmp:0.11, perH:1, push:true, pushSpan:0.16, trans:'#E8F59A', transK:1.9, key:'blade',
+  return natureMat(m, { wind:1.0, windH:1, windAmp:0.11, perH:1, push:true, pushSpan:0.16, trans:'#E0F09A', transK:1.25, key:'blade',
     frag:s => {
       // per-instance: bend forward, colour (base, tip), dryness
       s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 ib; attribute vec3 ic; varying vec3 vIc; varying vec2 vBuv; varying float vDry;')
@@ -63,7 +63,7 @@ export function buildGrass(){
   const r = mulberry(4242), geo = bladeGeo(LOW ? 5 : 7), geoLo = bladeGeo(3), mat = bladeMat();
   const depth = natureMat(new THREE.MeshDepthMaterial({ depthPacking:THREE.RGBADepthPacking, side:THREE.DoubleSide }), { wind:1.0, windH:1, windAmp:0.11, perH:1, push:true, pushSpan:0.16, key:'bladeD',
     frag:s => { s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 ib;').replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.z += ib.x * position.y * position.y; transformed.x += ib.y * position.y * position.y;'); } });
-  const CH = 32, EXT = 150, nC = Math.ceil(EXT * 2 / CH), cells = Array.from({ length:nC * nC }, () => []);
+  const CH = 24, EXT = 100, nC = Math.ceil(EXT * 2 / CH), cells = Array.from({ length:nC * nC }, () => []);
   const k = LOW ? 0.45 : HIGH ? 1.25 : 1;
   const o = { h:0 };
   const put = (x, z, h, w, lean) => {

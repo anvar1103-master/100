@@ -9,13 +9,13 @@ import { clamp } from './util.js';
 
 const _d = { x:0, y:0, z:0 };
 // hit boxes from the fighter's pose (no animation needed, so bots and tests agree with what you see)
+// the heroes are big-headed: a large head, a small body, short legs (scaled down while crouching)
 export function hitboxes(f){
-  const H = f.h, fx = -Math.sin(f.yaw), fz = -Math.cos(f.yaw);
+  const k = f.h / 1.7, fx = -Math.sin(f.yaw), fz = -Math.cos(f.yaw);
   return [
-    { part:'head', t:'sph', x:f.x + fx * 0.1, y:f.y + H - 0.2, z:f.z + fz * 0.1, r:0.25 },
-    { part:'body', t:'cap', ax:f.x, ay:f.y + H * 0.5, az:f.z, bx:f.x + fx * 0.05, by:f.y + H - 0.48, bz:f.z + fz * 0.05, r:0.34 },
-    { part:'body', t:'sph', x:f.x - fx * 0.5, y:f.y + H * 0.42, z:f.z - fz * 0.5, r:0.36 },
-    { part:'legs', t:'cap', ax:f.x, ay:f.y + 0.2, az:f.z, bx:f.x, by:f.y + H * 0.45, bz:f.z, r:0.26 },
+    { part:'head', t:'sph', x:f.x + fx * 0.15, y:f.y + 1.3 * k, z:f.z + fz * 0.15, r:0.4 },
+    { part:'body', t:'cap', ax:f.x + fx * 0.04, ay:f.y + 0.42 * k, az:f.z + fz * 0.04, bx:f.x + fx * 0.08, by:f.y + 0.82 * k, bz:f.z + fz * 0.08, r:0.3 },
+    { part:'legs', t:'cap', ax:f.x, ay:f.y + 0.12, az:f.z, bx:f.x, by:f.y + 0.38 * k, bz:f.z, r:0.22 },
   ];
 }
 const PART_K = { head:1, body:1, legs:0.8 };
