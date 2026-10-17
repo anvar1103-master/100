@@ -86,7 +86,7 @@ export function buildGrass(){
     if(d < 0.04 || r() > d * k * 1.15) continue;
     clump(px, pz, o.h, 4 + Math.floor(r() * 8 * d), 0.9 + d * 0.8);
   }
-  // beyond the edge: the wall of the meadow, taller and thicker, thinning far out (the far blur hides that)
+  // beyond the edge: the wall of the meadow, thicker and a little taller, low enough to leave the sky open
   const step2 = 3.0;
   for(let z = -EXT; z <= EXT; z += step2) for(let x = -EXT; x <= EXT; x += step2){
     const e = Math.max(Math.abs(x), Math.abs(z));
@@ -94,7 +94,7 @@ export function buildGrass(){
     const px = x + (r() - 0.5) * step2, pz = z + (r() - 0.5) * step2;
     const keep = (1 - sstep(BOUND + 15, EXT, e)) * 0.85 + 0.15;
     if(r() > keep * (LOW ? 0.6 : 1)) continue;
-    clump(px, pz, 14 + r() * 10, 5 + Math.floor(r() * 7), 1.6);
+    clump(px, pz, 10 + r() * 5, 5 + Math.floor(r() * 7), 1.6);
   }
   const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color();
   for(let ci = 0; ci < cells.length; ci++){

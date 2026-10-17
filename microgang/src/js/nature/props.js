@@ -61,5 +61,5 @@ function buildBackdrop(){
 }
 
 export async function buildProps(){
-  buildLeaves(); buildDew(); buildBackdrop();
+  buildLeaves(); buildDew();
 }

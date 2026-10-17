@@ -58,9 +58,9 @@ export function groundH(x, z){
   h += 0.7 * zoneK(x, z, ZONES.roots, 1.2) + 0.5 * zoneK(x, z, ZONES.stump, 1.2);
   // trails are worn a hand's breadth into the ground
   h -= 0.12 * trailAt(x, z);
-  // beyond the edge the ground climbs, so the grass wall reads as a wall
+  // beyond the edge the ground rises a little under the grass wall, then falls away out of sight: only sky above it
   const e = Math.max(Math.abs(x), Math.abs(z)) - BOUND;
-  if(e > 0) h += e * e * 0.012 + e * 0.05;
+  if(e > 0) h += Math.min(e, 45) * 0.04 - (e > 45 ? (e - 45) * (e - 45) * 0.05 : 0);
   return h;
 }
 export function waterAt(){ return -1e9; }
@@ -222,11 +222,7 @@ export function buildLayout(){
     }
     // dew drops on the ground
     for(let i = 0; i < 30; i++){ const x = rand(-BOUND, BOUND), z = rand(-BOUND, BOUND); add({ k:'dew', x, z, y:g(x, z), r:rand(0.25, 0.7) }); }
-    // -- beyond the edge: giants that tell you how small you are (bushes, trees), outside the grass wall --
-    for(let i = 0; i < 22; i++){ const a = i / 22 * TAU + rand(-0.1, 0.1), d = rand(66, 80), x = Math.cos(a) * d, z = Math.sin(a) * d;
-      add({ k:'far', mdl:'Bush_Common_Flowers', x, z, y:g(x, z) - 1, s:rand(16, 24), ry:rand(0, TAU) }); }
-    for(const [x, z, mdl, s] of [[86, 86, 'CommonTree_1', 38], [-120, -90, 'CommonTree_1', 40], [-60, -150, 'Pine_4', 34], [70, -140, 'CommonTree_3', 36], [150, -40, 'CommonTree_1', 42], [-160, 30, 'CommonTree_3', 40], [-100, 140, 'Pine_4', 36], [40, 160, 'CommonTree_3', 38]])
-      add({ k:'far', mdl, x, z, y:g(x, z) - 2, s, ry:rand(0, TAU) });
+    // beyond the edge: nothing but the grass wall and a clear sky
   });
   MAP.built = true;
   return MAP;
