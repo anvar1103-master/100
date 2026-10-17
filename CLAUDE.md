@@ -17,6 +17,8 @@
   Сборка кладёт игру в `docs/microgang` и `packages/microgang*.zip`.
 - `posledniy-tank/` — «Последний танк»: королевская битва танков в лесном лабиринте (three.js, сборка esbuild).
   Подробности — в `posledniy-tank/CLAUDE.md`. Сборка кладёт игру в `docs/posledniy-tank` и `packages/`.
+- `backshots/` — Backshots: реалистичная королевская битва от первого лица в «закулисье» (Backrooms), карта по зерну
+  (three.js, сборка esbuild; в работе). Подробности — в `backshots/CLAUDE.md`, сборка — в `docs/backshots` и `packages/`.
 - `lesnaya-voyna/`, `gribnoy-dozor/`, `shar-baba/`, `vyshibala/`, `oil-path/`, `zarya-ellady/` — игры одним файлом `index.html`.
 - `tools/` — общие скрипты (`build-pages.py`, `pack_yandex.py`).
 
