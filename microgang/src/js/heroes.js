@@ -62,6 +62,15 @@ export async function loadHeroes(progress){
   }
   T.ready = true;
 }
+// a gun mounted in the right hand slot (made when a fighter first holds it)
+function addGun(guns, bones, gid){
+  if(guns[gid]) return guns[gid];
+  const g = buildGun(gid, false), mount = new THREE.Group();
+  mount.matrixAutoUpdate = false;
+  mount.add(g.root); bones.handslotr.add(mount);
+  g.root.traverse(m => { if(m.isMesh){ m.castShadow = true; m.receiveShadow = true; } });
+  return guns[gid] = { g, mount };
+}
 function boneMap(o){ const b = {}; o.traverse(n => { if(n.isBone) b[n.name] = n; }); return b; }
 
 // ---- one fighter's model ----
@@ -74,16 +83,9 @@ export function buildHero(f, parent = scene){
   const mats = new Map(), meshes = [];
   model.traverse(m => { if(m.isMesh){ if(!mats.has(m.material)) mats.set(m.material, m.material.clone()); m.material = mats.get(m.material); meshes.push(m); } });
   const bones = boneMap(model);
-  // both guns are in the hand; the one not in use is hidden
+  // the guns are in the hand; the one not in use is hidden
   const guns = {};
-  for(const gid of [f.primary, 'comb']){
-    if(guns[gid]) continue;
-    const g = buildGun(gid, false), mount = new THREE.Group();
-    mount.matrixAutoUpdate = false;
-    mount.add(g.root); bones.handslotr.add(mount);
-    g.root.traverse(m => { if(m.isMesh){ m.castShadow = true; m.receiveShadow = true; } });
-    guns[gid] = { g, mount };
-  }
+  for(const gid of [f.primary, 'comb']) addGun(guns, bones, gid);
   const mixer = new THREE.AnimationMixer(model), A = {};
   for(const k in T.clips){ const a = mixer.clipAction(T.clips[k]); a.enabled = true; a.setEffectiveWeight(0); a.play(); A[k] = a; }
   for(const k of ['deathA', 'deathB', 'cheer', 'wave']){ A[k].stop(); A[k].setLoop(THREE.LoopOnce, 1); A[k].clampWhenFinished = true; }
@@ -102,6 +104,7 @@ export function disposeHero(H){
 }
 
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _v = new THREE.Vector3(), _ax = new THREE.Vector3();
+const TURNED = ['spine', 'chest', 'head'];
 // turn a bone by `ang` around a world-space axis (after the animation has posed it)
 function turnBone(b, axis, ang){
   if(!ang) return;
@@ -123,11 +126,17 @@ export function animHero(H, dt, hide){
   H.root.visible = vis;
   if(!vis) return;
   const g = gun(f), W = g.W, oneH = W.id === 'comb';
+  if(!H.guns[W.id]) addGun(H.guns, H.bones, W.id);
   // ---- which gun is in the hand ----
   for(const gid in H.guns){ const e = H.guns[gid]; e.g.root.visible = gid === W.id && f.alive; e.mount.matrix.copy(T.mounts[gid === 'comb' ? '1h' : '2h']); e.mount.matrixWorldNeedsUpdate = true; }
   // ---- facing: the body turns to the aim (the legs strafe underneath) ----
   const hs = Math.hypot(f.vx, f.vz);
-  if(f.alive) H.bodyYaw += angDiff(H.bodyYaw, f.yaw) * Math.min(1, dt * 14);
+  if(f.alive){
+    H.bodyYaw += angDiff(H.bodyYaw, f.yaw) * Math.min(1, dt * 14);
+    // a fast flick: the body never lags more than the chest can twist
+    const lag = angDiff(H.bodyYaw, f.yaw);
+    if(Math.abs(lag) > 0.9) H.bodyYaw = f.yaw - Math.sign(lag) * 0.9;
+  }
   H.root.position.set(f.x, f.y, f.z);
   H.root.rotation.set(0, H.bodyYaw + Math.PI, 0);
   // ---- target weights ----
@@ -178,9 +187,14 @@ export function animHero(H, dt, hide){
     const w = Wt[k] = damp(Wt[k], want[k], fast ? 22 : 12, dt);
     A[k].setEffectiveWeight(w < 0.002 ? 0 : w);
   }
-  H.mixer.update(dt);
-  // ---- on top of the clips: aim pitch through the spine, recoil kick, hit flinch ----
+  // the mixer writes a bone only when its value changes (a held aim pose doesn't): take back last frame's turns
+  // first, or they would pile up frame after frame
   const B = H.bones;
+  if(H.posed) for(const n of TURNED) B[n].quaternion.copy(H.posed[n]);
+  H.mixer.update(dt);
+  H.posed = H.posed || {};
+  for(const n of TURNED) (H.posed[n] = H.posed[n] || new THREE.Quaternion()).copy(B[n].quaternion);
+  // ---- on top of the clips: aim pitch through the spine, recoil kick, hit flinch ----
   spring(H.kick, 0, 260, 18, dt); spring(H.flinch, 0, 120, 12, dt);
   if(f.alive){
     H.root.updateMatrixWorld(true);

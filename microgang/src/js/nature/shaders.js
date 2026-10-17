@@ -121,8 +121,9 @@ export function natureMat(mat, o = {}){
       vec3 ab = mgCamB - mgCamA.xyz, ap = vMgWorld - mgCamA.xyz;
       float t = clamp(dot(ap, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
       float d = length(ap - ab * t), r = mgCamA.w * (0.55 + 0.45 * t);
-      float k = 1.0 - smoothstep(r * 0.55, r, d);
-      if(k > 0.0 && fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) < k * 0.94) discard;
+      // gone near the line, a thin even dither at the edge (interleaved gradient noise: no grainy clumps)
+      float k = 1.0 - smoothstep(r * 0.72, r, d);
+      if(k > 0.0 && fract(52.9829189 * fract(dot(floor(gl_FragCoord.xy), vec2(0.06711056, 0.00583715)))) < k) discard;
     }`;
       s.fragmentShader = s.fragmentShader.replace('void main() {', 'void main() {\n  mgCamFade();');
     }

@@ -6,6 +6,9 @@ import { losClear } from './phys.js';
 import { findPath, walkLine, randomNode } from './nav.js';
 import { gun, eyeY } from './fighter.js';
 import { WORLD } from './world.js';
+import { trailD } from './map.js';
+import { NAV } from './nav.js';
+import { W as PW } from './phys.js';
 import { angDiff, clamp, rand, gauss } from './util.js';
 
 export const DIFF = {
@@ -38,6 +41,7 @@ on('damage', (t, amt, src) => {
   const B = brain(t);
   B.lastSeen = { x:src.x, z:src.z }; B.lastSeenT = G.time;
   if(!B.target || Math.random() < 0.6){ B.hunt = src; B.reactT = Math.min(B.reactT, 0.12); }
+  B.holdT = 0;
 });
 
 function perceive(f, D){
@@ -64,10 +68,23 @@ function perceive(f, D){
   if(best){ B.lastSeen = { x:best.x, z:best.z }; B.lastSeenT = G.time; B.hunt = null; }
 }
 
+// ambush spots for shotguns: thick grass right next to a trail (people walk past within a few steps)
+let SPOTS = null;
+function spots(){
+  if(SPOTS) return SPOTS;
+  SPOTS = NAV.nodes.filter(([x, z]) => { const d = trailD(x, z); return d > 2.6 && d < 6 && PW.grassAt(x, z, { h:0 }) > 0.55; });
+  return SPOTS;
+}
 function goal(f){
   const B = brain(f);
   if(B.lastSeen && G.time - B.lastSeenT < 6) return { x:B.lastSeen.x + rand(-4, 4), z:B.lastSeen.z + rand(-4, 4) };
   if(B.heard && G.time - B.heardT < 6 && f.primary !== 'needle' && Math.random() < 0.85) return { x:B.heard.x + rand(-6, 6), z:B.heard.z + rand(-6, 6) };
+  // a shotgun often goes to lie in wait in the grass by a trail
+  if(f.primary === 'acorn' && Math.random() < 0.6 && spots().length){
+    const S = spots(), near = [];
+    for(let i = 0; i < 40; i++){ const p = S[Math.floor(Math.random() * S.length)]; const d = Math.hypot(p[0] - f.x, p[1] - f.z); if(d > 6 && d < 40) near.push(p); if(near.length >= 4) break; }
+    if(near.length){ const p = near[Math.floor(Math.random() * near.length)]; return { x:p[0], z:p[1], ambush:true }; }
+  }
   // snipers like the high caps: walk to the puffball now and then
   if(f.primary === 'needle' && Math.random() < 0.3 && WORLD.pads.length){ const p = WORLD.pads[0]; return { x:p.x, z:p.z, pad:true }; }
   // hunt: head roughly toward someone (everyone is an enemy here); snipers keep their distance
@@ -96,6 +113,7 @@ export function botThink(f, dt){
   if(!f.alive || !f.bot) return;
   const B = brain(f), D = DIFF[G.match.diff] || DIFF.normal, I = f.inp, g = gun(f), W = g.W;
   I.jump = false; I.reload = false;
+  B.holdT = Math.max(0, (B.holdT || 0) - dt);
   B.reactT -= dt; B.fireDelay -= dt; B.strafeT -= dt; B.goalT -= dt; B.jumpT -= dt; B.losT -= dt;
   if(B.reactT <= 0){ B.reactT = D.react * rand(0.6, 1.1); perceive(f, D); }
   let T = B.target;
@@ -106,7 +124,8 @@ export function botThink(f, dt){
   let wx = 0, wz = 0, sprint = false;
   I.aim = false; I.fire = false; I.crouch = false;
   // the primary is empty and the enemy is close: pull the pistol
-  if(T && f.cur === 0 && g.mag === 0 && Math.hypot(T.x - f.x, T.z - f.z) < 30) I.slot = 1;
+  const dT = T ? Math.hypot(T.x - f.x, T.z - f.z) : 1e9;
+  if(T && f.cur === 0 && g.mag === 0 && dT < 30) I.slot = 1;
   else if(!T && f.cur === 1 && f.guns[0].mag + f.guns[0].reserve > 0) I.slot = 0;
   if(T){
     const dx = T.x - f.x, dz = T.z - f.z, d = Math.hypot(dx, dz) || 0.01;
@@ -146,14 +165,22 @@ export function botThink(f, dt){
     wx = ux * radial - uz * B.strafeDir * strafe; wz = uz * radial + ux * B.strafeDir * strafe;
     if(!B.los && d > 3 && !B.retreat){ const [cx, cz] = waypoint(f, T.x, T.z, true), cl = Math.hypot(cx - f.x, cz - f.z) || 1; wx = (cx - f.x) / cl; wz = (cz - f.z) / cl; sprint = d > 20; }
     if(B.retreat){ wx = -ux + -uz * B.strafeDir * 0.5; wz = -uz + ux * B.strafeDir * 0.5; sprint = !fire; }
-    // a shotgun closes in fast, weaving
-    else if(W.kind === 'shotgun' && d > 13){ wx = ux - uz * B.strafeDir * 0.35; wz = uz + ux * B.strafeDir * 0.35; sprint = true; }
+    // a shotgun lying in wait keeps still and hidden until they come close (or it is found)
+    else if(W.kind === 'shotgun' && B.holdT > 0 && d > 12){ wx = wz = 0; sprint = false; I.fire = false; I.crouch = true; }
+    // otherwise it closes in through the grass where it can, weaving when it has to cross the open
+    else if(W.kind === 'shotgun' && d > 13){
+      const [cx, cz] = waypoint(f, T.x, T.z, true), cl = Math.hypot(cx - f.x, cz - f.z) || 1;
+      wx = (cx - f.x) / cl - uz * B.strafeDir * 0.3; wz = (cz - f.z) / cl + ux * B.strafeDir * 0.3; sprint = !I.fire;
+    }
   } else {
     // roam toward a goal along the paths, glancing around
-    if(!B.goal || B.goalT <= 0 || Math.hypot(B.goal.x - f.x, B.goal.z - f.z) < 2.5){ B.goal = goal(f); B.goalT = rand(6, 12); B.path = null; }
+    if(B.goal && B.goal.ambush && Math.hypot(B.goal.x - f.x, B.goal.z - f.z) < 2.5 && !B.goal.held){ B.goal.held = true; B.holdT = rand(9, 16); B.goalT = B.holdT; }
+    if(!B.goal || B.goalT <= 0 || (!B.goal.ambush && Math.hypot(B.goal.x - f.x, B.goal.z - f.z) < 2.5)){ B.goal = goal(f); B.goalT = rand(6, 12); B.path = null; B.holdT = 0; }
     const [px, pz] = waypoint(f, B.goal.x, B.goal.z);
     const dx = px - f.x, dz = pz - f.z, d = Math.hypot(dx, dz) || 1;
     wx = dx / d; wz = dz / d;
+    // in the ambush: crouched and still, watching the trail
+    if(B.holdT > 0){ wx = wz = 0; I.crouch = true; }
     const look = B.heard && G.time - B.heardT < 3 ? Math.atan2(-(B.heard.x - f.x), -(B.heard.z - f.z)) : Math.atan2(-wx, -wz) + Math.sin(G.time * 0.7 + f.id) * 0.5;
     const mt = D.turn * 0.55 * dt;
     I.yaw = f.yaw + clamp(angDiff(f.yaw, look), -mt, mt); I.pitch = f.pitch * (1 - Math.min(1, dt * 3));

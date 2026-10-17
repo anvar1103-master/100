@@ -49,7 +49,7 @@ addEventListener('wheel', e => { const f = G.me; if(f && G.state === 'play' && P
 addEventListener('mousemove', e => { if(!PL.locked) return; PL.dx += e.movementX; PL.dy += e.movementY; });
 
 export function resetView(f){ PL.yaw = f.yaw; PL.pitch = 0; PL.dx = PL.dy = 0; PL.aimToggle = false; PL.sway.breath = 1; }
-on('spawn', f => { if(f === G.me) resetView(f); });
+on('spawn', f => { if(f === G.me){ resetView(f); TP.len = -1; } });
 
 // read input into the fighter (every frame, before the simulation)
 export function playerInput(dt){
@@ -155,7 +155,8 @@ export function updateCamera(dt){
   TP.scopeK = f.alive ? scopeT * scopeT * (3 - 2 * scopeT) : 0;
   if(VIEW.mode === 3 && TP.scopeK < 1){
     const ads = f.alive ? f.adsK * f.adsK * (3 - 2 * f.adsK) : 0;
-    const right = 0.78 - 0.18 * ads, up = 0.42 - 0.12 * ads, back = (f.alive ? 3.3 : 4.2) - 1.4 * ads;
+    // aiming moves the camera in a little and out over the shoulder, so the big head doesn't fill the view
+    const right = 0.85 + 0.2 * ads, up = 0.45 + 0.02 * ads, back = (f.alive ? 3.5 : 4.4) - 0.95 * ads;
     const px = f.x, py = f.y + (f.alive ? f.h * 0.84 : 0.9), pz = f.z;
     const sy = Math.sin(cy), cyy = Math.cos(cy), sp_ = Math.sin(cpch), cp_ = Math.cos(cpch);
     // camera axes: right (cos, 0, -sin), back = -forward

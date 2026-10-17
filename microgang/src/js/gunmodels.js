@@ -8,10 +8,10 @@ import { loadGLB } from './assets.js';
 // per gun: model file, grip (where the right hand holds), muzzle, left hand, the aim eye line, the casing port —
 // measured on the models in their own units
 const SPEC = {
-  hornet:{ file:'blaster-d', grip:[0, -0.061, 0.166], muzzle:[0, 0.056, -0.46], left:[0, -0.044, -0.245], sight:[0, 0.165, 0.12], eject:[0.07, 0.06, -0.05], vm:0.62 },
-  acorn: { file:'blaster-o', grip:[0, -0.053, 0.131], muzzle:[0, 0.0, -0.2], left:[0, -0.05, -0.08], sight:[0, 0.17, 0.08], eject:[0.12, 0.05, 0.0], vm:0.8 },
-  needle:{ file:'blaster-f', grip:[0, -0.07, 0.359], muzzle:[0, 0.053, -0.66], left:[0, -0.01, -0.175], sight:[0, 0.193, 0.26], eject:[0.08, 0.05, 0.05], vm:0.55 },
-  comb:  { file:'blaster-j', grip:[0, -0.053, 0.228], muzzle:[0, 0.095, -0.31], left:[-0.02, -0.075, 0.235], sight:[0, 0.175, 0.16], eject:[0.07, 0.08, 0.0], vm:0.75 },
+  hornet:{ file:'blaster-d', grip:[0, -0.061, 0.166], muzzle:[0, 0.056, -0.46], left:[0, -0.044, -0.245], sight:[0, 0.165, 0.12], eject:[0.07, 0.06, -0.05], vm:0.5 },
+  acorn: { file:'blaster-o', grip:[0, -0.053, 0.131], muzzle:[0, 0.0, -0.2], left:[0, -0.05, -0.08], sight:[0, 0.17, 0.08], eject:[0.12, 0.05, 0.0], vm:0.66 },
+  needle:{ file:'blaster-f', grip:[0, -0.07, 0.359], muzzle:[0, 0.053, -0.66], left:[0, -0.01, -0.175], sight:[0, 0.193, 0.26], eject:[0.08, 0.05, 0.05], vm:0.45 },
+  comb:  { file:'blaster-j', grip:[0, -0.053, 0.228], muzzle:[0, 0.095, -0.31], left:[-0.02, -0.075, 0.235], sight:[0, 0.175, 0.16], eject:[0.07, 0.08, 0.0], vm:0.62 },
 };
 export const GUN_IDS = Object.keys(SPEC);
 const SRC = {};

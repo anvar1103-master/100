@@ -138,7 +138,9 @@ export function buildLayout(){
     // -- N: the hollow fallen log, a tunnel; a plank leans on its west end to walk up onto it --
     { const L = ZONES.log, a = [L.x - 17, L.z - 0.5], b = [L.x + 13, L.z - 1.5], R = 3.3, sink = 0.8;
       const cy = Math.min(g(a[0], a[1]), g(b[0], b[1]), g(L.x, L.z)) - sink + R;
-      add({ k:'log', mdl:'sg_log_hollow', ax:a[0], az:a[1], bx:b[0], bz:b[1], cy, R });
+      // the model lies along its x, 2.06 long, 0.35 in radius with its axis 0.342 up
+      const sy = R / 0.35, lx = b[0] - a[0], lz = b[1] - a[1];
+      add({ k:'log', mdl:'sg_log_hollow', ax:a[0], az:a[1], bx:b[0], bz:b[1], cy, R, x:(a[0] + b[0]) / 2, z:(a[1] + b[1]) / 2, y:cy - 0.342 * sy, ry:-Math.atan2(lz, lx), sx:Math.hypot(lx, lz) / 2.06, sy, sz:sy });
       for(let t = 0; t <= 1; t += 0.04) take(lerp(a[0], b[0], t), lerp(a[1], b[1], t), 3.6);
       // the plank: from the grass south-west of the log up onto its back
       const top = [a[0] + 3, cy + R + 0.12, lerp(a[1], b[1], 0.1)], foot = [a[0] - 5, g(a[0] - 5, a[1] + 6) + 0.1, a[1] + 6];
@@ -182,13 +184,13 @@ export function buildLayout(){
       // shelves round the south-west side, each a hop higher; the last hop is onto the stump
       for(let i = 0; i < 4; i++){ const a = 2.3 + i * 0.5, x = sx + Math.cos(a) * (sr + 0.9), z = sz - Math.sin(a) * (sr + 0.9), top = g(sx, sz) + 0.98 * (i + 1);
         add({ k:'laeti', mdl:'Mushroom_Laetiporus', x, z, s:4.2, top, y:top - 0.61 * 4.2 * 0.75, ry:a - Math.PI / 2, shelf:true }); }
-      scatter(T, 4, 1.4, (x, z) => add({ k:'shrooms', mdl:'Mushroom_Common', x, z, y:g(x, z), s:rand(12, 16), ry:rand(0, TAU) }), { k:1.3 });
+      scatter(T, 2, 1.4, (x, z) => add({ k:'shrooms', mdl:'Mushroom_Common', x, z, y:g(x, z), s:rand(12, 16), ry:rand(0, TAU) }), { k:1.3 });
     }
     // -- SE: a big old stump with its roots spread over the ground: run between them, hide behind them --
     { const R = ZONES.roots, x = R.x + 2, z = R.z + 2;
       add({ k:'rootstump', mdl:'fs_stump_roots', x, z, y:g(x, z) - 0.3, s:12, ry:0.4 }); take(x, z, 7);
       scatter(R, 3, 1.5, (x, z) => add({ k:'cushion', x, z, y:g(x, z), r:rand(1.5, 2.5), ry:rand(0, TAU) }), { k:1.3 });
-      scatter(R, 3, 2, (x, z) => add({ k:'shrooms', mdl:'Mushroom_Common', x, z, y:g(x, z), s:rand(12, 16), ry:rand(0, TAU) }), { k:1.3 });
+      scatter(R, 2, 2, (x, z) => add({ k:'shrooms', mdl:'Mushroom_Common', x, z, y:g(x, z), s:rand(12, 16), ry:rand(0, TAU) }), { k:1.3 });
     }
     // -- SW: dandelions with their rosettes (low cover) --
     { const D = ZONES.dande;
@@ -222,8 +224,8 @@ export function buildLayout(){
     for(let i = 0; i < 30; i++){ const x = rand(-BOUND, BOUND), z = rand(-BOUND, BOUND); add({ k:'dew', x, z, y:g(x, z), r:rand(0.25, 0.7) }); }
     // -- beyond the edge: giants that tell you how small you are (bushes, trees), outside the grass wall --
     for(let i = 0; i < 22; i++){ const a = i / 22 * TAU + rand(-0.1, 0.1), d = rand(66, 80), x = Math.cos(a) * d, z = Math.sin(a) * d;
-      add({ k:'far', mdl:i % 3 ? 'Bush_Common' : 'Bush_Common_Flowers', x, z, y:g(x, z) - 1, s:rand(16, 24), ry:rand(0, TAU) }); }
-    for(const [x, z, mdl, s] of [[86, 86, 'TwistedTree_2', 13], [-120, -90, 'CommonTree_1', 40], [-60, -150, 'Pine_4', 34], [70, -140, 'CommonTree_3', 36], [150, -40, 'CommonTree_1', 42], [-160, 30, 'TwistedTree_2', 14], [-100, 140, 'Pine_4', 36], [40, 160, 'CommonTree_3', 38]])
+      add({ k:'far', mdl:'Bush_Common_Flowers', x, z, y:g(x, z) - 1, s:rand(16, 24), ry:rand(0, TAU) }); }
+    for(const [x, z, mdl, s] of [[86, 86, 'CommonTree_1', 38], [-120, -90, 'CommonTree_1', 40], [-60, -150, 'Pine_4', 34], [70, -140, 'CommonTree_3', 36], [150, -40, 'CommonTree_1', 42], [-160, 30, 'CommonTree_3', 40], [-100, 140, 'Pine_4', 36], [40, 160, 'CommonTree_3', 38]])
       add({ k:'far', mdl, x, z, y:g(x, z) - 2, s, ry:rand(0, TAU) });
   });
   MAP.built = true;

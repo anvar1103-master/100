@@ -187,7 +187,7 @@ function frame(dt, raw){
   tickNature(dt, pushers);
   // over the shoulder, blades between the camera and your hero thin out so you can see yourself
   const me = G.me;
-  if(me && VIEW.mode === 3 && (G.state === 'play' || G.state === 'end') && !CAM.free){ _pv.set(me.x, me.y + me.h * 0.6, me.z); setCamFade(camera.position, _pv, 1.25); }
+  if(me && VIEW.mode === 3 && (G.state === 'play' || G.state === 'end') && !CAM.free){ _pv.set(me.x, me.y + me.h * 0.6, me.z); setCamFade(camera.position, _pv, 1.7); }
   else setCamFade(camera.position, camera.position, 0);
   tickTerrain(dt, SUN_DIR, SUN_COL); tickPlants(dt); tickGrass(camera.position);
   stepFx(dt);
@@ -198,9 +198,10 @@ function frame(dt, raw){
 }
 function menuCamera(dt){
   CAM.menuT += dt;
-  const t = CAM.menuT * 0.035, r = 34 + Math.sin(t * 1.7) * 6;
-  camera.position.set(Math.cos(t) * r, 2.4 + Math.sin(t * 2.3) * 0.8, Math.sin(t) * r);
-  camera.lookAt(Math.cos(t + 0.5) * 6, 7 + Math.sin(t * 1.3) * 2, Math.sin(t + 0.5) * 6);
+  // a slow walk round the fly agaric ring, along the trail
+  const t = CAM.menuT * 0.03 + 0.6, r = 19 + Math.sin(t * 1.7) * 2;
+  camera.position.set(Math.cos(t) * r, groundH(Math.cos(t) * r, Math.sin(t) * r) + 2.6 + Math.sin(t * 2.3) * 0.5, Math.sin(t) * r);
+  camera.lookAt(Math.cos(t + 0.35) * 4, 5.5 + Math.sin(t * 1.3) * 1.2, Math.sin(t + 0.35) * 4);
   camera.fov = vfov(78, camera.aspect); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
 }
 function loop(now){

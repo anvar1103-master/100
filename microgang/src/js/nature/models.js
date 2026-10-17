@@ -15,6 +15,8 @@ const LOOK = {
   fern:   { wind:{ stiff:2, h:0.8, amp:0.05 }, trans:'#C8F090' },
   shrooms:{ trans:'#FFE8C8' },
   agaric: { trans:'#FF9070', transK:0.4 },
+  // the hollow log is one flat colour on its own: painted bark wrapped round it by world position
+  log:    { tri:{ tex:'Bark_NormalTree', k:0.16, tint:'#D8B898' } },
   far:    { far:true },
 };
 export const NM = { meshes:[], tex:{} };
@@ -46,6 +48,17 @@ export async function buildModels(){
     const o = K.wind ? { wind:K.wind.stiff, windH:K.wind.h, windAmp:K.wind.amp, perH:1 } : {};
     if(K.trans) Object.assign(o, { trans:K.trans, transK:K.transK || 1.2 });
     if(K.far) o.dapple = false;
+    // leaves between the camera and your hero thin out, like the grass
+    if(K.wind) o.fadeCam = true;
+    if(K.tri && NM.tex[K.tri.tex]){
+      const t = NM.tex[K.tri.tex]; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.needsUpdate = true;
+      n.map = t; n.color.set(K.tri.tint);
+      o.frag = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `
+        vec3 mgWn = normalize(inverseTransformDirection(vNormal, viewMatrix));
+        vec3 mgBw = pow(abs(mgWn), vec3(4.0)); mgBw /= dot(mgBw, vec3(1.0));
+        vec3 mgTp = vMgWorld * ${K.tri.k.toFixed(3)};
+        diffuseColor *= texture2D(map, mgTp.zy) * mgBw.x + texture2D(map, mgTp.xz) * mgBw.y + texture2D(map, mgTp.xy) * mgBw.z;`); };
+    }
     o.key = 'nm-' + kind + '-' + m.name;
     const r = natureMat(n, o); mats.set(key, r); return r;
   };
@@ -56,7 +69,8 @@ export async function buildModels(){
     const [kind, name] = key.split('|'), root = src[name], K = LOOK[kind] || {};
     if(!root){ console.warn('model missing', name); continue; }
     const parts = [];
-    root.traverse(o => { if(o.isMesh) parts.push({ mesh:o, local:new THREE.Matrix4().copy(root.matrixWorld).invert().multiply(o.matrixWorld) }); });
+    // (relative to the file's scene, not to the model's own node: that node may carry the un-squeezing of its vertices)
+    root.traverse(o => { if(o.isMesh) parts.push({ mesh:o, local:o.matrixWorld.clone() }); });
     for(const P of parts){
       const im = new THREE.InstancedMesh(P.mesh.geometry, matFor(P.mesh.material, kind), list.length);
       list.forEach((it, i) => im.setMatrixAt(i, itemMatrix(it, _m).multiply(P.local)));
