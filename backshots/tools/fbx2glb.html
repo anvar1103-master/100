@@ -1,0 +1,58 @@
+<!doctype html><meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+// Helper page for tools/assets.mjs: loads FBX files with three.js and exports GLB (runs in headless Chromium).
+import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+const load = async url => { const o = await new FBXLoader().loadAsync(url);
+  // embedded textures decode asynchronously: wait for them, drop the ones that never arrive
+  const texs = []; o.traverse(m => { if(m.isMesh) [].concat(m.material).forEach(x => { for(const k of ['map', 'normalMap', 'specularMap', 'bumpMap', 'emissiveMap', 'alphaMap']) if(x[k]) texs.push([x, k]); }); });
+  for(let i = 0; i < 100 && texs.some(([x, k]) => x[k] && !(x[k].image && x[k].image.width)); i++) await new Promise(r => setTimeout(r, 100));
+  for(const [x, k] of texs) if(x[k] && !(x[k].image && x[k].image.width)){ console.error('no image', x.name, k, x[k].name); x[k] = null; }
+  return o; };
+const b64 = buf => { let s = '', u = new Uint8Array(buf); for(let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const exportGLB = (obj, animations = [], maxTextureSize = 1024) => new Promise((ok, bad) => new GLTFExporter().parse(obj, r => ok(b64(r)), bad, { binary:true, animations, maxTextureSize, onlyVisible:false }));
+// Phong materials from FBX -> standard ones (keeps colour and normal maps)
+function toStandard(o, rough = 0.75){
+  o.traverse(m => { if(!m.isMesh) return;
+    const one = s => { const n = new THREE.MeshStandardMaterial({ name:s.name, color:s.color, map:s.map || null, normalMap:s.normalMap || null, roughness:rough, metalness:0,
+      transparent:false, alphaTest:s.map && s.alphaTest ? s.alphaTest : 0, side:THREE.FrontSide }); return n; };
+    m.material = Array.isArray(m.material) ? m.material.map(one) : one(m.material); });
+}
+window.info = async url => { const o = await load(url); const out = { meshes:[], bones:0, clips:o.animations.map(c => c.name + ':' + c.duration.toFixed(2)) };
+  o.traverse(m => { if(m.isBone) out.bones++; if(m.isMesh){ const mats = [].concat(m.material); out.meshes.push({ name:m.name, tris:(m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3,
+    mats:mats.map(x => x.type + ':' + x.name + '[' + ['map', 'normalMap', 'specularMap', 'bumpMap', 'emissiveMap'].filter(k => x[k]).map(k => k + '=' + (x[k].image ? x[k].image.width : '?')).join(',') + ']') }); } });
+  const b = new THREE.Box3().setFromObject(o); out.size = b.getSize(new THREE.Vector3()).toArray().map(v => +v.toFixed(2)); out.first = o.children.map(c => c.name); return out; };
+// a character: scaled from centimetres to metres, standard materials
+const plain = n => n.replace(/^mixamorig\d*:?/, '');
+window.character = async (url, tex) => { const o = await load(url); toStandard(o); o.traverse(b => { if(b.isBone) b.name = plain(b.name); }); o.animations = []; o.scale.setScalar(0.01); o.name = 'Character'; return exportGLB(o, [], tex || 1024); };
+// animations: one skeleton (no meshes) plus all clips; horizontal drift of the hips removed from loops
+window.anims = async list => {
+  let skel = null; const clips = [];
+  for(const { url, name, keepRoot } of list){
+    const o = await load(url); const c = o.animations[0]; c.name = name; o.traverse(b => { if(b.isBone) b.name = plain(b.name); });
+    for(const t of c.tracks) t.name = plain(t.name);
+    for(const t of c.tracks) if(/Hips\.position$/.test(t.name) && !keepRoot){
+      const v = t.values, n = v.length / 3, x0 = v[0], z0 = v[2], x1 = v[(n - 1) * 3], z1 = v[(n - 1) * 3 + 2];
+      for(let i = 0; i < n; i++){ const k = n > 1 ? i / (n - 1) : 0; v[i * 3] -= x0 + (x1 - x0) * k; v[i * 3 + 2] -= z0 + (z1 - z0) * k; }
+    }
+    clips.push(c);
+    if(!skel){ skel = o; const rm = []; o.traverse(m => { if(m.isMesh) rm.push(m); }); rm.forEach(m => m.parent.remove(m)); }
+  }
+  skel.scale.setScalar(0.01); skel.name = 'Rig';
+  return exportGLB(skel, clips);
+};
+// a gun: FBX + loose PBR textures; DirectX normal maps get the green channel flipped by tools/assets.mjs later
+window.gun = async (url, tex, dx) => { const o = await load(url); const L = new THREE.TextureLoader();
+  const t = async (u, srgb) => { if(!u) return null; const x = await L.loadAsync(u); x.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; x.flipY = true; return x; };
+  const m = new THREE.MeshStandardMaterial({ name:'gun', map:await t(tex.col, true), normalMap:await t(tex.nor), roughnessMap:await t(tex.rough), metalnessMap:await t(tex.metal), roughness:1, metalness:1 });
+  if(dx && m.normalMap){ // DirectX normal map -> OpenGL convention (glTF): flip green
+    const im = m.normalMap.image, c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+    const g = c.getContext('2d'); g.drawImage(im, 0, 0); const d = g.getImageData(0, 0, c.width, c.height);
+    for(let i = 1; i < d.data.length; i += 4) d.data[i] = 255 - d.data[i];
+    g.putImageData(d, 0, 0); const t = new THREE.CanvasTexture(c); t.flipY = true; t.colorSpace = THREE.NoColorSpace; m.normalMap = t; }
+  o.traverse(c => { if(c.isMesh) c.material = m; }); o.scale.setScalar(0.01); o.name = 'Gun';
+  return exportGLB(o, [], 1024); };
+window.ready = true;
+</script>

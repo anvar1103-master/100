@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#14110A">
+<title>Backshots</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"../node_modules/three/build/three.module.js","three/addons/":"../node_modules/three/examples/jsm/","three/examples/jsm/":"../node_modules/three/examples/jsm/","postprocessing":"../node_modules/postprocessing/build/index.js","n8ao":"../node_modules/n8ao/dist/N8AO.js","@dimforge/rapier3d-compat":"../node_modules/@dimforge/rapier3d-compat/rapier.mjs"}}</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<!-- ============ battle HUD ============ -->
+<div id="hud" class="hud" hidden>
+  <div id="hurt" class="hurt"></div>
+  <div class="rec"><i></i>REC <span id="timer">9:00</span></div>
+  <div class="top">
+    <div class="tl"><div class="alive"><b id="alive">20</b><small>осталось</small></div><div class="kills"><b id="my-k">0</b><small>убийств</small></div></div>
+    <div class="compass"><div class="strip" id="strip"></div><div class="marks" id="marks"></div><i class="mark"></i></div>
+    <div class="tr"></div>
+  </div>
+  <div id="feed" class="feed"></div>
+  <div id="xhair" class="xhair"><i class="u"></i><i class="d"></i><i class="l"></i><i class="r"></i><b></b></div>
+  <div id="hitm" class="hitm"><i></i><i></i><i></i><i></i></div>
+  <div id="dmgdir" class="dmgdir"></div>
+  <div id="ann" class="ann"></div>
+  <div id="prep" class="prep" hidden>Стрельба через <b id="prep-n">6</b></div>
+  <div class="bl">
+    <div class="hp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg><b id="hp-n">100</b><div class="hpbar"><u id="hp-bar"></u></div></div>
+  </div>
+  <div class="br">
+    <div class="wname"><span id="wname">АК-47</span><span id="torch" class="torch">фонарь</span></div>
+    <div class="ammo"><b id="mag">30</b><small>/ <span id="res">90</span></small></div>
+    <div class="hint" id="rhint" hidden>R — перезарядка</div>
+  </div>
+  <div id="dead" class="dead" hidden>
+    <div class="killer" id="killer"></div>
+    <div class="place" id="dead-place"></div>
+    <div class="watch" id="watch"></div>
+    <div class="btns"><button id="d-again" class="play">Новый бой</button><button id="d-menu" class="ghost">В меню</button></div>
+  </div>
+  <div id="lockhint" class="lockhint" hidden>Щёлкни, чтобы играть · Esc — пауза</div>
+  <div id="board" class="board" hidden><table id="board-t"></table></div>
+</div>
+
+<!-- ============ menu ============ -->
+<div id="menu" class="screen menu" hidden>
+  <header class="brand"><b class="logo">BACK<i>SHOTS</i></b><span>Королевская битва в закулисье · последний выживший</span></header>
+  <section class="panel">
+    <div class="row"><span>Бойцов</span><div class="seg" id="m-count"><button data-v="15">15</button><button data-v="20">20</button><button data-v="25">25</button></div></div>
+    <div class="row"><span>Боты</span><div class="seg" id="m-diff"><button data-v="easy">Лёгкие</button><button data-v="normal">Обычные</button><button data-v="hard">Сложные</button></div></div>
+    <div class="row"><span>Графика</span><div class="seg" id="m-gfx"><button data-v="medium">Средняя</button><button data-v="high">Красивая</button></div></div>
+    <button id="play" class="play">В бой</button>
+    <button id="m-set" class="ghost">Настройки</button>
+    <ul class="keys">
+      <li><kbd>WASD</kbd> ходить <kbd>Shift</kbd> бег <kbd>C</kbd> присесть <kbd>Пробел</kbd> прыжок</li>
+      <li><kbd>ЛКМ</kbd> огонь <kbd>ПКМ</kbd> прицел <kbd>R</kbd> перезарядка <kbd>Q</kbd> <kbd>E</kbd> выглянуть <kbd>V</kbd> фонарь <kbd>Tab</kbd> таблица</li>
+      <li>В темноте тебя видно хуже. Фонарь светит, но выдаёт тебя.</li>
+    </ul>
+    <small class="seed" id="seed"></small>
+  </section>
+</div>
+
+<!-- ============ pause ============ -->
+<div id="pause" class="screen modal" hidden>
+  <div class="card">
+    <h2>Пауза</h2>
+    <button id="p-resume" class="play">Продолжить</button>
+    <button id="p-set" class="ghost">Настройки</button>
+    <button id="p-quit" class="ghost">Выйти в меню</button>
+  </div>
+</div>
+
+<!-- ============ settings ============ -->
+<div id="settings" class="screen modal" hidden>
+  <div class="card settings">
+    <h2>Настройки</h2>
+    <div class="row"><span>Графика</span><div class="seg" id="s-gfx"><button data-v="medium">Средняя</button><button data-v="high">Красивая</button></div></div>
+    <small class="note">«Средняя» — для слабых компьютеров: без теней, отражений и затенения углов. Игра сама снижает чёткость, если кадров не хватает. При смене графики страница перезагрузится.</small>
+    <div class="row"><label for="s-sens">Чувствительность мыши</label><div class="slide"><input type="range" id="s-sens" min="0.2" max="3" step="0.05"><b id="s-sens-v">1.0</b></div></div>
+    <div class="row"><label for="s-fov">Угол обзора</label><div class="slide"><input type="range" id="s-fov" min="65" max="105" step="1"><b id="s-fov-v">82</b></div></div>
+    <div class="row"><label for="s-vol">Громкость</label><div class="slide"><input type="range" id="s-vol" min="0" max="1" step="0.05"><b id="s-vol-v">80</b></div></div>
+    <div class="row"><span>Прицел (ПКМ)</span><div class="seg" id="s-aim"><button data-v="hold">Удерживать</button><button data-v="toggle">Нажать</button></div></div>
+    <div class="row"><span>Кровь</span><div class="seg" id="s-blood"><button data-v="on">Вкл</button><button data-v="off">Выкл</button></div></div>
+    <div class="row"><span>Счётчик кадров</span><div class="seg" id="s-fps"><button data-v="0">Выкл</button><button data-v="1">Вкл</button></div></div>
+    <div class="row"><span>Язык</span><div class="seg" id="s-lang"><button data-v="ru">Русский</button><button data-v="en">English</button></div></div>
+    <button id="s-close" class="play">Готово</button>
+  </div>
+</div>
+
+<!-- ============ end of match ============ -->
+<div id="end" class="screen modal end" hidden>
+  <div class="card wide">
+    <h1 id="e-title">Победа!</h1>
+    <p id="e-sub"></p>
+    <div class="estats" id="e-stats"></div>
+    <table class="btable" id="e-board"></table>
+    <div class="btns"><button id="e-again" class="play">Новый бой</button><button id="e-menu" class="ghost">В меню</button></div>
+  </div>
+</div>
+
+<div id="gen" class="gen" hidden><b>Новый этаж…</b></div>
+<div id="fps" class="fps" hidden>60</div>
+<div id="load" class="load"><div class="load-in"><b class="logo">BACK<i>SHOTS</i></b><div class="bar"><u id="load-bar"></u></div><small id="load-txt">Гудят лампы…</small></div></div>
+<div id="nogl" class="nogl" hidden><b>Нужен WebGL 2</b><span>Браузер или видеокарта не умеют рисовать 3D. Обнови браузер или включи аппаратное ускорение.</span></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
