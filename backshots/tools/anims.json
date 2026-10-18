@@ -224,5 +224,13 @@
 "death_walk",
 "Shooter Pack/walking to dying.fbx",
 1
+],
+[
+"pistol_idle",
+"Pistol Pack/pistol idle.fbx"
+],
+[
+"pistol_crouch",
+"Pistol Pack/pistol kneeling idle.fbx"
 ]
 ]

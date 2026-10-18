@@ -14,7 +14,7 @@ import { startMatch, stepMatch, standings } from './match.js';
 import { botThink, botReset } from './bots.js';
 import { gun, LOOKS } from './fighter.js';
 import { PL, playerInput, updateCamera, requestLock, resetView } from './player.js';
-import { initViewmodel, updateViewmodel, setRig, VMS } from './viewmodel.js';
+import { initViewmodel, updateViewmodel, setRig, loadFpArms, VMS } from './viewmodel.js';
 import { loadSoldiers, buildSoldier, animSoldier, disposeSoldier } from './soldiers.js';
 import { loadGuns } from './gunmodels.js';
 import { loadProps, placeProps } from './props.js';
@@ -43,7 +43,7 @@ async function boot(){
   await Promise.all([initPhysics().catch(e => console.warn('physics off', e)), loadLevelTex()]);
   setLoad(0.3, 'Офисные работники ищут выход…'); await yieldFrame();
   await loadGuns(); await loadSoldiers(k => setLoad(0.3 + k * 0.4));
-  setLoad(0.75, 'Расставляем мебель…'); await Promise.all([loadProps(), loadLootModels()]);
+  setLoad(0.75, 'Расставляем мебель…'); await Promise.all([loadProps(), loadLootModels(), loadFpArms()]);
   initLamps(); initViewmodel(); initFx(); initHud();
   buildMenu();
   await newFloor(Number(new URLSearchParams(location.search).get('seed')) || randSeed());
