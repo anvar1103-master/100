@@ -7,7 +7,15 @@
 ## Персонажи и движения (`src/assets/models/chars/*.glb`, `anims.glb`)
 | Что | Откуда | Лицензия |
 |---|---|---|
-| `ch12`, `ch23`, `ch33` — офисные люди; 54 движения: стойка и прицел с автоматом, ходьба/бег/спринт/ходьба вприсядку в 8 сторон, повороты, прыжок, стрельба, перезарядка, реакции на попадание, 8 смертей (наборы «Rifle 8-Way Locomotion Pack», «Shooter Pack» и отдельные) | Adobe Mixamo — https://www.mixamo.com | Mixamo: бесплатно для игр, в т.ч. коммерческих; нельзя распространять сами исходные файлы как ассеты |
+| `ch12`, `ch23`, `ch33` — офисные люди; 54 движения: стойка и прицел с автоматом, ходьба/бег/спринт/ходьба вприсядку в 8 сторон, повороты, прыжок, стрельба, перезарядка, реакции на попадание, 8 смертей, поза с пистолетом стоя и с колена (наборы «Rifle 8-Way Locomotion Pack», «Shooter Pack», «Pistol Handgun Locomotion Pack» и отдельные) | Adobe Mixamo — https://www.mixamo.com | Mixamo: бесплатно для игр, в т.ч. коммерческих; нельзя распространять сами исходные файлы как ассеты |
+
+## Руки от первого лица (`src/assets/models/fp_rifle.glb`, `fp_pistol.glb`)
+Готовит `python tools/fparms.py` (Blender, `pip install bpy`) + `node tools/assets.mjs fparms <папка>`. Текстуры 1024 webp,
+своё оружие из моделей убрано (оставлено невидимым только для подгонки наших стволов).
+| Что | Откуда | Лицензия |
+|---|---|---|
+| руки в перчатках с анимациями (стойка, перезарядки, доставание) — для автоматов, дробовика и снайперки | «M16 A2 Assault Rifle - Animated», user77 — https://sketchfab.com/3d-models/m16-a2-assault-rifle-animated-bd4ff595b593447f9a7f1d95f501fb6c | CC Attribution (CC BY 4.0) |
+| руки в перчатках с анимациями пистолета (стойка, выстрел, две перезарядки) | «FPS pistol animations», Cransh — https://sketchfab.com/3d-models/fps-pistol-animations-0d7a343dcb6f401197a73c91aee93f6d | CC Attribution (CC BY 4.0) |
 
 ## Оружие (`src/assets/models/guns/*.glb`)
 | Что | Откуда | Лицензия |

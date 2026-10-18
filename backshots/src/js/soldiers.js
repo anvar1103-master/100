@@ -27,7 +27,7 @@ const upperOnly = c => new THREE.AnimationClip(c.name + '_up', c.duration, c.tra
 export async function loadSoldiers(progress){
   const an = await loadGLB('assets/models/anims.glb');
   for(const c of an.animations) T.clips[c.name] = c;
-  for(const n of ['reload', 'reload_2', 'hit', 'hit_walk', 'fire']) if(T.clips[n]) T.clips[n + '_up'] = upperOnly(T.clips[n]);
+  for(const n of ['reload', 'reload_2', 'hit', 'hit_walk', 'fire', 'pistol_idle', 'pistol_crouch']) if(T.clips[n]) T.clips[n + '_up'] = upperOnly(T.clips[n]);
   let i = 0;
   await Promise.all(LOOKS.map(async id => {
     const g = await loadGLB(`assets/models/chars/${id}.glb`);
@@ -45,6 +45,13 @@ export async function loadSoldiers(progress){
   // gun space: -z is the muzzle, so +z = -fwd
   const want = new THREE.Matrix4().makeBasis(right, up, fwd.clone().negate()).setPosition(rp);
   T.mount = new THREE.Matrix4().copy(B.RightHand.matrixWorld).invert().multiply(want);
+  // the pistol: held in both hands by the pistol pose, barrel along the right arm
+  if(T.clips.pistol_idle){
+    mx.stopAllAction(); mx.clipAction(T.clips.pistol_idle).play(); mx.setTime(0.5); probe.updateMatrixWorld(true);
+    const hp = palm(B, 'Right'), sh = new THREE.Vector3().setFromMatrixPosition(B.RightArm.matrixWorld);
+    const f2 = hp.clone().sub(sh).normalize(), u2 = new THREE.Vector3(0, 1, 0).addScaledVector(f2, -f2.y).normalize(), r2 = new THREE.Vector3().crossVectors(f2, u2);
+    T.mountPistol = new THREE.Matrix4().copy(B.RightHand.matrixWorld).invert().multiply(new THREE.Matrix4().makeBasis(r2, u2, f2.clone().negate()).setPosition(hp));
+  }
   T.ready = true;
 }
 function boneMap(o){ const b = {}; o.traverse(n => { if(n.isBone) b[n.name] = n; }); return b; }
@@ -71,6 +78,7 @@ export function buildSoldier(f, parent = scene){
 function setSoldierGun(H, id){
   if(H.gun){ H.mount.remove(H.gun.root); for(const m of H.gunMats) m.dispose(); H.gunMats = []; }
   const g = buildGun(id, false);
+  H.mount.matrix.copy(id === 'pistol' && T.mountPistol ? T.mountPistol : T.mount);
   g.root.traverse(m => { if(m.isMesh){ m.castShadow = true; m.receiveShadow = true; ambient(m.material = m.material.clone(), H.amb); H.gunMats.push(m.material); } });
   H.mount.add(g.root); H.gun = g; H.gunId = id;
 }
@@ -160,6 +168,8 @@ export function animSoldier(H, dt, hide){
       if(H.reloadOf !== f.reload){ H.reloadOf = f.reload; const a = act(H, 'reload_up'); a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.timeScale = T.clips.reload.duration / Math.max(0.5, f.reload.total || 2.4); a.play(); }
       want.reload_up = 7;
     }
+    // a pistol: the arms take the pistol pose (the legs keep walking as they do)
+    if(gun(f) && gun(f).W.kind === 'pistol' && !f.reload) want[crouch && T.clips.pistol_crouch_up ? 'pistol_crouch_up' : 'pistol_idle_up'] = 5;
     H.hitT += dt;
     if(H.hitT < 0.5) want[hs > 1.5 ? 'hit_walk_up' : 'hit_up'] = 3 * (1 - H.hitT / 0.5);
   }

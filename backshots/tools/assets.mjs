@@ -5,6 +5,8 @@
 //   tex <dir>          — «Backrooms PBR texture pack» (its backrooms/ folder) -> src/assets/tex/*.jpg (1K, normals flipped to OpenGL)
 //   props <dir>        — Poly Haven glTF models (folders phm-<id>/ with <id>_1k.gltf) -> src/assets/models/props.glb
 //   loot <dir>         — the same for the loot (ammo_box, medical_box, medical_tape, wooden_military_crate) -> loot.glb
+//   fparms <dir>       — first-person arms (Sketchfab, CC-BY): first `python tools/fparms.py <dir> <dir>` (Blender's
+//                        bpy reads the FBX rigs), then this step adds the textures and packs fp_rifle.glb, fp_pistol.glb
 //   sfx <dir>          — sounds: see SFX below (sources relative to <dir>; microgang's sounds are copied as they are)
 // FBX is read by three.js in headless Chromium (tools/fbx2glb.html), then gltf-transform shrinks textures to webp,
 // welds, quantizes and packs with meshopt (the game decodes it with three's MeshoptDecoder, no outside files).
@@ -84,6 +86,34 @@ if(step === 'props' || step === 'loot'){
   await out.transform(dedup(), prune(), quantize(), meshopt({ encoder:MeshoptEncoder, level:'medium' }));
   if(step === 'loot') await out.transform(simplify({ simplifier:MeshoptSimplifier, ratio:0.5, error:0.0005 }));
   fs.writeFileSync(path.join(OUT, NAME), await io.writeBinary(out)); console.log(NAME, Math.round(fs.statSync(path.join(OUT, NAME)).size / 1024), 'KB');
+  process.exit(0);
+}
+if(step === 'fparms'){
+  const { Document: _D } = await import('@gltf-transform/core');
+  const T = { rifle:['m16-a2-assault-rifle-animated/textures', 'armColor', 'armNormal', 'armsmoothness', true, 'armmetallic', 'armAO'],
+    pistol:['fps-pistol-animations/textures', 'armColor', 'armNormal', 'armRoughness', false, null, 'armAO'] };
+  for(const [id, [dir, col, nor, rough, smooth, metal, ao]] of Object.entries(T)){
+    const doc = await io.read(path.join(SRC, `fp_${id}.glb`)), R = doc.getRoot(), D = path.join(SRC, dir), S = 1024;
+    const img = async (f, o = {}) => { let im = sharp(path.join(D, f + '.png')).resize(S, S); if(o.grey) im = im.greyscale(); return im; };
+    const tex = (name, buf, mime) => doc.createTexture(name).setImage(buf).setMimeType(mime);
+    // occlusion (R), roughness (G), metalness (B) in one image
+    const r = await (await img(rough, { grey:true })).raw().toBuffer(), a = await (await img(ao, { grey:true })).raw().toBuffer();
+    const m = metal ? await (await img(metal, { grey:true })).raw().toBuffer() : null, orm = Buffer.alloc(S * S * 3);
+    for(let i = 0; i < S * S; i++){ orm[i * 3] = a[i]; orm[i * 3 + 1] = smooth ? 255 - r[i] : r[i]; orm[i * 3 + 2] = m ? m[i] : 0; }
+    const ormT = tex('orm', await sharp(orm, { raw:{ width:S, height:S, channels:3 } }).webp({ quality:85 }).toBuffer(), 'image/webp');
+    const colT = tex('color', await (await img(col)).webp({ quality:85 }).toBuffer(), 'image/webp');
+    const norT = tex('normal', await (await img(nor)).webp({ quality:90 }).toBuffer(), 'image/webp');
+    for(const mat of R.listMaterials()){
+      if(mat.getName() !== 'arms'){ mat.setBaseColorTexture(null).setNormalTexture(null).setMetallicRoughnessTexture(null); continue; }
+      mat.setBaseColorTexture(colT).setNormalTexture(norT).setMetallicRoughnessTexture(ormT).setOcclusionTexture(ormT).setBaseColorFactor([1, 1, 1, 1]).setRoughnessFactor(1).setMetallicFactor(1);
+      mat.setExtension('KHR_materials_specular', null);
+    }
+    // the rifle exported one animation per object: merge them into one clip
+    const A = R.listAnimations();
+    if(id === 'rifle' && A.length > 1){ const all = A[0]; all.setName('all'); for(const b of A.slice(1)){ for(const c of b.listChannels()) all.addChannel(c); for(const sm of b.listSamplers()) all.addSampler(sm); b.dispose(); } }
+    await doc.transform(dedup(), prune(), weld(), quantize(), meshopt({ encoder:MeshoptEncoder, level:'medium' }));
+    const out = path.join(OUT, `fp_${id}.glb`); fs.writeFileSync(out, await io.writeBinary(doc)); console.log(path.basename(out), Math.round(fs.statSync(out).size / 1024), 'KB');
+  }
   process.exit(0);
 }
 if(step === 'sfx'){
