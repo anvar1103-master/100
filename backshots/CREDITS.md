@@ -44,3 +44,4 @@ Poly Haven, на странице лицензии: «Our assets are all license
 | three.js | https://threejs.org | MIT |
 | postprocessing, N8AO | https://github.com/pmndrs/postprocessing , https://github.com/N8python/n8ao | Zlib, ISC |
 | Rapier (физика) | https://rapier.rs | Apache-2.0 |
+| Шрифты Oswald и Nunito (`src/fonts`) | Google Fonts | SIL Open Font License 1.1 |

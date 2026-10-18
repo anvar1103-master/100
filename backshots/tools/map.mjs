@@ -1,3 +1,5 @@
+// A floor plan as a picture (walls, baked light, spawns green, loot purple, landmarks orange, flickering lamps blue):
+//   node tools/map.mjs [seed] [out.png]
 import sharp from 'sharp';
 const { buildLevel } = await import('../src/js/level/check.js');
 const { bakeLight } = await import('../src/js/level/lights.js');
