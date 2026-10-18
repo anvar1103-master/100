@@ -1,10 +1,11 @@
 // Automated check in headless Chromium (playwright).
 //   node tools/test.mjs          — tests the source (src/)
 //   node tools/test.mjs --dist   — tests the release build (dist/web, run npm run build first)
-// Floor plans for several seeds (one connected floor, no slits, spawns, lamps, landmarks) in node; then in the browser:
-// a full bot battle royale to the last one standing, the end screen, the player walking, shooting a bot dead and
-// reloading, rag dolls and loose props in the physics, the pause when the mouse is released, stable memory over
-// matches, «Красивая» loads clean too, English with no Russian left, and not one request to another site.
+// Floor plans for several seeds (one connected floor, no slits, spawns, lamps, landmarks) and a quick bot match with
+// loot and the zone in node; then in the browser: a full bot battle royale to the last one standing, the end screen,
+// the player walking, shooting a bot dead and reloading, picking up a gun, armour and medicine, healing, the zone
+// hurting outside, the map, rag dolls and loose props in the physics, the pause when the mouse is released, stable
+// memory over matches, «Красивая» loads clean too, English with no Russian left, and not one request to another site.
 import { chromium } from 'playwright';
 import { serve, GL_ARGS } from './serve.mjs';
 
@@ -28,6 +29,26 @@ console.log('Backshots test:', PAGE);
     if(n !== 1 || slits || L.spawns.length < 25 || lit < 120 || L.landmarks.length < 5) bad.push({ seed, parts:n, slits, spawns:L.spawns.length, lit, marks:L.landmarks.length });
   }
   ok(!bad.length, 'floor plans: one connected floor, no slits, 25+ spawns, 120+ lit lamps, 5+ landmarks (5 seeds)' + (bad.length ? ' ' + JSON.stringify(bad) : ''));
+}
+
+// ---- loot, guns by luck and the zone (node) ----
+{
+  const R = '../src/js/';
+  const { buildLevel } = await import(R + 'level/check.js'); const { bakeLight } = await import(R + 'level/lights.js');
+  const { setLevel } = await import(R + 'phys.js'); const { buildNav } = await import(R + 'nav.js');
+  const { startMatch, stepMatch } = await import(R + 'match.js'); const { botThink } = await import(R + 'bots.js');
+  const { G, on } = await import(R + 'state.js'); const { LOOT } = await import(R + 'loot.js'); const { Z } = await import(R + 'zone.js');
+  let taken = 0, zoneHurt = 0, kinds = new Set(); on('take', () => taken++); on('damage', (t, a, s, o) => { if(o && o.zone) zoneHurt++; });
+  const L = G.level = buildLevel(77); bakeLight(L); setLevel(L); buildNav();
+  startMatch({ count:20, diff:'normal' }); G.me.bot = true;
+  for(const f of G.fighters) kinds.add(f.guns[0].id);
+  const items = LOOT.items.length, inside = LOOT.items.every(it => L.g[L.ck(it.z) * L.W + L.ci(it.x)] === 0);
+  let t = 0, alive30 = 0; while(G.state === 'play' && t < 600){ for(const f of G.fighters) botThink(f, 1 / 30); stepMatch(1 / 30); t += 1 / 30; if(!alive30 && t >= 30) alive30 = G.match.alive; }
+  ok(items > 60 && inside, `loot on the floor (${items} items, all on open floor)`);
+  ok(kinds.size >= 3, `fighters start with different guns (${[...kinds].join(', ')})`);
+  ok(taken > 20, `bots pick things up (${taken} times)`);
+  ok(Z.stage >= 1 && zoneHurt > 0 || G.state === 'end' && t < 300, `the zone shrinks and hurts outside (stage ${Z.stage}, ${zoneHurt} hits)`);
+  ok(alive30 >= 15, `a calm start: ${alive30} of 20 alive after 30 s; match ${Math.round(t)} s`);
 }
 
 const srv = await serve(), port = srv.address().port;
@@ -62,10 +83,12 @@ async function open(lang, gfx = 'medium'){
   ok(await page.evaluate(() => !document.getElementById('end').hidden && document.querySelectorAll('#e-board tr').length > 5), 'the end screen with the table');
   // ---- the player: walk, shoot, reload ----
   const p = await page.evaluate(async () => {
-    await __bs.start({ count:3, prep:0 });
+    await __bs.start({ count:3, prep:0, gun:'ak', zone:false });
     const G = __bs.G, me = G.me, t = G.fighters[1];
     // the target stands 6 m in front, in the open
-    const yaw = me.yaw; t.x = me.x - Math.sin(yaw) * 6; t.z = me.z - Math.cos(yaw) * 6; t.vx = t.vz = 0; t.bot = false;
+    let yaw = me.yaw, d = 6;
+    for(let a = 0; a < 16; a++){ const y = me.yaw + a * Math.PI / 8; if(__bs.losClear(me.x, 1.5, me.z, me.x - Math.sin(y) * 7, 1.5, me.z - Math.cos(y) * 7)){ yaw = y; break; } }
+    t.x = me.x - Math.sin(yaw) * d; t.z = me.z - Math.cos(yaw) * d; t.vx = t.vz = 0; t.bot = false;
     __bs.step(10);
     const hp0 = t.hp, mag0 = me.guns[0].mag;
     let n = 0; while(t.alive && n++ < 60){ __bs.aimAt(t); __bs.step(4, true); }
@@ -79,6 +102,30 @@ async function open(lang, gfx = 'medium'){
   ok(p.killed && p.kills === 1 && p.used > 0, `the player shoots a bot dead (${p.used} rounds)`);
   ok(p.reloading && p.reloaded, 'reload refills the magazine');
   ok(p.walked > 1.5, `the player walks (${p.walked.toFixed(1)} m in 1 s)`);
+  // ---- loot: a gun, a vest, a medkit at your feet; healing; the vest takes a hit; the zone hurts ----
+  const l = await page.evaluate(async () => {
+    await __bs.start({ count:3, prep:0, gun:'pistol', zone:false });
+    const G = __bs.G, me = G.me, L = __bs.LOOT;
+    for(const f of G.fighters) if(f !== me) f.bot = false;
+    const put = o => { const it = Object.assign({ id:9000 + L.items.length, y:0, ry:0, x:me.x, z:me.z }, o); L.items.push(it); return it; };
+    const g = put({ kind:'gun', gun:'m4', mag:30 }), v = put({ kind:'vest', lv:2, armor:100 }), m = put({ kind:'medkit' });
+    __bs.takeLoot(me, g); __bs.takeLoot(me, v); __bs.step(5); __bs.step(40);
+    const gunOk = me.guns.length === 2 && me.guns.some(q => q.id === 'm4'), vestOk = me.armor === 100;
+    __bs.step(10); const medOk = me.meds.medkit === 1 && !L.items.includes(m);
+    me.hp = 40; me.inp.heal = true; __bs.step(2); const healing = !!me.use; __bs.step(260); const healed = me.hp;
+    return { gunOk, vestOk, medOk, healing, healed };
+  });
+  ok(l.gunOk && l.vestOk, 'picking up a second gun and a vest');
+  ok(l.medOk && l.healing && l.healed >= 90, `walking over a medkit takes it; healing (${l.healed} hp)`);
+  const z = await page.evaluate(async () => {
+    await __bs.start({ count:3, prep:0, zone:true });
+    const G = __bs.G, me = G.me, Z = __bs.Z; for(const f of G.fighters) if(f !== me) f.bot = false;
+    Z.r = 1; Z.cx = me.x + 50; Z.cz = me.z; Z.dps = 5; const hp = me.hp; __bs.step(130);
+    __bs.tick(); const map = document.getElementById('mini').getContext('2d').getImageData(90, 90, 1, 1).data[3] > 0;
+    return { lost:hp - me.hp, text:document.getElementById('zone-t').textContent, map };
+  });
+  ok(z.lost >= 8 && z.text.length > 3, `the dark outside the zone hurts (${z.lost} hp in 2 s: «${z.text}»)`);
+  ok(z.map, 'the map is drawn');
   const paused = await page.evaluate(async () => { await __bs.start({ count:4 }); return __bs.lockLost(); });
   ok(paused, 'releasing the mouse pauses the game');
   const mem = await page.evaluate(async () => {

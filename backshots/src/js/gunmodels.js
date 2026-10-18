@@ -11,7 +11,7 @@ const SPEC = {
   m4:     { grip:[0, -0.088, 0.075], muzzle:[0, 0.03, -0.54], left:[0, 0.0, -0.25], sight:[0, 0.079, 0.07], eject:[0.035, 0.02, -0.02], mag:'Magazine', bolt:'Charging_Handle' },
   shotgun:{ grip:[0, -0.088, 0.43], muzzle:[0, 0.022, -0.4], left:[0, -0.03, -0.06], sight:[0, 0.052, 0.2], eject:[0.03, 0, 0.25], pump:'Fore_Stock' },
   sniper: { grip:[-0.255, -1.21, 4.85], muzzle:[-0.257, -1.07, 4.06], left:[-0.257, -1.15, 4.45], sight:[-0.256, -1.046, 4.8], eject:[-0.23, -1.11, 4.75], mag:'Magazine', bolt:'Bolt' },
-  pistol: { grip:[0.005, -0.02, 0.095], muzzle:[0.004, 0.047, -0.13], left:[0.004, -0.02, 0.09], sight:[0.004, 0.066, 0.02], eject:[0.02, 0.05, -0.02], mag:'Magazine', bolt:'Slide' },
+  pistol: { grip:[0.005, -0.02, 0.095], muzzle:[0.004, 0.047, -0.13], left:[-0.03, -0.07, 0.085], sight:[0.004, 0.066, 0.02], eject:[0.02, 0.05, -0.02], mag:'Magazine', bolt:'Slide' },
 };
 export const GUN_IDS = Object.keys(SPEC);
 const SRC = {};

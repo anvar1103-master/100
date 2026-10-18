@@ -11,9 +11,10 @@ import { store, clamp } from './util.js';
 export const AU = { ctx:null, master:null, sfx:null, amb:null, verb:null, buf:{}, vol:store.get('vol', 0.8), ready:false, voices:0, ambOn:false, muted:false };
 const FILES = ['rifle_1', 'rifle_2', 'rifle_3', 'rifle_far', 'mag_out_2', 'mag_in_2', 'charge_2', 'dry',
   'shell_1', 'shell_2', 'shell_3', 'shell_4', 'imp_wood', 'imp_stone', 'imp_stone_2', 'imp_flesh_1', 'imp_flesh_2', 'imp_flesh_3', 'whiz_1', 'whiz_2', 'whiz_3',
-  'step_1', 'step_2', 'step_3', 'step_4', 'land', 'jump', 'tick', 'hover', 'click', 'head', 'kill', 'hum', 'vent', 'flicker', 'buzz', 'thud'];
-const SHOT = { ak:['rifle_3', 'rifle_3', 'rifle_1'], m4:['rifle_1', 'rifle_2'], shotgun:['rifle_3'], sniper:['rifle_1'], pistol:['rifle_2'] };
-const FAR = { ak:'rifle_far', m4:'rifle_far', shotgun:'rifle_far', sniper:'rifle_far', pistol:'rifle_far' };
+  'step_1', 'step_2', 'step_3', 'step_4', 'land', 'jump', 'tick', 'hover', 'click', 'head', 'kill', 'hum', 'vent', 'flicker', 'buzz', 'thud',
+  'pistol', 'pistol_2', 'revolver_far', 'shotgun', 'shotgun_2', 'shotgun_far', 'sniper', 'sniper_2', 'sniper_far', 'pump', 'bolt', 'shell_in', 'shell_in_2', 'mag_in', 'mag_out', 'charge'];
+const SHOT = { ak:['rifle_3', 'rifle_3', 'rifle_1'], m4:['rifle_1', 'rifle_2'], shotgun:['shotgun', 'shotgun_2'], sniper:['sniper', 'sniper_2'], pistol:['pistol', 'pistol_2'] };
+const FAR = { ak:'rifle_far', m4:'rifle_far', shotgun:'shotgun_far', sniper:'sniper_far', pistol:'revolver_far' };
 const pick = a => a[Math.floor(Math.random() * a.length)];
 
 export function initAudio(){
@@ -131,6 +132,13 @@ on('fire', f => {
   }
 });
 on('vmSound', (n, delay) => play(n, null, { vol:0.75, delay:delay || 0 }));
+on('pump', f => { if(near(f, 25)) play('pump', f === G.me ? null : { x:f.x, y:f.y + 1.3, z:f.z }, { vol:0.7, delay:0.12 }); });
+on('bolt', f => { if(near(f, 25)) play('bolt', f === G.me ? null : { x:f.x, y:f.y + 1.3, z:f.z }, { vol:0.7, delay:0.15 }); });
+on('shell', f => { if(near(f, 18)) play(pick(['shell_in', 'shell_in_2']), f === G.me ? null : { x:f.x, y:f.y + 1.2, z:f.z }, { vol:0.6 }); });
+on('take', (f, it) => { if(f === G.me) play(it.kind === 'gun' ? 'charge' : it.kind === 'ammo' ? 'mag_in' : 'click', null, { vol:0.5, rate:it.kind === 'gun' ? 1 : 1.1 }); });
+on('use', f => { if(f === G.me) play('click', null, { vol:0.4, rate:0.7 }); });
+on('healed', f => { if(f === G.me) play('click', null, { vol:0.5, rate:1.3 }); });
+on('armorBroke', f => { if(near(f, 15)) play('imp_stone_2', { x:f.x, y:f.y + 1.2, z:f.z }, { vol:0.6, rate:0.8 }); });
 on('dry', f => { if(f === G.me) play('dry', null, { vol:0.7 }); });
 on('reload', f => { if(f !== G.me && near(f, 25)) play('mag_out_2', { x:f.x, y:f.y + 1, z:f.z }, { vol:0.6 }); });
 on('equip', f => { if(f === G.me) play('charge_2', null, { vol:0.4, rate:1.2 }); });
@@ -143,6 +151,7 @@ on('impactSound', (mat, x, y, z) => {
   play(n, { x, y, z }, { vol:mat === 'floor' ? 0.3 : 0.45, rate:mat === 'floor' ? 0.7 : mat === 'metal' ? 1.2 : 1, fall:0.08, max:60, send:0.2 });
 });
 on('damage', (t, amt, src, o) => {
+  if(o.zone){ if(t === G.me) play('buzz', null, { vol:0.5, rate:0.6 }); return; }
   if(t === G.me){ play(pick(['imp_flesh_1', 'imp_flesh_3']), null, { vol:0.8 }); return; }
   play(pick(['imp_flesh_1', 'imp_flesh_2', 'imp_flesh_3']), { x:o.x, y:o.y, z:o.z }, { vol:0.6, fall:0.06, send:0.1 });
   if(src === G.me){ play(o.head ? 'head' : 'tick', null, { vol:o.head ? 0.7 : 0.55, vary:0.02 }); }

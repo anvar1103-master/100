@@ -4,6 +4,7 @@
 //   guns <dir>         — «Free CC0 Guns & Explosives Pack» (unpacked GunsExplosives/) -> src/assets/models/guns/*.glb
 //   tex <dir>          — «Backrooms PBR texture pack» (its backrooms/ folder) -> src/assets/tex/*.jpg (1K, normals flipped to OpenGL)
 //   props <dir>        — Poly Haven glTF models (folders phm-<id>/ with <id>_1k.gltf) -> src/assets/models/props.glb
+//   loot <dir>         — the same for the loot (ammo_box, medical_box, medical_tape, wooden_military_crate) -> loot.glb
 //   sfx <dir>          — sounds: see SFX below (sources relative to <dir>; microgang's sounds are copied as they are)
 // FBX is read by three.js in headless Chromium (tools/fbx2glb.html), then gltf-transform shrinks textures to webp,
 // welds, quantizes and packs with meshopt (the game decodes it with three's MeshoptDecoder, no outside files).
@@ -59,12 +60,13 @@ if(step === 'tex'){
   }
   process.exit(0);
 }
-if(step === 'props'){
+if(step === 'props' || step === 'loot'){
+  const IDS = step === 'loot' ? ['ammo_box', 'medical_box', 'medical_tape', 'wooden_military_crate'] : PROPS, NAME = step + '.glb';
   const docs = [];
   const out = new Document(); const scene = out.createScene('Props'); out.createBuffer();
   for(const d of fs.readdirSync(SRC).filter(d => d.startsWith('phm-'))){
     const id = d.slice(4), f = fs.readdirSync(path.join(SRC, d)).find(x => x.endsWith('.gltf'));
-    if(!PROPS.includes(id) || !f) continue;
+    if(!IDS.includes(id) || !f) continue;
     const doc = await io.read(path.join(SRC, d, f));
     await doc.transform(dedup(), prune(), weld(), textureCompress({ encoder:sharp, targetFormat:'webp', resize:[512, 512], quality:80 }));
     const tmp = path.join('/tmp', 'prop_' + id + '.glb'); fs.writeFileSync(tmp, await io.writeBinary(doc)); docs.push([id, tmp]);
@@ -80,7 +82,8 @@ if(step === 'props'){
   for(const b of out.getRoot().listBuffers().slice(1)) b.dispose();
   out.getRoot().listAccessors().forEach(a => a.setBuffer(out.getRoot().listBuffers()[0]));
   await out.transform(dedup(), prune(), quantize(), meshopt({ encoder:MeshoptEncoder, level:'medium' }));
-  fs.writeFileSync(path.join(OUT, 'props.glb'), await io.writeBinary(out)); console.log('props.glb', Math.round(fs.statSync(path.join(OUT, 'props.glb')).size / 1024), 'KB');
+  if(step === 'loot') await out.transform(simplify({ simplifier:MeshoptSimplifier, ratio:0.5, error:0.0005 }));
+  fs.writeFileSync(path.join(OUT, NAME), await io.writeBinary(out)); console.log(NAME, Math.round(fs.statSync(path.join(OUT, NAME)).size / 1024), 'KB');
   process.exit(0);
 }
 if(step === 'sfx'){

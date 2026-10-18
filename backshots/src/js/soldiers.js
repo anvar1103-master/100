@@ -13,6 +13,7 @@ import { buildGun } from './gunmodels.js';
 import { G, on } from './state.js';
 import { gun, LOOKS } from './fighter.js';
 import { lightRGB } from './level/lights.js';
+import { zoneTint } from './zone.js';
 import { clamp, damp, angDiff, sp, spring } from './util.js';
 
 export const T = { tpl:{}, clips:{}, mount:null, ready:false };
@@ -58,13 +59,20 @@ export function buildSoldier(f, parent = scene){
   const amb = { value:new THREE.Color(0.1, 0.09, 0.07) }, mats = new Map();
   model.traverse(m => { if(m.isMesh){ if(!mats.has(m.material)){ const c = m.material.clone(); ambient(c, amb); mats.set(m.material, c); } m.material = mats.get(m.material); } });
   const bones = boneMap(model);
-  const g = buildGun(gun(f).W.id, false), mount = new THREE.Group(); mount.matrixAutoUpdate = false; mount.matrix.copy(T.mount);
-  mount.add(g.root); bones.RightHand.add(mount);
-  g.root.traverse(m => { if(m.isMesh){ m.castShadow = true; m.receiveShadow = true; ambient(m.material = m.material.clone(), amb); } });
+  const mount = new THREE.Group(); mount.matrixAutoUpdate = false; mount.matrix.copy(T.mount); bones.RightHand.add(mount);
   const mixer = new THREE.AnimationMixer(model);
   parent.add(root);
-  return { f, root, model, bones, mats:[...mats.values()], amb, gun:g, mount, mixer, acts:{}, w:{}, want:{}, phase:Math.random(), bodyYaw:f.yaw,
+  const H = { f, root, model, bones, mats:[...mats.values()], amb, gun:null, gunId:null, gunMats:[], mount, mixer, acts:{}, w:{}, want:{}, phase:Math.random(), bodyYaw:f.yaw,
     kick:sp(), flinch:sp(), dying:null, rag:false, posed:null, hitT:9, reloadOf:null, hidden:false };
+  setSoldierGun(H, gun(f).W.id);
+  return H;
+}
+// the gun in the right hand (a new one when the fighter swaps or picks one up)
+function setSoldierGun(H, id){
+  if(H.gun){ H.mount.remove(H.gun.root); for(const m of H.gunMats) m.dispose(); H.gunMats = []; }
+  const g = buildGun(id, false);
+  g.root.traverse(m => { if(m.isMesh){ m.castShadow = true; m.receiveShadow = true; ambient(m.material = m.material.clone(), H.amb); H.gunMats.push(m.material); } });
+  H.mount.add(g.root); H.gun = g; H.gunId = id;
 }
 // a uniform light term for skinned characters, set per fighter from the baked light where it stands
 export function ambient(m, amb){
@@ -80,6 +88,7 @@ export function disposeSoldier(H){
   if(H.root.parent) H.root.parent.remove(H.root);
   H.mixer.stopAllAction(); H.mixer.uncacheRoot(H.model);
   for(const m of H.mats) m.dispose();
+  for(const m of H.gunMats) m.dispose();
 }
 function act(H, name){
   let a = H.acts[name];
@@ -107,7 +116,7 @@ export function animSoldier(H, dt, hide){
   H.root.visible = vis;
   if(!vis || H.rag) return;
   // ambient from the baked light (plus your flashlight on them)
-  const L = G.level; if(L){ lightRGB(L, f.x, f.z, _rgb); H.amb.value.setRGB(0.06 + _rgb[0] * AMB_K, 0.05 + _rgb[1] * AMB_K, 0.04 + _rgb[2] * AMB_K); }
+  const L = G.level; if(L){ zoneTint(f.x, f.z, lightRGB(L, f.x, f.z, _rgb)); H.amb.value.setRGB(0.06 + _rgb[0] * AMB_K, 0.05 + _rgb[1] * AMB_K, 0.04 + _rgb[2] * AMB_K); }
   for(const k in want) want[k] = 0;
   const hs = Math.hypot(f.vx, f.vz);
   if(f.alive){
@@ -117,6 +126,9 @@ export function animSoldier(H, dt, hide){
   H.root.position.set(f.x, f.y, f.z);
   H.root.rotation.set(0, H.bodyYaw + Math.PI, 0);
   let fast = false;
+  // the dead drop their gun (it lies on the floor as loot)
+  if(H.gun) H.gun.root.visible = f.alive;
+  if(f.alive && f.guns.length && H.gunId !== gun(f).W.id) setSoldierGun(H, gun(f).W.id);
   if(!f.alive){
     if(!H.dying){ H.dying = pickDeath(H); const a = act(H, H.dying); a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.timeScale = 1; a.play(); H.deathT = 0; }
     want[H.dying] = 1; fast = true; H.deathT += dt;
@@ -200,4 +212,4 @@ function pickDeath(H){
 export { DEATHS };
 
 on('fire', f => { if(f.model) f.model.kick.v += gun(f).W.recoil.punch * 1.4; });
-on('damage', (t, amt) => { if(t.model && t.alive){ t.model.hitT = 0; t.model.flinch.v += 2.5 + amt * 0.06; } });
+on('damage', (t, amt, src, o) => { if(t.model && t.alive && !(o && o.zone)){ t.model.hitT = 0; t.model.flinch.v += 2.5 + amt * 0.06; } });

@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { scene, camera, HIGH } from '../engine.js';
 import { G, on } from '../state.js';
+import { Z, zoneLit } from '../zone.js';
 import { losClear } from '../phys.js';
 import { LV, LAMP } from './build.js';
 import { gun } from '../fighter.js';
@@ -37,13 +38,23 @@ export function flickerK(l, t){
 }
 
 const _v = new THREE.Vector3(), _d = new THREE.Vector3();
+const EMERG = new THREE.Color(0.55, 0.06, 0.04);
 export function updateLamps(dt){
   const L = G.level; if(!L || !LV.diffuser) return;
   const t = G.time + performance.now() * 0.0003, cx = camera.position.x, cz = camera.position.z;
-  // ---- flickering panels near you ----
+  // ---- the zone: lamps past the edge die to a dim red emergency glow ----
   let dirty = false;
+  LV.uni.zone.value.set(Z.cx, Z.cz, Z.on && G.state !== 'menu' ? Z.r : 1e4, Z.edge);
+  if((LAMPS.zoneT = (LAMPS.zoneT || 0) - dt) <= 0){
+    LAMPS.zoneT = 0.25;
+    for(let i = 0; i < L.lamps.length; i++){
+      const l = L.lamps[i], out = G.state !== 'menu' && zoneLit(l.x, l.z) < 0.5;
+      if(out !== !!l.out){ l.out = out; dirty = true; LV.diffuser.setColorAt(i, out ? EMERG : l.state === 'on' ? (l.red ? LAMP.red : LAMP.warm) : LAMP.dead); }
+    }
+  }
+  // ---- flickering panels near you ----
   for(let i = 0; i < L.lamps.length; i++){
-    const l = L.lamps[i]; if(l.state !== 'flicker') continue;
+    const l = L.lamps[i]; if(l.state !== 'flicker' || l.out) continue;
     if(Math.abs(l.x - cx) > 40 || Math.abs(l.z - cz) > 40) continue;
     const k = flickerK(l, t); LAMPS.flick.set(l, k);
     LV.diffuser.setColorAt(i, _c.copy(l.red ? LAMP.red : LAMP.warm).multiplyScalar(k).lerp(LAMP.dead, k < 0.2 ? 0.8 : 0)); dirty = true;
@@ -56,7 +67,7 @@ export function updateLamps(dt){
     camera.getWorldDirection(_d);
     const cand = [];
     for(const l of L.lamps){
-      if(l.state === 'off') continue;
+      if(l.state === 'off' || l.out) continue;
       const dx = l.x - cx, dz = l.z - cz, d = Math.hypot(dx, dz); if(d > 16) continue;
       const front = (dx * _d.x + dz * _d.z) / (d || 1);
       let s = d - front * 4;
@@ -74,6 +85,7 @@ export function updateLamps(dt){
   for(const S of LAMPS.spots){
     S.k += (S.want - S.k) * Math.min(1, dt * 6);
     const fl = S.lamp && S.lamp.state === 'flicker' ? (LAMPS.flick.get(S.lamp) ?? 1) : 1;
+    if(S.lamp && S.lamp.out) S.want = 0;
     S.s.intensity = 26 * S.k * fl;
     if(S.k < 0.02 && S.want === 0) S.lamp = null;
   }

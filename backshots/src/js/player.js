@@ -5,10 +5,11 @@ import * as THREE from 'three';
 import { G, on } from './state.js';
 import { camera, canvas, vfov, baseFov } from './engine.js';
 import { gun, eyeX, eyeY, eyeZ } from './fighter.js';
+import { lootNear, takeLoot, PICK_R } from './loot.js';
 import { clamp, damp, store, sp, spring } from './util.js';
 
 export const PL = { yaw:0, pitch:0, locked:false, keys:new Set(), mouse:{ l:false, r:false }, sens:store.get('sens', 1), aimHold:store.get('aimHold', true),
-  dx:0, dy:0, bobT:0, landY:sp(), punch:{ p:sp(), y:sp(), r:sp() }, fov:75, autopilot:false, aimToggle:false, deathT:0, watch:null };
+  dx:0, dy:0, bobT:0, pick:null, landY:sp(), punch:{ p:sp(), y:sp(), r:sp() }, fov:75, autopilot:false, aimToggle:false, deathT:0, watch:null };
 
 const KEY = { fwd:['KeyW', 'ArrowUp'], back:['KeyS', 'ArrowDown'], left:['KeyA', 'ArrowLeft'], right:['KeyD', 'ArrowRight'], crouch:['KeyC', 'ControlLeft'], sprint:['ShiftLeft', 'ShiftRight'], leanL:['KeyQ'], leanR:['KeyE'] };
 const down = k => KEY[k].some(c => PL.keys.has(c));
@@ -21,7 +22,11 @@ addEventListener('keydown', e => {
   const f = G.me; if(!f || G.state !== 'play') return;
   if(e.code === 'KeyR') f.inp.reload = true;
   if(e.code === 'Space') f.inp.jump = true;
-  if(e.code === 'KeyV' || e.code === 'KeyF') f.inp.light = true;
+  if(e.code === 'KeyV') f.inp.light = true;
+  if(e.code === 'KeyF' && PL.pick && f.alive) takeLoot(f, PL.pick);
+  if(e.code === 'KeyH') f.inp.heal = true;
+  if(e.code === 'Digit1') f.inp.slot = 0;
+  if(e.code === 'Digit2') f.inp.slot = 1;
   if(e.code === 'Tab') e.preventDefault();
 });
 addEventListener('keyup', e => PL.keys.delete(e.code));
@@ -33,6 +38,7 @@ canvas.addEventListener('mousedown', e => {
 });
 addEventListener('mouseup', e => { if(e.button === 0) PL.mouse.l = false; if(e.button === 2) PL.mouse.r = false; });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('wheel', e => { const f = G.me; if(!f || G.state !== 'play' || !PL.locked || f.guns.length < 2) return; f.inp.slot = (f.cur + (e.deltaY > 0 ? 1 : f.guns.length - 1)) % f.guns.length; }, { passive:true });
 addEventListener('mousemove', e => { if(!PL.locked) return; PL.dx += e.movementX; PL.dy += e.movementY; });
 
 export function resetView(f){ PL.yaw = f.yaw; PL.pitch = 0; PL.dx = PL.dy = 0; PL.aimToggle = false; PL.watch = null; }
@@ -54,6 +60,13 @@ export function playerInput(dt){
   I.aim = (PL.aimHold ? PL.mouse.r : PL.aimToggle) && PL.locked;
   I.sprint = down('sprint');
   I.yaw = PL.yaw; I.pitch = PL.pitch;
+  // what F would pick up: the item nearest where you look, within reach
+  let best = null, bs = 1e9;
+  for(const it of lootNear(f, PICK_R)){
+    const dx = it.x - f.x, dz = it.z - f.z, d = Math.hypot(dx, dz), front = (-Math.sin(f.yaw) * dx - Math.cos(f.yaw) * dz) / (d || 1);
+    const s_ = d - front * 0.8; if(front > -0.2 && s_ < bs){ bs = s_; best = it; }
+  }
+  PL.pick = best;
 }
 
 on('land', (f, v) => { if(f === G.me) PL.landY.v -= Math.min(4, v * 0.4); });

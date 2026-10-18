@@ -19,7 +19,7 @@
   <div class="top">
     <div class="tl"><div class="alive"><b id="alive">20</b><small>осталось</small></div><div class="kills"><b id="my-k">0</b><small>убийств</small></div></div>
     <div class="compass"><div class="strip" id="strip"></div><div class="marks" id="marks"></div><i class="mark"></i></div>
-    <div class="tr"></div>
+    <div class="tr"><canvas id="mini" class="mini" width="180" height="180"></canvas><div id="zone-t" class="zone-t"></div></div>
   </div>
   <div id="feed" class="feed"></div>
   <div id="xhair" class="xhair"><i class="u"></i><i class="d"></i><i class="l"></i><i class="r"></i><b></b></div>
@@ -28,13 +28,19 @@
   <div id="ann" class="ann"></div>
   <div id="prep" class="prep" hidden>Стрельба через <b id="prep-n">6</b></div>
   <div class="bl">
-    <div class="hp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg><b id="hp-n">100</b><div class="hpbar"><u id="hp-bar"></u></div></div>
+    <div class="meds" id="meds"><span class="med"><i class="ic-med"></i><b id="n-medkit">0</b></span><span class="med"><i class="ic-band"></i><b id="n-bandage">0</b></span><kbd>H</kbd></div>
+    <div class="hp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg><b id="hp-n">100</b><span id="helm" class="helm" hidden>шлем</span><div class="hpbar"><u id="hp-bar"></u></div><div class="arbar" id="arbar" hidden><u id="ar-bar"></u></div></div>
   </div>
   <div class="br">
+    <div class="slots" id="slots"></div>
     <div class="wname"><span id="wname">АК-47</span><span id="torch" class="torch">фонарь</span></div>
     <div class="ammo"><b id="mag">30</b><small>/ <span id="res">90</span></small></div>
     <div class="hint" id="rhint" hidden>R — перезарядка</div>
   </div>
+  <div id="pick" class="pick" hidden></div>
+  <div id="use" class="use" hidden><span id="use-t"></span><div class="usebar"><u id="use-bar"></u></div></div>
+  <div id="scope" class="scope" hidden><i></i></div>
+  <canvas id="bigmap" class="bigmap" width="640" height="640" hidden></canvas>
   <div id="dead" class="dead" hidden>
     <div class="killer" id="killer"></div>
     <div class="place" id="dead-place"></div>
@@ -57,7 +63,8 @@
     <ul class="keys">
       <li><kbd>WASD</kbd> ходить <kbd>Shift</kbd> бег <kbd>C</kbd> присесть <kbd>Пробел</kbd> прыжок</li>
       <li><kbd>ЛКМ</kbd> огонь <kbd>ПКМ</kbd> прицел <kbd>R</kbd> перезарядка <kbd>Q</kbd> <kbd>E</kbd> выглянуть <kbd>V</kbd> фонарь <kbd>Tab</kbd> таблица</li>
-      <li>В темноте тебя видно хуже. Фонарь светит, но выдаёт тебя.</li>
+      <li><kbd>F</kbd> подобрать <kbd>1</kbd> <kbd>2</kbd> оружие <kbd>H</kbd> лечиться <kbd>M</kbd> карта этажа</li>
+      <li>В темноте тебя видно хуже. Фонарь светит, но выдаёт тебя. Свет гаснет с краёв — успей к кругу на карте.</li>
     </ul>
     <small class="seed" id="seed"></small>
   </section>
@@ -102,7 +109,7 @@
 </div>
 
 <div id="gen" class="gen" hidden><b>Новый этаж…</b></div>
-<div id="fps" class="fps" hidden>60</div>
+<div id="fps" class="fps">60</div>
 <div id="load" class="load"><div class="load-in"><b class="logo">BACK<i>SHOTS</i></b><div class="bar"><u id="load-bar"></u></div><small id="load-txt">Гудят лампы…</small></div></div>
 <div id="nogl" class="nogl" hidden><b>Нужен WebGL 2</b><span>Браузер или видеокарта не умеют рисовать 3D. Обнови браузер или включи аппаратное ускорение.</span></div>
 <script type="module" src="js/main.js"></script>
