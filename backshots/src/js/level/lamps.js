@@ -74,7 +74,7 @@ export function updateLamps(dt){
   for(const S of LAMPS.spots){
     S.k += (S.want - S.k) * Math.min(1, dt * 6);
     const fl = S.lamp && S.lamp.state === 'flicker' ? (LAMPS.flick.get(S.lamp) ?? 1) : 1;
-    S.s.intensity = 16 * S.k * fl;
+    S.s.intensity = 26 * S.k * fl;
     if(S.k < 0.02 && S.want === 0) S.lamp = null;
   }
   // ---- flashlights ----

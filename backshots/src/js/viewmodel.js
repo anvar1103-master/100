@@ -10,13 +10,15 @@ import { buildGun } from './gunmodels.js';
 import { gun } from './fighter.js';
 import { PL } from './player.js';
 import { sp, spring, clamp, damp, lerp } from './util.js';
-import { T as T_ } from './soldiers.js';
+import { T as T_, ambient, AMB_K } from './soldiers.js';
+import { lightRGB } from './level/lights.js';
 
-export const VMS = { root:null, rig:null, cur:null, flash:null, shown:true, look:null };
+export const VMS = { root:null, rig:null, cur:null, flash:null, shown:true, look:null, ambU:{ value:new THREE.Color(0.3, 0.27, 0.2) } };
 const S = { px:sp(), py:sp(), pz:sp(), rx:sp(), ry:sp(), rz:sp(), swayX:0, swayY:0, sprint:0, lower:0, fireT:9, reloadOf:null };
 const ARM = /^(LeftShoulder|RightShoulder|LeftArm|RightArm|LeftForeArm|RightForeArm|LeftHand|RightHand)/;
 // gun pose in camera space: hip (grip position) and the aim distance of the sights
-const HIP = [0.15, -0.165, -0.3], ADS_D = 0.22;
+const HIP = [0.12, -0.165, -0.33], ADS_D = 0.23, RIG = [0.0, -0.03, -0.1];   // grip from the hip; sights ahead when aiming; the rig's eyes from the camera
+const IKB = ['LeftArm', 'LeftForeArm', 'LeftHand', 'RightArm', 'RightForeArm', 'RightHand'];
 
 export function initViewmodel(){
   const root = VMS.root = new THREE.Group(); root.matrixAutoUpdate = false; scene.add(root);
@@ -36,7 +38,7 @@ export function setRig(look, gid){
     const geo = m.geometry.clone(), si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight, names = m.skeleton.bones.map(b => b.name), mask = new Float32Array(si.count);
     for(let i = 0; i < si.count; i++){ let best = 0, bw = -1; for(let k = 0; k < 4; k++){ const w = sw.getComponent(i, k); if(w > bw){ bw = w; best = si.getComponent(i, k); } } mask[i] = ARM.test(names[best] || '') ? 1 : 0; }
     geo.setAttribute('armMask', new THREE.BufferAttribute(mask, 1)); m.geometry = geo;
-    const mat = m.material.clone(), prev = mat.onBeforeCompile;
+    const mat = m.material.clone(); ambient(mat, VMS.ambU); const prev = mat.onBeforeCompile;
     mat.onBeforeCompile = (s, r) => { if(prev) prev(s, r);
       s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nattribute float armMask; varying float vArm;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvArm = armMask;');
       s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vArm;').replace('void main() {', 'void main() {\n  if(vArm < 0.5) discard;'); };
@@ -44,16 +46,35 @@ export function setRig(look, gid){
     m.frustumCulled = false; m.castShadow = false; m.receiveShadow = false; m.layers.set(VM_LAYER);
   });
   model.traverse(o => { if(!o.isSkinnedMesh && o.isMesh) o.visible = false; });
-  const g = buildGun(gid, true), mount = new THREE.Group(); mount.matrixAutoUpdate = false; mount.matrix.copy(T_.mount); mount.add(g.root); bones.RightHand.add(mount);
+  const g = buildGun(gid, true);
+  g.root.traverse(o => { if(o.isMesh) ambient(o.material, VMS.ambU); });
   g.flash = muzzleFlash(); g.muzzle.add(g.flash);
   const mixer = new THREE.AnimationMixer(model);
   const aim = mixer.clipAction(T_.clips.aim); aim.play(); aim.time = 0.5; aim.paused = true;
-  const reload = mixer.clipAction(T_.clips.reload); reload.setLoop(THREE.LoopOnce, 1); reload.clampWhenFinished = true;
   mixer.update(0); holder.updateMatrixWorld(true);
-  // the gun's pose inside the rig (aiming clip): the rig is placed through its inverse
-  const gunInRig = new THREE.Matrix4().copy(g.root.matrixWorld);
+  // hands relative to the gun in the aiming pose (the gun mounted in the right hand as the third-person models hold it)
+  const mount = new THREE.Group(); mount.matrixAutoUpdate = false; mount.matrix.copy(T_.mount); bones.RightHand.add(mount); mount.add(g.root);
+  holder.updateMatrixWorld(true);
+  const gunM = g.root.matrixWorld.clone(), gunInv = gunM.clone().invert();
+  const offR = gunInv.clone().multiply(bones.RightHand.matrixWorld), offL = gunInv.clone().multiply(bones.LeftHand.matrixWorld);
+  // the left palm (between wrist and middle knuckle), in gun space: it goes onto the handguard
+  const palmL = new THREE.Vector3().setFromMatrixPosition(bones.LeftHand.matrixWorld).lerp(new THREE.Vector3().setFromMatrixPosition(bones.LeftHandMiddle1.matrixWorld), 0.55).applyMatrix4(gunInv);
+  const wristL = new THREE.Vector3().setFromMatrixPosition(offL);
+  offL.setPosition(wristL.add(g.gripL.position.clone().add(new THREE.Vector3(0, -0.03, 0)).sub(palmL)));
+  mount.remove(g.root); bones.RightHand.remove(mount);
+  // the gun now lives in camera space; the arms reach for it (two-bone IK each frame)
+  const gunHolder = new THREE.Group(); gunHolder.matrixAutoUpdate = false; gunHolder.add(g.root); g.root.position.set(0, 0, 0); g.root.quaternion.identity(); g.root.updateMatrix();
+  VMS.root.add(gunHolder);
+  // the rig turned to face along the gun, upright; its eyes go to the camera
+  const gq = new THREE.Quaternion(); gunM.decompose(new THREE.Vector3(), gq, new THREE.Vector3());
+  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(gq).normalize(); fwd.y = 0; fwd.normalize();
+  const up = new THREE.Vector3(0, 1, 0), right = new THREE.Vector3().crossVectors(fwd, up);
+  const rigToCam = new THREE.Matrix4().makeBasis(right, up, fwd.clone().negate()).invert();
+  const head = new THREE.Vector3().setFromMatrixPosition(bones.Head.matrixWorld), eyeR = head.clone().add(new THREE.Vector3(0, 0.07, 0)).addScaledVector(fwd, 0.09);
+  const eye = eyeR.clone().applyMatrix4(rigToCam);
+  const base = {}; for(const n of IKB) base[n] = bones[n].quaternion.clone();
   VMS.root.add(holder);
-  VMS.rig = { model, holder, bones, mixer, aim, reload, g, gunInRigInv:gunInRig.clone().invert(), sight:g.sight.position.clone() };
+  VMS.rig = { model, holder, bones, mixer, aim, g, gunHolder, rigToCam, eye, offR, offL, base, sight:g.sight.position.clone(), magHome:g.parts.mag ? g.parts.mag.position.clone() : null };
   VMS.look = look; VMS.gid = gid; VMS.cur = g;
 }
 
@@ -84,7 +105,33 @@ on('lower', f => { if(f === G.me) S.lowering = true; });
 on('equip', f => { if(f === G.me){ S.lowering = false; S.lower = 1; } });
 on('spawn', f => { if(f === G.me){ S.lower = 1; S.lowering = false; S.snap = true; S.reloadOf = null; } });
 
-const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _one = new THREE.Vector3(1, 1, 1);
+const _hm = new THREE.Matrix4(), _hp = new THREE.Vector3(), _mp = new THREE.Vector3(), _mp2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _rgb = [0, 0, 0], _m2 = new THREE.Matrix4(), _m3 = new THREE.Matrix4(), _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _one = new THREE.Vector3(1, 1, 1);
+const ease = t => t * t * (3 - 2 * t);
+const seg = (t, a, b) => ease(clamp((t - a) / (b - a), 0, 1));
+const bump = (t, a, b) => Math.sin(Math.PI * clamp((t - a) / (b - a), 0, 1));
+// two-bone IK: shoulder → elbow → wrist reaches the target matrix (position and hand rotation); the elbow keeps the
+// side it bends to in the animation
+const _A = new THREE.Vector3(), _B = new THREE.Vector3(), _C = new THREE.Vector3(), _T = new THREE.Vector3(), _n = new THREE.Vector3(), _d = new THREE.Vector3(), _e1 = new THREE.Vector3(), _e2 = new THREE.Vector3(), _qa = new THREE.Quaternion(), _qp = new THREE.Quaternion(), _qt = new THREE.Quaternion(), _sc = new THREE.Vector3();
+function aimBone(bone, from, to){
+  _qa.setFromUnitVectors(from.normalize(), to.normalize());
+  bone.getWorldQuaternion(_qt); _qt.premultiply(_qa);
+  bone.parent.getWorldQuaternion(_qp); bone.quaternion.copy(_qp.invert().multiply(_qt)); bone.updateMatrixWorld(true);
+}
+function ik(B, side, target, w){
+  const a = B[side + 'Arm'], b = B[side + 'ForeArm'], c = B[side + 'Hand'];
+  a.getWorldPosition(_A); b.getWorldPosition(_B); c.getWorldPosition(_C); _T.setFromMatrixPosition(target);
+  const l1 = _A.distanceTo(_B), l2 = _B.distanceTo(_C), dist = clamp(_A.distanceTo(_T), 0.02, l1 + l2 - 1e-3);
+  _n.subVectors(_B, _A).cross(_d.subVectors(_C, _A)); if(_n.lengthSq() < 1e-8) _n.set(0, 1, 0); _n.normalize();
+  _d.subVectors(_T, _A).normalize();
+  const ang = Math.acos(clamp((l1 * l1 + dist * dist - l2 * l2) / (2 * l1 * dist), -1, 1));
+  _e1.copy(_d).applyAxisAngle(_n, ang).multiplyScalar(l1).add(_A); _e2.copy(_d).applyAxisAngle(_n, -ang).multiplyScalar(l1).add(_A);
+  const elbow = _e1.distanceTo(_B) < _e2.distanceTo(_B) ? _e1 : _e2;
+  aimBone(a, _sc.subVectors(_B, _A), _d.subVectors(elbow, _A));
+  b.getWorldPosition(_B); c.getWorldPosition(_C);
+  aimBone(b, _sc.subVectors(_C, _B), _d.subVectors(_T, _B));
+  // the hand takes the target's rotation
+  target.decompose(_sc, _qt, _d); c.parent.getWorldQuaternion(_qp); c.quaternion.copy(_qp.invert().multiply(_qt)); c.updateMatrixWorld(true);
+}
 export function updateViewmodel(dt){
   const f = G.me;
   const show = !!f && f.alive && G.state === 'play' && VMS.shown && !!VMS.rig;
@@ -94,11 +141,19 @@ export function updateViewmodel(dt){
   const R = VMS.rig, g = gun(f), W = g.W;
   if(VMS.gid !== W.id || VMS.look !== f.look) setRig(f.look, W.id);
   VM.clip.value = f.adsK * 0.12;
-  // ---- reload clip on the arms ----
-  if(f.reload && S.reloadOf !== f.reload){ S.reloadOf = f.reload; R.reload.reset(); R.reload.timeScale = R.reload.getClip().duration / Math.max(0.5, f.reload.total || 2.4); R.reload.setEffectiveWeight(1); R.reload.play(); emit('vmSound', 'mag_out_2', 0.35); }
-  if(!f.reload && R.reload.isRunning()){ R.reload.fadeOut(0.25); }
-  if(f.reload){ const tt = f.reload.t / Math.max(0.5, f.reload.total); if(tt > 0.62 && !f.reload.inSnd){ f.reload.inSnd = true; emit('vmSound', 'mag_in_2'); } if(f.reload.empty && tt > 0.86 && !f.reload.chSnd){ f.reload.chSnd = true; emit('vmSound', 'charge_2'); } }
-  R.mixer.update(dt);
+  if(G.level){ lightRGB(G.level, f.x, f.z, _rgb); VMS.ambU.value.setRGB(0.05 + _rgb[0] * AMB_K * 0.8, 0.045 + _rgb[1] * AMB_K * 0.8, 0.035 + _rgb[2] * AMB_K * 0.8); }
+  // ---- reload: the gun tips, the left hand pulls the magazine down and out of view, brings a new one, slaps it in ----
+  let magOff = 0, magVis = true, hand = 0, handDrop = 0, tilt = 0, charge = 0;
+  if(f.reload){
+    const t = clamp(f.reload.t / Math.max(0.5, f.reload.total), 0, 1), R_ = f.reload;
+    const once = (k, at, fn) => { if(t >= at && !R_[k]){ R_[k] = true; fn(); } };
+    tilt = seg(t, 0, 0.12) * (1 - seg(t, 0.85, 1));
+    hand = seg(t, 0.06, 0.18) * (1 - seg(t, 0.72, 0.84));
+    magOff = seg(t, 0.2, 0.34) * (1 - seg(t, 0.5, 0.64)); magVis = !(t > 0.34 && t < 0.5);
+    handDrop = seg(t, 0.22, 0.36) * (1 - seg(t, 0.44, 0.58));
+    once('s1', 0.2, () => emit('vmSound', 'mag_out_2')); once('s2', 0.62, () => { emit('vmSound', 'mag_in_2'); S.rx.v -= 0.6; S.py.v += 0.15; });
+    if(R_.empty){ charge = bump(t, 0.76, 0.9); once('s3', 0.77, () => emit('vmSound', 'charge_2')); }
+  }
   // ---- springs toward the pose ----
   const ads = f.adsK * f.adsK * (3 - 2 * f.adsK);
   S.sprint = damp(S.sprint, f.sprintT > 0.05 ? 1 : 0, 8, dt);
@@ -107,16 +162,16 @@ export function updateViewmodel(dt){
   S.swayY = damp(S.swayY, clamp((PL.mdy || 0) * 0.0008, -0.04, 0.04), 9, dt);
   const sw = 1 - ads * 0.85;
   const hs = Math.hypot(f.vx, f.vz), bk = Math.min(1, hs / 5) * (f.ground ? 1 : 0) * (1 - ads * 0.85), bt = PL.bobT;
-  // hip: the grip at HIP; aiming: the sight on the centre line at ADS_D
-  const sx = R.sight.x, sy = R.sight.y, sz = R.sight.z;
-  let tx = lerp(HIP[0], -sx, ads), ty = lerp(HIP[1], -sy, ads), tz = lerp(HIP[2], -ADS_D - sz, ads);
+  // hip: the rig's eyes at the camera, the gun a little low and right; aiming: the sights on the centre line
+  const Sg = R.sight;
+  let tx = lerp(HIP[0], -Sg.x, ads), ty = lerp(HIP[1], -Sg.y, ads), tz = lerp(HIP[2], -Sg.z - ADS_D, ads);
   let trx = 0, try_ = 0, trz = 0;
   tx += Math.sin(bt) * 0.011 * bk - S.swayX * sw; ty += -Math.abs(Math.cos(bt)) * 0.012 * bk + S.swayY * sw;
   trz += -S.swayX * 1.4 * sw; trx += S.swayY * 0.7 * sw; try_ += S.swayX * 0.7 * sw;
   ty += Math.sin(G.time * 1.5) * 0.0028 * (1 - ads * 0.9);
   tx += -0.05 * S.sprint; ty += -0.06 * S.sprint; try_ += 0.6 * S.sprint; trx += -0.3 * S.sprint; trz += 0.3 * S.sprint;
   if(S.sprint > 0.1){ tx += Math.sin(bt) * 0.022 * S.sprint; ty += -Math.abs(Math.cos(bt)) * 0.02 * S.sprint; }
-  trz += 0.05 * f.crouchK * (1 - ads) - f.leanK * 0.12;
+  trz += 0.05 * f.crouchK * (1 - ads) - f.leanK * 0.12 + tilt * 0.5; trx += tilt * 0.15; tx -= tilt * 0.03; ty += tilt * 0.03;
   if(!f.ground) ty += 0.012;
   ty -= S.lower * 0.3; trx -= S.lower * 0.8;
   if(S.snap){ S.snap = false; for(const [s_, v] of [[S.px, tx], [S.py, ty], [S.pz, tz], [S.rx, trx], [S.ry, try_], [S.rz, trz]]){ s_.x = v; s_.v = 0; } }
@@ -126,11 +181,26 @@ export function updateViewmodel(dt){
   // ---- place: camera → gun pose → rig through the gun's inverse ----
   VMS.root.matrix.copy(camera.matrixWorld); VMS.root.matrixWorldNeedsUpdate = true; VMS.root.updateMatrixWorld(true);
   _e.set(S.rx.x, S.ry.x, S.rz.x, 'YXZ'); _q.setFromEuler(_e);
-  // rotate around the sight when aiming (it stays on the centre), around the grip from the hip
-  _m.compose(_p.set(S.px.x, S.py.x, S.pz.x), _q, _one);
-  R.holder.matrix.copy(_m).multiply(R.gunInRigInv);
-  R.holder.matrixWorldNeedsUpdate = true;
+  // the gun: at its pose, turned around the sight (kick, sway)
+  _m.makeTranslation(Sg.x, Sg.y, Sg.z).multiply(_m2.makeRotationFromQuaternion(_q)).multiply(_m3.makeTranslation(-Sg.x, -Sg.y, -Sg.z));
+  R.gunHolder.matrix.makeTranslation(S.px.x, S.py.x, S.pz.x).multiply(_m); R.gunHolder.matrixWorldNeedsUpdate = true; R.gunHolder.updateMatrixWorld(true);
+  if(R.g.parts.mag && R.magHome){ R.g.parts.mag.position.copy(R.magHome); R.g.parts.mag.position.y -= magOff * 0.3; R.g.parts.mag.visible = magVis; }
+  // the rig: eyes at the camera, following a little of the gun's motion so the shoulders move with it
+  const E = R.eye;
+  R.holder.matrix.makeTranslation(-E.x + RIG[0] + (S.px.x - HIP[0]) * 0.4, -E.y + RIG[1] + (S.py.x - HIP[1]) * 0.4, -E.z + RIG[2]).multiply(R.rigToCam);
+  R.holder.matrixWorldNeedsUpdate = true; R.holder.updateMatrixWorld(true);
+  // the arms reach the grips
+  for(const n of IKB) R.bones[n].quaternion.copy(R.base[n]);
   R.holder.updateMatrixWorld(true);
+  _hm.multiplyMatrices(R.gunHolder.matrixWorld, R.offR); ik(R.bones, 'Right', _hm, 1);
+  _hm.multiplyMatrices(R.gunHolder.matrixWorld, R.offL);
+  if(hand > 0){
+    // the left hand goes to the magazine, then down out of view and back
+    _hp.setFromMatrixPosition(_hm); _mp.set(0, -0.12 - handDrop * 0.35, 0.03 + handDrop * 0.1).applyMatrix4(R.gunHolder.matrixWorld);
+    if(R.g.parts.mag){ R.g.parts.mag.getWorldPosition(_mp2); _mp.lerp(_mp2.add(_v3.set(0, -handDrop * 0.4, 0)), 0.7); }
+    _hp.lerp(_mp, hand); _hm.setPosition(_hp);
+  }
+  ik(R.bones, 'Left', _hm, 1);
   // muzzle flash and light
   S.fireT += dt;
   R.g.flash.visible = S.fireT < 0.04;

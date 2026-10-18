@@ -14,11 +14,12 @@ class BodycamEffect extends Effect {
     super('BodycamEffect', `
 uniform float time; uniform float grain; uniform float vig; uniform float ca; uniform float distort; uniform float hurt; uniform float flash; uniform float sat;
 float bcH(vec2 p){ p = fract(p * vec2(443.897, 441.423)); p += dot(p, p.yx + 19.19); return fract((p.x + p.y) * p.x); }
-void mainUv(inout vec2 uv){ vec2 c = uv - 0.5; uv = 0.5 + c * (1.0 - distort * 0.25 + distort * dot(c, c)); }
-void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor){
+void mainImage(const in vec4 inputColor, const in vec2 uv0, out vec4 outputColor){
+  // barrel distortion of a wide body-camera lens, colour fringes growing toward the edges
+  vec2 c0 = uv0 - 0.5; vec2 uv = 0.5 + c0 * (1.0 - distort * 0.25 + distort * dot(c0, c0));
   vec2 c = uv - 0.5; float r2 = dot(c, c);
   vec2 off = c * ca * r2 * 2.0;
-  vec3 col = vec3(texture2D(inputBuffer, uv + off).r, inputColor.g, texture2D(inputBuffer, uv - off).b);
+  vec3 col = vec3(texture2D(inputBuffer, uv + off).r, texture2D(inputBuffer, uv).g, texture2D(inputBuffer, uv - off).b);
   float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
   // grade: a little drained, warm mids, cool blacks
   col = mix(vec3(l), col, sat);
@@ -35,7 +36,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   col += flash;
   outputColor = vec4(clamp(col, 0.0, 1.0), inputColor.a);
 }`, { attributes:EffectAttribute.CONVOLUTION, blendFunction:BlendFunction.NORMAL, uniforms:new Map([
-      ['time', new THREE.Uniform(0)], ['grain', new THREE.Uniform(HIGH ? 0.075 : 0.06)], ['vig', new THREE.Uniform(0.42)], ['ca', new THREE.Uniform(0.012)],
+      ['time', new THREE.Uniform(0)], ['grain', new THREE.Uniform(0.045)], ['vig', new THREE.Uniform(0.42)], ['ca', new THREE.Uniform(0.012)],
       ['distort', new THREE.Uniform(0.16)], ['hurt', new THREE.Uniform(0)], ['flash', new THREE.Uniform(0)], ['sat', new THREE.Uniform(0.88)] ]) });
   }
 }
@@ -65,7 +66,7 @@ export function initPost(){
 
 export function renderFrame(dt){
   vmCam.position.copy(camera.position); vmCam.quaternion.copy(camera.quaternion); vmCam.updateMatrixWorld();
-  renderer.shadowMap.needsUpdate = HIGH;
+  renderer.shadowMap.needsUpdate = HIGH;      // drawn once, by whichever pass renders first
   renderReflection();
   const u = P.cam.uniforms;
   u.get('time').value += dt || 0.016;

@@ -19,7 +19,7 @@ export const renderer = new THREE.WebGLRenderer({ canvas, antialias:false, power
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NoToneMapping;          // the effect pass tone-maps
 renderer.shadowMap.enabled = HIGH;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.shadowMap.autoUpdate = false;
 renderer.autoClear = false;
 
@@ -29,6 +29,15 @@ export const FOG_COL = new THREE.Color('#2A2412');
 scene.fog = new THREE.FogExp2(FOG_COL, 0.028);
 scene.background = new THREE.Color('#060504');
 export const camera = new THREE.PerspectiveCamera(75, 1, 0.04, 140);
+// a dim yellow office around everything, for reflections in metal (guns, lamp housings) and a little fill light
+export function bakeEnv(){
+  const pm = new THREE.PMREMGenerator(renderer), env = new THREE.Scene();
+  const room = new THREE.Mesh(new THREE.BoxGeometry(10, 3, 10), new THREE.MeshBasicMaterial({ color:'#5A4E24', side:THREE.BackSide }));
+  const lamp = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 2.4).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color:new THREE.Color(6, 5.6, 4.6), side:THREE.DoubleSide })); lamp.position.y = 1.45;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 10).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color:'#2E2414' })); floor.position.y = -1.45;
+  env.add(room, lamp, floor);
+  scene.environment = pm.fromScene(env, 0.04).texture; scene.environmentIntensity = 0.35; pm.dispose();
+}
 camera.layers.set(0);
 export const vmCam = new THREE.PerspectiveCamera(54, 1, 0.01, 10);
 vmCam.layers.set(VM_LAYER);

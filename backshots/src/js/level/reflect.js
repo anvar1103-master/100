@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { renderer, scene, camera, HIGH, Q } from '../engine.js';
 import { LV } from './build.js';
 
-const R = { rt:null, cam:new THREE.PerspectiveCamera(), on:HIGH };
+const R = { rt:null, cam:new THREE.PerspectiveCamera(), on:HIGH, hide:[] };
+export const REFL = R;
 const N = new THREE.Vector3(0, 1, 0), _w = new THREE.Vector3(), _l = new THREE.Vector3(), _t = new THREE.Vector3(), _r = new THREE.Matrix4();
 const BIAS = new THREE.Matrix4().set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1);
 
@@ -23,7 +24,7 @@ export function renderReflection(){
   _r.extractRotation(camera.matrixWorld);
   _l.set(0, 0, -1).applyMatrix4(_r).add(_w);
   // mirrored position, target and up
-  C.position.copy(_w).reflect(N).negate(); C.position.y = -_w.y; C.position.x = _w.x; C.position.z = _w.z;
+  C.position.set(_w.x, -_w.y, _w.z);
   _t.copy(_l); _t.y = -_t.y;
   C.up.set(0, 1, 0).applyMatrix4(_r).reflect(N);
   C.lookAt(_t);
@@ -32,10 +33,12 @@ export function renderReflection(){
   LV.refl.mat.value.copy(BIAS).multiply(C.projectionMatrix).multiply(C.matrixWorldInverse);
   // draw the room without the floor itself, no shadow re-render
   LV.floor.visible = false;
-  const prevRT = renderer.getRenderTarget(), sm = renderer.shadowMap.needsUpdate;
-  renderer.shadowMap.needsUpdate = false;
+  // (shadow maps get drawn here if due — the main pass then reuses them; far fighters and props are left out)
+  const prevRT = renderer.getRenderTarget();
+  for(const fn of R.hide) fn(true);
   renderer.setRenderTarget(R.rt); renderer.clear();
   renderer.render(scene, C);
-  renderer.setRenderTarget(prevRT); renderer.shadowMap.needsUpdate = sm;
+  renderer.setRenderTarget(prevRT);
+  for(const fn of R.hide) fn(false);
   LV.floor.visible = true;
 }

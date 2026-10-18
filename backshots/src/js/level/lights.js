@@ -76,3 +76,11 @@ export function lightAt(L, x, z){
   if(p < 0 || q < 0 || p >= B.n || q >= B.n) return 0;
   const o = (q * B.n + p) * 3; return (B.data[o] + B.data[o + 1] + B.data[o + 2]) / 2.6;
 }
+
+// the baked light colour at a spot (raw, before the material's light-map scale) — characters take it as ambient
+export function lightRGB(L, x, z, out){
+  const B = L.light; out[0] = out[1] = out[2] = 0; if(!B) return out;
+  const size = L.W * CELL, p = Math.floor((x + size / 2) * B.res), q = Math.floor((z + size / 2) * B.res);
+  if(p < 0 || q < 0 || p >= B.n || q >= B.n) return out;
+  const o = (q * B.n + p) * 3; out[0] = B.data[o]; out[1] = B.data[o + 1]; out[2] = B.data[o + 2]; return out;
+}

@@ -23,7 +23,7 @@ float bsN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
 float bsF(vec2 p){ return bsN(p) * 0.55 + bsN(p * 2.3 + 7.1) * 0.3 + bsN(p * 5.1 - 3.7) * 0.15; }`;
 function levelMat(o){
   const m = new THREE.MeshStandardMaterial({ map:o.map, normalMap:o.nor, roughnessMap:o.rough, roughness:1, metalness:0, lightMap:LV.lm, lightMapIntensity:o.lmK ?? 3.2,
-    vertexColors:!!o.vcol, normalScale:new THREE.Vector2(o.ns ?? 1, o.ns ?? 1) });
+    vertexColors:!!o.vcol, normalScale:new THREE.Vector2(o.ns ?? 1, o.ns ?? 1), envMapIntensity:o.wet ? 0.6 : 0.15 });
   m.onBeforeCompile = s => {
     s.uniforms.uDirK = { value:o.dirK ?? 0.4 }; s.uniforms.uTime = LV.uni.time;
     if(o.wet){ s.uniforms.wetMap = { value:LV.wetTex }; s.uniforms.reflTex = LV.refl.tex; s.uniforms.reflMat = LV.refl.mat; s.uniforms.reflOn = LV.refl.on; }
@@ -67,10 +67,10 @@ export function buildLevelMeshes(L){
   LV.wetTex = new THREE.DataTexture(wd, W, H, THREE.RGBAFormat); LV.wetTex.magFilter = LV.wetTex.minFilter = THREE.LinearFilter; LV.wetTex.needsUpdate = true;
 
   const M = LV.mats = {
-    floor:levelMat({ map:TEX.carpet_col, nor:TEX.carpet_nor, rough:TEX.carpet_rough, wet:true, size, lmK:3.0, dirK:0.45, ns:0.8 }),
-    wall:levelMat({ map:TEX.wallpaper_col, nor:TEX.wallpaper_nor, rough:TEX.wallpaper_rough, vcol:true, grime:true, lmK:3.0, dirK:0.35 }),
-    trim:levelMat({ map:TEX.painted_wall_2_col, nor:TEX.painted_wall_2_nor, rough:TEX.painted_wall_2_rough, vcol:true, lmK:2.6, dirK:0.5 }),
-    ceil:levelMat({ map:TEX.ceiling_tiles_col, nor:TEX.ceiling_tiles_nor, rough:TEX.ceiling_tiles_rough, vcol:true, lmK:1.5, dirK:0.6 }),
+    floor:levelMat({ map:TEX.carpet_col, nor:TEX.carpet_nor, rough:TEX.carpet_rough, wet:true, size, lmK:5.5, dirK:0.45, ns:0.8 }),
+    wall:levelMat({ map:TEX.wallpaper_col, nor:TEX.wallpaper_nor, rough:TEX.wallpaper_rough, vcol:true, grime:true, lmK:5.5, dirK:0.35 }),
+    trim:levelMat({ map:TEX.painted_wall_2_col, nor:TEX.painted_wall_2_nor, rough:TEX.painted_wall_2_rough, vcol:true, lmK:4.5, dirK:0.5 }),
+    ceil:levelMat({ map:TEX.ceiling_tiles_col, nor:TEX.ceiling_tiles_nor, rough:TEX.ceiling_tiles_rough, vcol:true, lmK:3.2, dirK:0.6 }),
   };
   // geometry builders: positions, normals, uv (texture), uv1 (light map), colours
   const mk = () => ({ p:[], n:[], uv:[], uv1:[], c:[], idx:[] });

@@ -12,7 +12,7 @@ import { loadGLB } from './assets.js';
 import { buildGun } from './gunmodels.js';
 import { G, on } from './state.js';
 import { gun, LOOKS } from './fighter.js';
-import { lightAt } from './level/lights.js';
+import { lightRGB } from './level/lights.js';
 import { clamp, damp, angDiff, sp, spring } from './util.js';
 
 export const T = { tpl:{}, clips:{}, mount:null, ready:false };
@@ -67,12 +67,14 @@ export function buildSoldier(f, parent = scene){
     kick:sp(), flinch:sp(), dying:null, rag:false, posed:null, hitT:9, reloadOf:null, hidden:false };
 }
 // a uniform light term for skinned characters, set per fighter from the baked light where it stands
-function ambient(m, amb){
+export function ambient(m, amb){
+  if(m.userData.amb) return; m.userData.amb = true;
   const prev = m.onBeforeCompile;
   m.onBeforeCompile = (s, r) => { if(prev) prev(s, r); s.uniforms.uAmb = amb;
     s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uAmb;')
       .replace('#include <lights_fragment_maps>', '#include <lights_fragment_maps>\nirradiance += uAmb;'); };
-  m.customProgramCacheKey = () => 'amb';
+  const key = m.customProgramCacheKey && m.customProgramCacheKey !== THREE.Material.prototype.customProgramCacheKey ? m.customProgramCacheKey.bind(m) : null;
+  m.customProgramCacheKey = () => (key ? key() : '') + 'amb';
 }
 export function disposeSoldier(H){
   if(H.root.parent) H.root.parent.remove(H.root);
@@ -95,6 +97,8 @@ function turnBone(b, axis, ang){
   _q.setFromAxisAngle(_v, ang);
   b.quaternion.premultiply(_q);
 }
+const _rgb = [0, 0, 0];
+export const AMB_K = 4.5;      // matches the light-map scale of the walls
 const TURNED = ['Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'RightArm', 'LeftArm'];
 
 export function animSoldier(H, dt, hide){
@@ -103,8 +107,7 @@ export function animSoldier(H, dt, hide){
   H.root.visible = vis;
   if(!vis || H.rag) return;
   // ambient from the baked light (plus your flashlight on them)
-  const L = G.level, la = L ? lightAt(L, f.x, f.z) : 0.5;
-  H.amb.value.setRGB(0.05 + la * 0.55, 0.045 + la * 0.5, 0.035 + la * 0.4);
+  const L = G.level; if(L){ lightRGB(L, f.x, f.z, _rgb); H.amb.value.setRGB(0.06 + _rgb[0] * AMB_K, 0.05 + _rgb[1] * AMB_K, 0.04 + _rgb[2] * AMB_K); }
   for(const k in want) want[k] = 0;
   const hs = Math.hypot(f.vx, f.vz);
   if(f.alive){
