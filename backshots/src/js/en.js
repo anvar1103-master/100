@@ -1,5 +1,14 @@
 // English phrases for the Russian source text (whole phrases; the longest match wins).
 export const EN = {
+
+  // stage 2: loot, healing, zone, map
+  'В темноте тебя видно хуже. Фонарь светит, но выдаёт тебя. Свет гаснет с краёв — успей к кругу на карте.':'In the dark you are harder to see. The flashlight helps you see but gives you away. The light dies from the edges — reach the circle on the map.',
+  'подобрать':'pick up', 'оружие':'weapon', 'лечиться':'heal', 'карта этажа':'floor map', 'шлем':'helmet', 'вместо ':'instead of ', 'броня ':'armour ',
+  'Патроны ':'Ammo ', '7,62 мм':'7.62 mm', '5,56 мм':'5.56 mm', '12 калибр':'12 gauge', '9 мм':'9 mm', 'Тяжёлый бронежилет':'Heavy vest', 'Бронежилет':'Vest', 'Шлем':'Helmet', 'Аптечка':'Medkit', 'Бинт':'Bandage',
+  'Аптечка…':'Medkit…', 'Бинт…':'Bandage…',
+  'Ты в темноте! Беги к свету':'You are in the dark! Run for the light', 'Свет уходит · ':'The light is moving · ', 'Свет погаснет через ':'The light dies in ',
+  'Свет уходит':'The light is moving', 'Иди в круг на карте':'Get into the circle on the map', 'За кругом темно':'Dark outside the circle', 'Новый круг на карте':'A new circle on the map',
+  'Тебя забрала темнота':'The dark took you', 'темнота':'the dark',
   // loading and screens
   'Гудят лампы…':'The lamps are humming…', 'Офисные работники ищут выход…':'Office workers are looking for the exit…', 'Расставляем мебель…':'Moving the furniture…',
   'Нужен WebGL 2':'WebGL 2 is needed', 'Браузер или видеокарта не умеют рисовать 3D. Обнови браузер или включи аппаратное ускорение.':'Your browser or graphics card cannot draw 3D. Update the browser or turn on hardware acceleration.',

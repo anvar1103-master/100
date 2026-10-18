@@ -1,6 +1,7 @@
 // Screenshots for checking the picture (software rendering is slow: use sparingly).
 //   node tools/shot.mjs <out dir> [medium|high] [--dist] [seed]
-// Shots: the menu corridor, the first-person view in a match, a bot close-up, the same after a fight (bodies, blood).
+// Shots: the menu corridor, the first-person view in a match, a bot close-up, aiming, after a fight (bodies, blood),
+// loot on the floor, the edge of the light zone, the floor map.
 import fs from 'fs'; import path from 'path';
 import { chromium } from 'playwright';
 import { serve, GL_ARGS } from './serve.mjs';
@@ -25,6 +26,13 @@ await page.evaluate(() => { __bs.autopilot(false); const me = __bs.G.me; me.inp.
 await page.evaluate(() => { const G = __bs.G, me = G.me, b = G.fighters[1]; const yaw = me.yaw; b.x = me.x - Math.sin(yaw) * 4; b.z = me.z - Math.cos(yaw) * 4; b.yaw = yaw + Math.PI; b.inp.yaw = b.yaw; b.vx = b.vz = 0; __bs.settle(1); __bs.tick(); __bs.tick(); }); await snap('bot');
 await page.evaluate(() => { __bs.G.me.inp.aim = true; __bs.step(30, false, true); __bs.settle(0.5); __bs.tick(); }); await snap('ads');
 await page.evaluate(() => { __bs.autopilot(true); __bs.sim(40); for(let i = 0; i < 60; i++) __bs.tick(1 / 30); }); await snap('fight');
+await page.evaluate(() => { __bs.autopilot(false); const L = __bs.LOOT.items, me = __bs.G.me; let best = null, bd = 1e9;
+  for(const it of L){ if(it.kind !== 'gun') continue; const d = Math.hypot(it.x - me.x, it.z - me.z); if(d < bd && __bs.losClear(it.x + 1.1, 1.2, it.z + 0.9, it.x, 0.2, it.z)){ bd = d; best = it; } }
+  if(best){ const near = L.filter(o => Math.hypot(o.x - best.x, o.z - best.z) < 2.5); __bs.cam([best.x + 1.3, 1.25, best.z + 1.0, best.x, 0.1, best.z]); }
+  for(let i = 0; i < 20; i++) __bs.tick(1 / 30); }); await snap('loot');
+await page.evaluate(() => { __bs.cam(null); const G = __bs.G, me = G.me, Z = __bs.Z; me.alive = true; me.hp = 100; Z.on = true; Z.phase = 'wait'; Z.t = 0;
+  Z.cx = me.x + Math.sin(me.yaw) * 3; Z.cz = me.z + Math.cos(me.yaw) * 3; Z.r = 8; __bs.settle(0.5); for(let i = 0; i < 20; i++) __bs.tick(1 / 30); }); await snap('zone');
+await page.evaluate(() => { __bs.bigMap(true); __bs.tick(1 / 30); __bs.tick(1 / 30); }); await snap('map');
 console.log(JSON.stringify(await page.evaluate(() => ({ s:__bs.s, info:__bs.info(), bench:__bs.bench(5) }))));
 console.log('errors:', [...new Set(errors)].slice(0, 15).join('\n'));
 await b.close(); srv.close();

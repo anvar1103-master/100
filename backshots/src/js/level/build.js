@@ -8,7 +8,7 @@ import { scene, loadTex, canvasTex, HIGH } from '../engine.js';
 import { CELL, FLOOR, WALL, PILLAR, DESK } from './gen.js';
 import { LIGHT_RES } from './lights.js';
 
-export const LV = { group:null, mats:{}, lm:null, wetTex:null, lamps:null, diffuser:null, refl:{ tex:{ value:null }, mat:{ value:new THREE.Matrix4() }, on:{ value:0 } }, uni:{ time:{ value:0 } } };
+export const LV = { group:null, mats:{}, lm:null, wetTex:null, lamps:null, diffuser:null, refl:{ tex:{ value:null }, mat:{ value:new THREE.Matrix4() }, on:{ value:0 } }, uni:{ time:{ value:0 }, zone:{ value:new THREE.Vector4(0, 0, 1e4, 3) } } };
 const TEX = {};
 export async function loadLevelTex(){
   const sets = ['wallpaper', 'carpet', 'ceiling_tiles', 'painted_wall_2'];
@@ -25,11 +25,11 @@ function levelMat(o){
   const m = new THREE.MeshStandardMaterial({ map:o.map, normalMap:o.nor, roughnessMap:o.rough, roughness:1, metalness:0, lightMap:LV.lm, lightMapIntensity:o.lmK ?? 3.2,
     vertexColors:!!o.vcol, normalScale:new THREE.Vector2(o.ns ?? 1, o.ns ?? 1), envMapIntensity:o.wet ? 0.6 : 0.15 });
   m.onBeforeCompile = s => {
-    s.uniforms.uDirK = { value:o.dirK ?? 0.4 }; s.uniforms.uTime = LV.uni.time;
+    s.uniforms.uDirK = { value:o.dirK ?? 0.4 }; s.uniforms.uTime = LV.uni.time; s.uniforms.uZone = LV.uni.zone;
     if(o.wet){ s.uniforms.wetMap = { value:LV.wetTex }; s.uniforms.reflTex = LV.refl.tex; s.uniforms.reflMat = LV.refl.mat; s.uniforms.reflOn = LV.refl.on; }
     s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP;' + (o.wet ? '\nuniform mat4 reflMat; varying vec4 vReflUv;' : ''))
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;' + (o.wet ? '\nvReflUv = reflMat * vec4(vWP, 1.0);' : ''));
-    s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uDirK; uniform float uTime; varying vec3 vWP;' + NOISE +
+    s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uDirK; uniform float uTime; uniform vec4 uZone; varying vec3 vWP;' + NOISE +
         (o.wet ? '\nuniform sampler2D wetMap; uniform sampler2D reflTex; uniform float reflOn; varying vec4 vReflUv; float bsWet;' : ''))
       .replace('#include <map_fragment>', `#include <map_fragment>
         ${o.grime ? `{ float gr = bsF(vec2(vWP.x + vWP.z, vWP.y * 1.7) * 0.45); float low = smoothstep(0.9, 0.0, vWP.y);
@@ -40,7 +40,11 @@ function levelMat(o){
           diffuseColor.rgb *= mix(0.86, 1.0, bsF(vWP.xz * 0.35)); }` : ''}`)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>' + (o.wet ? '\nroughnessFactor = mix(roughnessFactor, 0.05, bsWet);' : ''))
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>' + (o.wet ? '\nnormal = normalize(mix(normal, normalize(vNormal), bsWet * 0.9));' : ''))
-      .replace('#include <aomap_fragment>', '#include <aomap_fragment>\nreflectedLight.directDiffuse *= uDirK;')
+      .replace('#include <aomap_fragment>', `#include <aomap_fragment>
+        reflectedLight.directDiffuse *= uDirK;
+        // the zone: past its edge the baked lamp light is gone, a faint red emergency glow remains
+        { float zd = clamp((length(vWP.xz - uZone.xy) - uZone.z) / uZone.w, 0.0, 1.0);
+          reflectedLight.indirectDiffuse *= mix(vec3(1.0), vec3(0.075, 0.018, 0.014), zd); reflectedLight.indirectSpecular *= 1.0 - zd * 0.85; }`)
       .replace('#include <opaque_fragment>', (o.wet ? `if(reflOn > 0.5 && bsWet > 0.01){
           vec4 ru = vReflUv; ru.xy += normal.xz * 0.02 * ru.w;
           vec3 rc = texture2DProj(reflTex, ru).rgb;

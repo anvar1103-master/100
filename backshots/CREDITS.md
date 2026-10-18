@@ -25,6 +25,19 @@ Poly Haven, на странице лицензии: «Our assets are all license
 |---|---|
 | plastic_monobloc_chair_01, metal_trash_can, WetFloorSign_01, metal_office_desk, korean_fire_extinguisher_01, wall_clock, fire_alarm | https://polyhaven.com/a/<имя модели> |
 
+## Лут (`src/assets/models/loot.glb`, текстуры 512 px, готовит `node tools/assets.mjs loot <папка>`)
+Poly Haven, CC0 (https://polyhaven.com/license):
+| Модель | Где в игре | Автор, страница |
+|---|---|---|
+| ammo_box | патроны | DanKit — https://polyhaven.com/a/ammo_box |
+| medical_box | аптечка | Ulan Cabanilla — https://polyhaven.com/a/medical_box |
+| medical_tape | бинт | Miroslav Turura — https://polyhaven.com/a/medical_tape |
+| wooden_military_crate | бронежилет и шлем лежат в армейском ящике | Prabhjinder Singh — https://polyhaven.com/a/wooden_military_crate |
+
+Реалистичных бронежилета и шлема под CC0 / CC-BY без входа на сайт не нашлось (Sketchfab и Smithsonian закрыты для
+скачивания отсюда, на OpenGameArt и itch.io — только грубые модели), поэтому броня показана ящиком. Если владелец
+найдёт подходящую модель — заменить узел в `lootview.js`.
+
 ## Звуки (`src/assets/sfx/*.mp3`)
 | Что | Откуда | Лицензия |
 |---|---|---|
@@ -35,7 +48,7 @@ Poly Haven, на странице лицензии: «Our assets are all license
 | `thud` (далёкий удар) | «Big Structure Collision Heard from Inside», Osvoldon — https://freesound.org/s/653294/ | Creative Commons 0 |
 | `indoor_tail` (выстрелы в помещении) | «Shooting_inside», ikbenraar — https://freesound.org/s/592264/ | Creative Commons 0 |
 | `step_1..4` (шаги по ковру) | Kenney «Impact Sounds» (footstep_carpet_000..003) — https://kenney.nl/assets/impact-sounds | «License: Creative Commons CC0» |
-| выстрелы, перезарядка, гильзы, попадания, интерфейс, пролёт пули | взяты из Microgang — авторы и ссылки в `../microgang/CREDITS.md` (Free Firearm Sound Library и др.) | CC0 |
+| выстрелы (автомат, дробовик, винтовка, пистолет), помпа, затвор, патроны в дробовик, перезарядка, гильзы, попадания, интерфейс, пролёт пули | взяты из Microgang — авторы и ссылки в `../microgang/CREDITS.md` (Free Firearm Sound Library и др.) | CC0 |
 С Freesound без входа на сайт скачиваются только сжатые копии (mp3 128 кбит/с) — их и взяли.
 
 ## Код

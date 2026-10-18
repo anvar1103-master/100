@@ -7,7 +7,7 @@ import { bakeLight } from './level/lights.js';
 import { loadLevelTex, buildLevelMeshes, LV } from './level/build.js';
 import { initLamps, updateLamps, flickerK } from './level/lamps.js';
 import { initReflect, REFL } from './level/reflect.js';
-import { setLevel, PW } from './phys.js';
+import { setLevel, PW, losClear } from './phys.js';
 import { buildNav, NAV } from './nav.js';
 import { G, on } from './state.js';
 import { startMatch, stepMatch, standings } from './match.js';
@@ -18,6 +18,10 @@ import { initViewmodel, updateViewmodel, setRig, VMS } from './viewmodel.js';
 import { loadSoldiers, buildSoldier, animSoldier, disposeSoldier } from './soldiers.js';
 import { loadGuns } from './gunmodels.js';
 import { loadProps, placeProps } from './props.js';
+import { loadLootModels, updateLootView, clearLootView } from './lootview.js';
+import { LOOT, takeLoot } from './loot.js';
+import { Z } from './zone.js';
+import { buildMinimap, toggleBigMap } from './minimap.js';
 import { initPhysics, buildPhysics, stepPhysics, makeRagdoll, dropRagdoll, segCentres, PH } from './physics.js';
 import { initFx, stepFx, clearFx, bloodPool, FX } from './fx.js';
 import { initAudio, resumeAudio, startAmbience, updateAmbience, setVolume, uiSound, AU } from './audio.js';
@@ -38,8 +42,8 @@ async function boot(){
   setLoad(0.08, 'Гудят лампы…'); await yieldFrame();
   await Promise.all([initPhysics().catch(e => console.warn('physics off', e)), loadLevelTex()]);
   setLoad(0.3, 'Офисные работники ищут выход…'); await yieldFrame();
-  await loadGuns(['ak']); await loadSoldiers(k => setLoad(0.3 + k * 0.4));
-  setLoad(0.75, 'Расставляем мебель…'); await loadProps();
+  await loadGuns(); await loadSoldiers(k => setLoad(0.3 + k * 0.4));
+  setLoad(0.75, 'Расставляем мебель…'); await Promise.all([loadProps(), loadLootModels()]);
   initLamps(); initViewmodel(); initFx(); initHud();
   buildMenu();
   await newFloor(Number(new URLSearchParams(location.search).get('seed')) || randSeed());
@@ -59,6 +63,7 @@ async function newFloor(seed){
   const props = placeProps(L);
   buildPhysics(L, props);
   setLandmarks(L.landmarks);
+  buildMinimap(L);
   $('seed').textContent = tr('Этаж № ') + seed;
   CAM.menuT = 0;
   return L;
@@ -96,12 +101,13 @@ async function startGame(o = {}){
   // every match on a new floor (the menu's floor is used for the first one)
   if(usedFloor || o.seed){ $('gen').hidden = false; await yieldFrame(); await newFloor(o.seed || randSeed()); $('gen').hidden = true; }
   usedFloor = true;
+  clearLootView();
   startMatch(Object.assign({ count:MENU.count, diff:MENU.diff, look:MENU.look }, o));
   for(const f of G.fighters){ botReset(f); f.model = buildSoldier(f); MODELS.set(f, f.model); }
   setRig(G.me.look, gun(G.me).W.id);
   VMS.shown = true;
   $('menu').hidden = true; $('end').hidden = true; $('pause').hidden = true; $('hud').hidden = false; $('dead').hidden = true;
-  showBoard(false);
+  showBoard(false); toggleBigMap(false);
   resetView(G.me);
   resumeAudio(); startAmbience();
   if(!o.noLock) requestLock();
@@ -127,9 +133,10 @@ on('shot', (f, traces) => { f.shotsFired = (f.shotsFired || 0) + 1; if(traces.so
 function toMenu(){
   G.state = 'menu'; G.paused = false;
   for(const H of MODELS.values()){ dropRagdoll(H); disposeSoldier(H); } MODELS.clear(); clearFx();
+  clearLootView(); LOOT.items.length = 0; Z.on = false;
   G.fighters.length = 0; G.me = null;
   if(document.exitPointerLock) try{ document.exitPointerLock(); }catch(e){}
-  $('dead').hidden = true;
+  $('dead').hidden = true; toggleBigMap(false);
   showMenu();
 }
 function pause(){ if(G.state !== 'play' || PL.autopilot || (G.me && !G.me.alive)) return; G.paused = true; $('pause').hidden = false; showBoard(false); }
@@ -137,6 +144,7 @@ function resume(){ $('pause').hidden = true; $('settings').hidden = true; G.paus
 PL.onLock = locked => { if(!locked && G.state === 'play' && !PL.autopilot && !G.paused) pause(); };
 addEventListener('keydown', e => {
   if(e.code === 'Tab' && G.state === 'play'){ e.preventDefault(); showBoard(true); }
+  if(e.code === 'KeyM' && G.state === 'play' && !e.repeat) toggleBigMap($('bigmap').hidden);
   if(e.code === 'Escape' && G.state === 'play' && G.paused && !PL.locked && $('settings').hidden) resume();
 });
 addEventListener('keyup', e => { if(e.code === 'Tab') showBoard(false); });
@@ -149,7 +157,7 @@ function openSettings(from){
   seg('s-gfx', LEVEL, v => { if(v !== LEVEL){ store.set('gfx', v); location.reload(); } });
   seg('s-aim', PL.aimHold ? 'hold' : 'toggle', v => { PL.aimHold = v === 'hold'; store.set('aimHold', PL.aimHold); });
   seg('s-blood', FX.blood, v => { FX.blood = v; store.set('blood', v); });
-  seg('s-fps', store.get('fps', 0), v => { store.set('fps', +v); $('fps').hidden = !+v; });
+  seg('s-fps', store.get('fps', 1), v => { store.set('fps', +v); $('fps').hidden = !+v; });
   seg('s-lang', LANG.lang, v => { store.set('lang', v); const u = new URL(location.href); u.searchParams.set('lang', v); location.href = u.toString(); });
   const slide = (id, val, fmt, cb) => { const el = $(id), out = $(id + '-v'); el.value = val; out.textContent = fmt(+val); el.oninput = () => { out.textContent = fmt(+el.value); cb(+el.value); }; };
   slide('s-sens', PL.sens, v => v.toFixed(2), v => { PL.sens = v; store.set('sens', v); });
@@ -157,7 +165,7 @@ function openSettings(from){
   slide('s-vol', AU.vol, v => String(Math.round(v * 100)), v => setVolume(v));
   $('s-close').onclick = () => { $('settings').hidden = true; if(setFrom === 'pause') $('pause').hidden = false; uiSound('click'); };
 }
-$('fps').hidden = !store.get('fps', 0);
+$('fps').hidden = !store.get('fps', 1);
 
 // ---- main loop ----
 let last = performance.now(), frozen = /[?&]freeze/.test(location.search);
@@ -205,6 +213,7 @@ function frame(dt, raw){
   updateViewmodel(dt);
   updateLamps(dt);
   stepFx(dt);
+  updateLootView(dt);
   if(G.level) updateAmbience(dt, G.level.lamps, l => flickerK(l, G.time + performance.now() * 0.0003));
   LV.uni.time.value += dt;
   if(G.state === 'play' || G.state === 'end') updateHud(dt);
@@ -249,6 +258,6 @@ window.__bs = {
   aimAt(t, head){ const me = G.me, dx = t.x - me.x, dz = t.z - me.z, dy = t.y + (head ? t.h * 0.93 : t.h * 0.66) - (me.y + me.eye);
     PL.yaw = Math.atan2(-dx, -dz); PL.pitch = Math.atan2(dy, Math.hypot(dx, dz)); me.inp.yaw = PL.yaw; me.inp.pitch = PL.pitch; me.yaw = PL.yaw; me.pitch = PL.pitch; },
   step(n, fire = false, aim = false){ const me = G.me; for(let i = 0; i < n; i++){ me.inp.fire = fire; me.inp.aim = aim; me.inp.yaw = PL.yaw; me.inp.pitch = PL.pitch; stepMatch(1 / 60); } },
-  newFloor, toMenu, G, PL, P, Q, PH, VMS, MODELS, camera, standings,
+  newFloor, toMenu, G, PL, P, Q, PH, VMS, MODELS, camera, standings, LOOT, Z, takeLoot, losClear, bigMap:toggleBigMap,
 };
 boot();

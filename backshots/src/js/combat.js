@@ -77,8 +77,14 @@ function fire(f){
 }
 on('fire', fire);
 
+// armour: a vest takes 60% of a hit to the body while it lasts, a helmet takes 30% off a hit to the head
+export const ARMOR = { vest:0.6, helmet:0.3 };
 export function damage(t, amt, src, o){
   if(!t.alive || G.state === 'end') return;
+  if(o && !o.zone){
+    if(t.armor > 0 && (o.part === 'chest' || o.part === 'belly')){ const a = Math.min(t.armor, amt * ARMOR.vest); t.armor -= a; amt -= a; o.armor = true; if(t.armor <= 0.5){ t.armor = 0; t.armorLv = 0; emit('armorBroke', t); } }
+    else if(t.helmet && o.part === 'head'){ amt *= 1 - ARMOR.helmet; o.helmet = true; }
+  }
   amt = Math.round(amt);
   t.hp -= amt; t.sinceHit = 0; t.lastAttacker = src; t.lastHit = o;
   if(src && src !== t){ t.damagers.set(src, (t.damagers.get(src) || 0) + amt); src.dmgDone += amt; }

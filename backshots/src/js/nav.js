@@ -11,13 +11,13 @@ const cx = a => -OFF + (a + 0.5) * NAV.s;
 
 export function buildNav(){
   const L = PW.L; N = NAV.n = L.W; OFF = L.ox;
-  NAV.ok = new Uint8Array(N * N); NAV.cost = new Float32Array(N * N); NAV.nodes.length = 0;
+  NAV.ok = new Uint8Array(N * N); NAV.wide = new Uint8Array(N * N); NAV.cost = new Float32Array(N * N); NAV.nodes.length = 0;
   for(let b = 0; b < N; b++) for(let a = 0; a < N; a++){
     const s = b * L.W + a; if(L.g[s] !== FLOOR) continue;
     // a one-cell gap is too narrow for anyone
     const sol = (i, k) => i < 0 || k < 0 || i >= L.W || k >= L.H || L.g[k * L.W + i] !== FLOOR;
     if((sol(a - 1, b) && sol(a + 1, b)) || (sol(a, b - 1) && sol(a, b + 1))) continue;
-    NAV.ok[s] = 1; NAV.cost[s] = L.dist[s] <= 1 ? 2.2 : L.dist[s] === 2 ? 1.3 : 1;
+    NAV.ok[s] = 1; NAV.wide[s] = L.dist[s] >= 2 ? 1 : 0; NAV.cost[s] = L.dist[s] <= 1 ? 2.2 : L.dist[s] === 2 ? 1.3 : 1;
     if(L.dist[s] >= 2) NAV.nodes.push([cx(a), cx(b)]);
   }
   g = new Float32Array(N * N); came = new Int32Array(N * N); seen = new Uint32Array(N * N);
@@ -31,10 +31,11 @@ function near(x, z){
   }
   return -1;
 }
-// can you walk straight from one point to another (every node on the line walkable)?
+// can you walk straight from one point to another? The line keeps a body's width off the walls (cells hugging a
+// wall only near its ends), so a short cut never clips a corner
 export function walkLine(ax, az, bx, bz){
   const L = Math.hypot(bx - ax, bz - az), n = Math.ceil(L / 0.25);
-  for(let s = 1; s < n; s++){ const t = s / n; if(!NAV.ok[id(node(ax + (bx - ax) * t), node(az + (bz - az) * t))]) return false; }
+  for(let s = 1; s < n; s++){ const t = s / n, c = id(node(ax + (bx - ax) * t), node(az + (bz - az) * t)); if(!NAV.ok[c] || (!NAV.wide[c] && t * L > 0.6 && (1 - t) * L > 0.6)) return false; }
   return true;
 }
 let g = null, came = null, seen = null, closed = null, stamp = 0;
