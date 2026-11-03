@@ -45,7 +45,7 @@
 }
 html,body{height:100%;margin:0}
 [hidden]{display:none!important}
-body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:14px;overflow:hidden;-webkit-tap-highlight-color:transparent}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:14px;overflow:hidden;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;overscroll-behavior:none;touch-action:manipulation}
 #app{position:relative;height:100%;width:100%;overflow:hidden}
 #map{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 #map.look{cursor:grab}
@@ -1248,9 +1248,39 @@ function gameOver() {
 function plural(n, a, b, c) { const m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 10 || h >= 20) ? b : c; }
 $('#startBtn').addEventListener('click', () => { $('#intro').hidden = true; setSpeed(1); setTool('station'); });
 $('#againBtn').addEventListener('click', () => {
-  newGame(); $('#over').hidden = true; closePanel(); ui.line = null; ui.anchor = null;
-  cam = { x: 1600, y: 1080, z: view.w < 760 ? .5 : .8 }; renderGoal(); renderLinebar(); setSpeed(1); setTool('station');
+  showAd(() => {
+    newGame(); $('#over').hidden = true; closePanel(); ui.line = null; ui.anchor = null;
+    cam = { x: 1600, y: 1080, z: view.w < 760 ? .5 : .8 }; renderGoal(); renderLinebar(); setSpeed(1); setTool('station');
+  });
 });
+
+/* ---------- Yandex Games SDK (does nothing when the SDK is absent) ---------- */
+const YA = { sdk: null, adOpen: false, sdkPause: false, ready: false, playing: false, booted: false };
+function yaReady() {
+  if (YA.sdk && YA.booted && !YA.ready) { YA.ready = true; try { YA.sdk.features.LoadingAPI.ready(); } catch (e) {} }
+}
+if (window.YaGames) {
+  window.YaGames.init().then(sdk => {
+    YA.sdk = sdk;
+    try { sdk.on('game_api_pause', () => { YA.sdkPause = true; }); sdk.on('game_api_resume', () => { YA.sdkPause = false; }); } catch (e) {}
+    yaReady();
+  }).catch(() => {});
+}
+function showAd(done) {
+  const adv = YA.sdk && YA.sdk.adv;
+  if (!adv || YA.adOpen) { done(); return; }
+  let fin = false;
+  const end = () => { if (fin) return; fin = true; YA.adOpen = false; done(); };
+  YA.adOpen = true;
+  try { adv.showFullscreenAdv({ callbacks: { onClose: end, onError: end, onOffline: end } }); } catch (e) { end(); }
+}
+const frozen = () => document.hidden || YA.adOpen || YA.sdkPause;
+function syncGameplay() {
+  const playing = !G.paused && !G.over && !frozen() && $('#intro').hidden;
+  if (playing === YA.playing) return;
+  YA.playing = playing;
+  try { const g = YA.sdk && YA.sdk.features.GameplayAPI; if (g) playing ? g.start() : g.stop(); } catch (e) {}
+}
 
 /* ---------- rendering ---------- */
 let T = 0;
@@ -1729,11 +1759,11 @@ let last = performance.now(), hudT = 0;
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; T += dt;
   if (fly) { cam.x += (fly.x - cam.x) * .12; cam.y += (fly.y - cam.y) * .12; if (Math.hypot(fly.x - cam.x, fly.y - cam.y) < 2) fly = null; }
-  if (!G.paused && !G.over) {
+  if (!G.paused && !G.over && !frozen()) {
     const sub = G.speed, h = dt;
     for (let i = 0; i < sub; i++) step(h);
   } else if (G.dirty) rebuild();
-  draw();
+  draw(); syncGameplay();
   hudT += dt; if (hudT > .2) { hudT = 0; hud(); }
   requestAnimationFrame(frame);
 }
@@ -1747,6 +1777,7 @@ clampCam(); renderGoal(); renderLinebar(); setTool('look'); setSpeed(0); G.pause
 for (let i = 0; i < 900; i++) { step(1 / 30); }
 G.time = 6 * 60; G.sat = 62; G.share = 0;
 window.__metro = { get G() { return G; }, get cam() { return cam; }, step, buildStation, lineClick, setTool, rebuild, addTrain };
+YA.booted = true; yaReady();
 requestAnimationFrame(frame);
 })();
 </script>
