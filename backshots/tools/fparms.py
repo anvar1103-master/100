@@ -1,10 +1,10 @@
 # First-person arms from Sketchfab (see CREDITS.md), converted with Blender's FBX importer (three.js reads these rigs
 # badly). Run with Blender's Python (pip install bpy), then `node tools/assets.mjs fparms <dir>` adds textures and packs:
 #   python tools/fparms.py -- <dir with fps-pistol-animations/ and m16-a2-assault-rifle-animated/> <same dir>
-# rifle: the arms + armature + two empties standing in for the M16 ('gun', 'mag', animated) with the M16 body under
-#        'gun' as 'rifle_ref' (only to line our rifles up); one baked clip (30 fps)
-# pistol: the arms + armature (gun bones PBody / Rif / Pmag, camera bone Head_Cam) + the pistol frame as 'pistol_ref'
-#         (only to line our pistol up), each action its own clip
+# rifle: the arms + armature + the animated M16 (body 'rifle_ref' and its parts) + two empties following it ('gun',
+#        'mag'); one baked clip (30 fps)
+# pistol: the arms + armature (gun bones PBody / Rif / Pmag, camera bone Head_Cam) + the pistol (frame 'pistol_ref'),
+#         each action its own clip
 import bpy, sys, os
 src, out = sys.argv[sys.argv.index('--') + 1:][:2] if '--' in sys.argv else sys.argv[1:3]
 
@@ -31,21 +31,17 @@ reset()
 bpy.ops.import_scene.fbx(filepath=os.path.join(src, 'm16-a2-assault-rifle-animated/source/M16 A2 Rifle - Animated.fbx'))
 base, mag = bpy.data.objects['m16a2_base'], bpy.data.objects['magazine']
 g = proxy(base, 'gun'); m = proxy(mag, 'mag'); m.parent = g
-for o in list(bpy.data.objects):
-    if o.type == 'MESH' and o.name not in ('armmesh', 'm16a2_base'): bpy.data.objects.remove(o, do_unlink=True)
-# the M16 body stays under 'gun' (hidden in the game): our rifles are lined up with its bore
-import mathutils
-base.animation_data_clear(); base.parent = g; base.matrix_parent_inverse = mathutils.Matrix.Identity(4)
-base.location, base.rotation_euler, base.scale = (0, 0, 0), (0, 0, 0), (1, 1, 1); base.rotation_mode = 'XYZ'; base.name = 'rifle_ref'
+# the M16 itself stays whole (its parts animated): it is shown in the hands as the M4, and lines our rifles up
+base.name = 'rifle_ref'
 bpy.context.scene.frame_start, bpy.context.scene.frame_end = 2, 251
 export(os.path.join(out, 'fp_rifle.glb'), 'SCENE')
 
 # ---- pistol (FPS pistol animations, Cransh) ----
 reset()
 bpy.ops.import_scene.fbx(filepath=os.path.join(src, 'fps-pistol-animations/source/Armpist.fbx'))
-# the pistol's own frame stays (hidden in the game): our pistol is lined up with it
+# the pistol's own parts stay (frame 'pistol_ref', slide, magazine): it is the pistol shown in the hands
 for o in list(bpy.data.objects):
-    if o.type == 'MESH' and o.name not in ('arms', 'xd_frame'): bpy.data.objects.remove(o, do_unlink=True)
+    if o.type == 'MESH' and not (o.name == 'arms' or o.name.startswith('xd_frame')): bpy.data.objects.remove(o, do_unlink=True)
 bpy.data.objects['xd_frame'].name = 'pistol_ref'
 arm = bpy.data.objects['Armature']
 # every action onto the armature's NLA so each exports as its own clip

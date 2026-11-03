@@ -11,7 +11,7 @@
 
 ## Руки от первого лица (`src/assets/models/fp_rifle.glb`, `fp_pistol.glb`)
 Готовит `python tools/fparms.py` (Blender, `pip install bpy`) + `node tools/assets.mjs fparms <папка>`. Текстуры 1024 webp,
-своё оружие из моделей убрано (оставлено невидимым только для подгонки наших стволов).
+их родное оружие оставлено: M16 показывается в руках как M4, их пистолет — как пистолет; для АК, дробовика и снайперки оно скрыто и служит для подгонки.
 | Что | Откуда | Лицензия |
 |---|---|---|
 | руки в перчатках с анимациями (стойка, перезарядки, доставание) — для автоматов, дробовика и снайперки | «M16 A2 Assault Rifle - Animated», user77 — https://sketchfab.com/3d-models/m16-a2-assault-rifle-animated-bd4ff595b593447f9a7f1d95f501fb6c | CC Attribution (CC BY 4.0) |

@@ -90,23 +90,29 @@ if(step === 'props' || step === 'loot'){
 }
 if(step === 'fparms'){
   const { Document: _D } = await import('@gltf-transform/core');
-  const T = { rifle:['m16-a2-assault-rifle-animated/textures', 'armColor', 'armNormal', 'armsmoothness', true, 'armmetallic', 'armAO'],
-    pistol:['fps-pistol-animations/textures', 'armColor', 'armNormal', 'armRoughness', false, null, 'armAO'] };
-  for(const [id, [dir, col, nor, rough, smooth, metal, ao]] of Object.entries(T)){
-    const doc = await io.read(path.join(SRC, `fp_${id}.glb`)), R = doc.getRoot(), D = path.join(SRC, dir), S = 1024;
-    const img = async (f, o = {}) => { let im = sharp(path.join(D, f + '.png')).resize(S, S); if(o.grey) im = im.greyscale(); return im; };
-    const tex = (name, buf, mime) => doc.createTexture(name).setImage(buf).setMimeType(mime);
-    // occlusion (R), roughness (G), metalness (B) in one image
-    const r = await (await img(rough, { grey:true })).raw().toBuffer(), a = await (await img(ao, { grey:true })).raw().toBuffer();
-    const m = metal ? await (await img(metal, { grey:true })).raw().toBuffer() : null, orm = Buffer.alloc(S * S * 3);
-    for(let i = 0; i < S * S; i++){ orm[i * 3] = a[i]; orm[i * 3 + 1] = smooth ? 255 - r[i] : r[i]; orm[i * 3 + 2] = m ? m[i] : 0; }
-    const ormT = tex('orm', await sharp(orm, { raw:{ width:S, height:S, channels:3 } }).webp({ quality:85 }).toBuffer(), 'image/webp');
-    const colT = tex('color', await (await img(col)).webp({ quality:85 }).toBuffer(), 'image/webp');
-    const norT = tex('normal', await (await img(nor)).webp({ quality:90 }).toBuffer(), 'image/webp');
+  // material name → [texture folder, colour, normal, roughness (or smoothness), smooth?, metal, occlusion]
+  const T = {
+    arms_rifle:['m16-a2-assault-rifle-animated/textures', 'armColor', 'armNormal', 'armsmoothness', true, 'armmetallic', 'armAO'],
+    m16a2:['m16-a2-assault-rifle-animated/textures', 'm16a2_BaseColor', 'm16a2_Normal', 'm16a2_Roughness', false, 'm16a2_Metallic', 'm16a2_AO'],
+    arms_pistol:['fps-pistol-animations/textures', 'armColor', 'armNormal', 'armRoughness', false, null, 'armAO'],
+    Material:['fps-pistol-animations/textures', 'for_texturing_None.001_Diffuse', 'for_texturing_None.001_Normal', 'for_texturing_None.001_Glossiness', true, null, null, 0.85],
+  };
+  for(const id of ['rifle', 'pistol']){
+    const doc = await io.read(path.join(SRC, `fp_${id}.glb`)), R = doc.getRoot(), S = 1024;
     for(const mat of R.listMaterials()){
-      if(mat.getName() !== 'arms'){ mat.setBaseColorTexture(null).setNormalTexture(null).setMetallicRoughnessTexture(null); continue; }
-      mat.setBaseColorTexture(colT).setNormalTexture(norT).setMetallicRoughnessTexture(ormT).setOcclusionTexture(ormT).setBaseColorFactor([1, 1, 1, 1]).setRoughnessFactor(1).setMetallicFactor(1);
+      const key = mat.getName() === 'arms' ? 'arms_' + id : mat.getName(), t = T[key];
       mat.setExtension('KHR_materials_specular', null);
+      if(!t){ mat.setBaseColorTexture(null).setNormalTexture(null).setMetallicRoughnessTexture(null); continue; }
+      const [dir, col, nor, rough, smooth, metal, ao, metalK] = t, D = path.join(SRC, dir);
+      const img = async (f, o = {}) => { let im = sharp(path.join(D, f + '.png')).resize(S, S); if(o.grey) im = im.greyscale(); return im; };
+      const raw = async f => f ? (await img(f, { grey:true })).raw().toBuffer() : null;
+      const tex = (name, buf) => doc.createTexture(key + '_' + name).setImage(buf).setMimeType('image/webp');
+      // occlusion (R), roughness (G), metalness (B) in one image
+      const r = await raw(rough), a = await raw(ao), m = await raw(metal), orm = Buffer.alloc(S * S * 3);
+      for(let i = 0; i < S * S; i++){ orm[i * 3] = a ? a[i] : 255; orm[i * 3 + 1] = smooth ? 255 - r[i] : r[i]; orm[i * 3 + 2] = m ? m[i] : Math.round((metalK || 0) * 255); }
+      const ormT = tex('orm', await sharp(orm, { raw:{ width:S, height:S, channels:3 } }).webp({ quality:85 }).toBuffer());
+      mat.setBaseColorTexture(tex('color', await (await img(col)).webp({ quality:85 }).toBuffer())).setNormalTexture(tex('normal', await (await img(nor)).webp({ quality:90 }).toBuffer()))
+        .setMetallicRoughnessTexture(ormT).setOcclusionTexture(a ? ormT : null).setBaseColorFactor([1, 1, 1, 1]).setRoughnessFactor(1).setMetallicFactor(1);
     }
     // the rifle exported one animation per object: merge them into one clip
     const A = R.listAnimations();
