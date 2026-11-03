@@ -26,6 +26,7 @@ import { initHud, updateHud, showBoard, boardHTML, renderDeadPick, announce } fr
 import { makeIcons } from './icons.js';
 import { L, applyLang, tr } from './i18n.js';
 import { $, store, esc, clamp } from './util.js';
+import { yaInit, yaLoaded, yaTick, yaInterstitial } from './yandex.js';
 
 const setLoad = (k, t) => { $('load-bar').style.width = Math.round(k * 100) + '%'; if(t) $('load-txt').textContent = tr(t); };
 const MENU = { hero:heroOf(store.get('hero', 'ranger')), primary:store.get('primary', 'hornet'), count:store.get('count', 12), diff:store.get('diff', 'normal') };
@@ -34,7 +35,8 @@ const yieldFrame = () => new Promise(r => setTimeout(r, 0));
 
 async function boot(){
   renderer.info.autoReset = false;
-  if(!WEBGL2){ $('nogl').hidden = false; $('load').hidden = true; return; }
+  await yaInit();
+  if(!WEBGL2){ $('nogl').hidden = false; $('load').hidden = true; yaLoaded(); return; }
   applyLang();
   applyQuality(); bakeSky(); initPost();
   setLoad(0.1, 'Растёт трава…'); await yieldFrame();
@@ -54,6 +56,7 @@ async function boot(){
   setLoad(1, '');
   $('load').classList.add('off');
   showMenu();
+  yaLoaded();
   window.__mgReady = true;
   requestAnimationFrame(loop);
 }
@@ -67,10 +70,10 @@ function buildMenu(icons){
   const seg = (el, key, cb) => { const upd = () => { for(const b of el.querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === String(MENU[key])); }; for(const b of el.querySelectorAll('button')) b.onclick = () => { MENU[key] = /^\d+$/.test(b.dataset.v) ? +b.dataset.v : b.dataset.v; store.set(key, MENU[key]); uiSound('click'); upd(); if(cb) cb(); }; upd(); };
   seg(sp, 'hero'); seg(wp, 'primary', weaponInfo); seg($('m-count'), 'count'); seg($('m-diff'), 'diff');
   weaponInfo();
-  $('play').onclick = () => { uiSound('click'); startGame(); };
+  $('play').onclick = () => { uiSound('click'); again(); };
   $('m-set').onclick = () => openSettings('menu');
   $('p-resume').onclick = resume; $('p-set').onclick = () => openSettings('pause'); $('p-quit').onclick = toMenu;
-  $('e-again').onclick = () => { $('end').hidden = true; startGame(); }; $('e-menu').onclick = toMenu;
+  $('e-again').onclick = () => { $('end').hidden = true; again(); }; $('e-menu').onclick = toMenu;
   for(const b of document.querySelectorAll('button')) b.addEventListener('pointerenter', () => uiSound('hover'));
 }
 function weaponInfo(){
@@ -89,6 +92,9 @@ function initAudioOnGesture(){ if(gestureBound) return; gestureBound = true; con
 
 // ---- the match ----
 const MODELS = new Map();
+// on Yandex every match after the first starts after a fullscreen ad
+let matches = 0;
+function again(){ if(matches++ === 0) startGame(); else yaInterstitial(() => startGame()); }
 function startGame(o = {}){
   if(o.primary) MENU.primary = o.primary;
   if(o.hero) MENU.hero = heroOf(o.hero);
@@ -173,6 +179,7 @@ const pushers = [];
 const _pv = new THREE.Vector3();
 function frame(dt, raw){
   renderer.info.reset();
+  yaTick();
   simStep(dt);
   // camera: first person in a match, a slow drift over the meadow in the menu
   if(CAM.free){ const c = CAM.free; camera.position.set(c[0], c[1], c[2]); camera.lookAt(c[3], c[4], c[5]); camera.fov = vfov(baseFov(), camera.aspect); camera.updateProjectionMatrix(); camera.updateMatrixWorld(); }
