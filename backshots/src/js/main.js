@@ -28,6 +28,7 @@ import { initAudio, resumeAudio, startAmbience, updateAmbience, setVolume, uiSou
 import { initHud, updateHud, showBoard, boardHTML, announce, setLandmarks } from './hud.js';
 import { L as LANG, applyLang, tr } from './i18n.js';
 import { $, store, esc } from './util.js';
+import { yaInit, yaLoaded, yaTick, yaInterstitial, YA } from './yandex.js';
 
 const setLoad = (k, t) => { $('load-bar').style.width = Math.round(k * 100) + '%'; if(t) $('load-txt').textContent = tr(t); };
 const MENU = { count:store.get('count', 20), diff:store.get('diff', 'normal'), look:store.get('look', LOOKS[0]) };
@@ -36,8 +37,11 @@ const yieldFrame = () => new Promise(r => setTimeout(r, 0));
 
 async function boot(){
   renderer.info.autoReset = false;
-  if(!WEBGL2){ $('nogl').hidden = false; $('load').hidden = true; return; }
+  await yaInit();
   applyLang();
+  if(!WEBGL2){ $('nogl').hidden = false; $('load').hidden = true; yaLoaded(); return; }
+  // a phone or tablet without a mouse: this game needs a keyboard and a mouse
+  if(matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches){ $('nopc').hidden = false; $('load').hidden = true; yaLoaded(); return; }
   applyQuality(); bakeEnv(); initPost(); initReflect();
   setLoad(0.08, 'Гудят лампы…'); await yieldFrame();
   await Promise.all([initPhysics().catch(e => console.warn('physics off', e)), loadLevelTex()]);
@@ -51,6 +55,7 @@ async function boot(){
   $('load').classList.add('off');
   showMenu();
   window.__bsReady = true;
+  yaLoaded();
   requestAnimationFrame(loop);
 }
 const randSeed = () => (Math.random() * 1e9) >>> 0;
@@ -75,13 +80,16 @@ function buildMenu(){
     for(const b of el.querySelectorAll('button')) b.onclick = () => { MENU[key] = /^\d+$/.test(b.dataset.v) ? +b.dataset.v : b.dataset.v; store.set(key, MENU[key]); uiSound('click'); upd(); }; upd(); };
   seg($('m-count'), 'count'); seg($('m-diff'), 'diff');
   const gseg = $('m-gfx'); for(const b of gseg.querySelectorAll('button')){ b.classList.toggle('on', b.dataset.v === LEVEL); b.onclick = () => { if(b.dataset.v !== LEVEL){ store.set('gfx', b.dataset.v); location.reload(); } }; }
-  $('play').onclick = () => { uiSound('click'); startGame(); };
+  $('play').onclick = () => { uiSound('click'); again(); };
   $('m-set').onclick = () => openSettings('menu');
   $('p-resume').onclick = resume; $('p-set').onclick = () => openSettings('pause'); $('p-quit').onclick = toMenu;
-  $('d-again').onclick = () => startGame(); $('d-menu').onclick = toMenu;
-  $('e-again').onclick = () => { $('end').hidden = true; startGame(); }; $('e-menu').onclick = toMenu;
+  $('d-again').onclick = () => again(); $('d-menu').onclick = toMenu;
+  $('e-again').onclick = () => { $('end').hidden = true; again(); }; $('e-menu').onclick = toMenu;
   for(const b of document.querySelectorAll('button')) b.addEventListener('pointerenter', () => uiSound('hover'));
 }
+// a new match; from the second one on, Yandex may show a fullscreen ad first
+let matches = 0;
+function again(){ if(matches++ === 0) startGame(); else yaInterstitial(() => startGame()); }
 function showMenu(){
   G.state = 'menu'; $('menu').hidden = false; $('hud').hidden = true; $('end').hidden = true; $('pause').hidden = true;
   VMS.shown = false;
@@ -170,7 +178,7 @@ $('fps').hidden = !store.get('fps', 1);
 // ---- main loop ----
 let last = performance.now(), frozen = /[?&]freeze/.test(location.search);
 function simStep(dt){
-  if(G.state !== 'play' || G.paused) return;
+  if(G.state !== 'play' || G.paused || YA.adOn) return;
   if(G.me && !PL.autopilot) playerInput(dt);
   for(const f of G.fighters) if(f.bot || (f === G.me && PL.autopilot)) botThink(f, dt);
   stepMatch(dt);
@@ -239,6 +247,7 @@ function menuCamera(dt){
 function loop(now){
   const raw = Math.min(0.25, (now - last) / 1000); last = now;
   if(!frozen) frame(Math.min(raw, 1 / 20), raw);
+  yaTick();
   requestAnimationFrame(loop);
 }
 addEventListener('visibilitychange', () => { if(document.hidden && G.state === 'play') pause(); });

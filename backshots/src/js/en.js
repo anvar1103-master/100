@@ -2,6 +2,7 @@
 export const EN = {
 
   // stage 2: loot, healing, zone, map
+  'Нужен компьютер':'A computer is needed', 'Backshots — шутер для компьютера с клавиатурой и мышью. Открой игру на компьютере.':'Backshots is a shooter for a computer with a keyboard and a mouse. Open the game on a computer.',
   'В темноте тебя видно хуже. Фонарь светит, но выдаёт тебя. Свет гаснет с краёв — успей к кругу на карте.':'In the dark you are harder to see. The flashlight helps you see but gives you away. The light dies from the edges — reach the circle on the map.',
   'подобрать':'pick up', 'оружие':'weapon', 'лечиться':'heal', 'карта этажа':'floor map', 'шлем':'helmet', 'вместо ':'instead of ', 'броня ':'armour ',
   'Патроны ':'Ammo ', '7,62 мм':'7.62 mm', '5,56 мм':'5.56 mm', '12 калибр':'12 gauge', '9 мм':'9 mm', 'Тяжёлый бронежилет':'Heavy vest', 'Бронежилет':'Vest', 'Шлем':'Helmet', 'Аптечка':'Medkit', 'Бинт':'Bandage',
