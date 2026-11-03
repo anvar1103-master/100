@@ -443,7 +443,7 @@ const tri = () => Math.random() + Math.random() - 1;
 function angDiff(a, b){ let d = (b - a) % TAU; if(d > Math.PI) d -= TAU; if(d < -Math.PI) d += TAU; return d; }
 const store = {
   get(k, d){ try{ const v = localStorage.getItem('lv_' + k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
-  set(k, v){ try{ localStorage.setItem('lv_' + k, JSON.stringify(v)); }catch(e){} }
+  set(k, v){ try{ localStorage.setItem('lv_' + k, JSON.stringify(v)); }catch(e){} if(window.__yaSave) window.__yaSave(); }
 };
 const settings = { sens:store.get('sens', 1), quality:store.get('q', TOUCH ? 'low' : 'high') };
 const menuSel = { map:store.get('map', 'rand'), mode:store.get('mode', 'tdm'), fac:store.get('fac', 'guard'), arch:store.get('arch', 'soldier'), diff:store.get('diff', 'normal'), tod:store.get('tod', 'rand'), season:store.get('season', 'rand') };
@@ -4928,8 +4928,37 @@ function yaInit(){
   window.YaGames.init().then(sdk => {
     YA.sdk = sdk;
     try{ const l = String(sdk.environment.i18n.lang || '').slice(0, 2); if(l) LANG = RU_LANGS.includes(l) ? 'ru' : 'en'; }catch(e){}
-    done();
+    done(); yaCloud(sdk);
   }).catch(done);
+}
+// progress and settings follow the player's Yandex account (the SDK's own storage), so they survive cleared browsers and new devices
+let yaPlayer = null, yaSaveT = 0;
+function yaCloud(sdk){
+  if(!sdk.getPlayer) return;
+  sdk.getPlayer({ scopes:false }).then(pl => { yaPlayer = pl; return pl.getData(); }).then(data => {
+    if(data && typeof data === 'object'){
+      const c = data.prof;
+      if(c && typeof c === 'object'){
+        // keep the best of both: per class the higher XP, and the cloud's hat choices
+        for(const k in (c.xp || {})) PROF.xp[k] = Math.max(PROF.xp[k] || 0, +c.xp[k] || 0);
+        Object.assign(PROF.hat, c.hat || {});
+      }
+      // settings only fill in what this device has never set
+      for(const k of ['music', 'q', 'sens', 'mode', 'fac', 'arch', 'diff', 'map', 'tod', 'season']){
+        if(data[k] !== undefined && localStorage.getItem('lv_' + k) === null){ try{ localStorage.setItem('lv_' + k, JSON.stringify(data[k])); }catch(e){} }
+      }
+      try{ localStorage.setItem('lv_prof', JSON.stringify(PROF)); }catch(e){}
+      if(state === 'menu') renderMenu();
+    }
+    window.__yaSave = () => { clearTimeout(yaSaveT); yaSaveT = setTimeout(yaPush, 1500); };
+    yaPush();
+  }).catch(() => {});
+}
+function yaPush(){
+  if(!yaPlayer) return;
+  const d = { prof:PROF };
+  for(const k of ['music', 'q', 'sens', 'mode', 'fac', 'arch', 'diff', 'map', 'tod', 'season']) d[k] = store.get(k, undefined);
+  try{ yaPlayer.setData(d, true); }catch(e){}
 }
 // the game has loaded: tell Yandex so it can hide its own loader
 function yaLoaded(){ if(YA.sdk && !YA.ready){ YA.ready = true; try{ YA.sdk.features.LoadingAPI.ready(); }catch(e){} } }
