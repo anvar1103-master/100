@@ -33,6 +33,9 @@ const RIG = {
     clips:{ idle:'FPS_Pistol_Idle', reload:'FPS_Pistol_Reload_easy', reloadEmpty:'FPS_Pistol_Reload_full', fire:'FPS_Pistol_Fire' } },
 };
 const FP = {};
+// guns shown as the rig's own model (animated with the hands: its grip and handguard fit them exactly); the rest are
+// our models lined up with it
+const NATIVE = { m4:'rifle', pistol:'pistol' };
 export async function loadFpArms(){
   await Promise.all(Object.entries(RIG).map(async ([k, R]) => { const g = await loadGLB(`assets/models/${R.file}.glb`); FP[k] = { scene:g.scene, clips:g.animations }; }));
 }
@@ -95,7 +98,9 @@ export function setRig(look, gid){
   if(ref){
     const refMesh = ref.isMesh ? ref : ref.getObjectByProperty('isMesh', true), pts = [], rb = new THREE.Box3(), v = new THREE.Vector3();
     for(let i = 0, n = refMesh.geometry.attributes.position.count; i < n; i++){ refMesh.getVertexPosition(i, v); v.applyMatrix4(refMesh.matrixWorld).applyMatrix4(rigInGun); rb.expandByPoint(v); pts.push(v.x, v.y, v.z); }
-    ref.traverse(o => { o.visible = false; });
+    const native = NATIVE[gid] === kind;
+    ref.traverse(o => { o.visible = native; });
+    if(kind === 'pistol') model.traverse(o => { if(o.isMesh && /^xd_frame/.test(o.name)) o.visible = native; });
     g.root.updateMatrixWorld(true); const ob = new THREE.Box3().setFromObject(g.root).applyMatrix4(_m.copy(g.root.matrixWorld).invert());
     if(kind === 'pistol'){
       const k = clamp((rb.max.z - rb.min.z) / Math.max(1e-3, ob.max.z - ob.min.z), 0.85, 1.35);
@@ -106,6 +111,9 @@ export function setRig(look, gid){
       for(let i = 0; i < pts.length; i += 3) if(pts[i + 2] < rb.min.z + 0.012){ mz.x += pts[i]; mz.y += pts[i + 1]; n++; }
       mz.divideScalar(Math.max(1, n));
       g.root.position.set(mz.x - g.muzzle.position.x, mz.y - g.muzzle.position.y, 0);
+      // the M16 shown: its own sight line, the front post's tip on the bore's vertical
+      if(native){ let ty = -1e9; for(let i = 0; i < pts.length; i += 3) if(pts[i + 2] < rb.min.z + (rb.max.z - rb.min.z) * 0.35 && Math.abs(pts[i] - mz.x) < 0.01) ty = Math.max(ty, pts[i + 1]);
+        g.nativeSight = new THREE.Vector3(mz.x, ty - 0.002, 0.16); }
     }
     g.root.updateMatrix(); holder.updateMatrixWorld(true);
   }
@@ -117,14 +125,15 @@ export function setRig(look, gid){
   const inGun = o => o ? pos(o).applyMatrix4(rigInGun) : null;
   // the left palm at rest, in gun space, and where this gun's handguard wants it
   const leftRest = pl.clone().applyMatrix4(rigInGun), leftWant = g.gripL.position.clone().add(g.root.position).add(new THREE.Vector3(0, -0.035, 0));
+  if(NATIVE[gid] === kind) g.root.traverse(o => { if(o.isMesh) o.visible = false; });
   g.flash = muzzleFlash(); g.muzzle.add(g.flash);
   const gunHolder = new THREE.Object3D(); gunHolder.matrixAutoUpdate = false; VMS.root.add(gunHolder);
   VMS.root.add(holder);
   const parts = g.parts, home = p => p ? { p, at:p.position.clone() } : null;
   VMS.rig = { kind, R, model, holder, mixer, acts, clips, cur:'idle', g, gunP, mount, magP, slideP, magRest:inGun(magP), slideRest:inGun(slideP), rigInGun, gunHolder,
-    leftDelta:kind === 'rifle' ? new THREE.Vector3(0, 0, leftWant.z - leftRest.z) : new THREE.Vector3(), arm:R.arm.map(n => model.getObjectByName(n)),
+    leftDelta:kind === 'rifle' && NATIVE[gid] !== kind ? new THREE.Vector3(0, 0, leftWant.z - leftRest.z) : new THREE.Vector3(), arm:R.arm.map(n => model.getObjectByName(n)),
     mag:home(parts.mag), slide:home(kind === 'pistol' ? parts.bolt : null),
-    hipP, hipQ, adsD:ADS_D[WEAPONS[gid].kind] || ADS_D.rifle, sight:g.sight.position.clone().multiplyScalar(g.root.scale.x).add(g.root.position), w:{ idle:1 } };
+    hipP, hipQ, adsD:ADS_D[WEAPONS[gid].kind] || ADS_D.rifle, sight:g.nativeSight || g.sight.position.clone().multiplyScalar(g.root.scale.x).add(g.root.position), w:{ idle:1 } };
   VMS.look = look; VMS.gid = gid; VMS.cur = g;
 }
 
